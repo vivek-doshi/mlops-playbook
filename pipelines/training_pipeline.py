@@ -1,29 +1,37 @@
-import os
-import yaml
-import json
 import argparse
+import json
+import os
+
+import joblib
 import mlflow
 import pandas as pd
-from sklearn.model_selection import train_test_split
+import yaml
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-import joblib
+from sklearn.model_selection import train_test_split
 
 from src.features.build_features import build_feature_pipeline
 from src.models.train_model import build_model
 
+
 def load_config(config_path: str) -> dict:
     with open(config_path, "r") as f:
-        if config_path.endswith('.yaml'):
+        if config_path.endswith(".yaml"):
             return yaml.safe_load(f)
         else:
             return json.load(f)
+
 
 def run_training(config_path: str):
     config = load_config(config_path)
 
     # MLflow Setup
-    mlflow.set_tracking_uri(config["mlflow"]["tracking_uri"])
-    mlflow.set_experiment(config["mlflow"]["experiment_name"])
+    tracking_uri = config.get("mlflow", {}).get("tracking_uri") or os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlruns.db")
+    experiment_name = config.get("mlflow", {}).get("experiment_name") or os.getenv(
+        "MLFLOW_EXPERIMENT_NAME", "churn_prediction"
+    )
+
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(experiment_name)
 
     print(f"Loading data from {config['data']['raw_path']}...")
     df = pd.read_csv(config["data"]["raw_path"])
@@ -32,15 +40,16 @@ def run_training(config_path: str):
     y = df["target"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
+        X,
+        y,
         test_size=config["data"]["test_size"],
-        random_state=config["data"]["random_state"]
+        random_state=config["data"]["random_state"],
     )
 
     feature_pipeline = build_feature_pipeline()
     model = build_model(
         n_estimators=config["model"]["n_estimators"],
-        max_depth=config["model"]["max_depth"]
+        max_depth=config["model"]["max_depth"],
     )
 
     with mlflow.start_run():
@@ -61,11 +70,7 @@ def run_training(config_path: str):
 
         # Log to MLflow
         mlflow.log_params(config["model"])
-        mlflow.log_metrics({
-            "accuracy": accuracy,
-            "precision": precision,
-            "recall": recall
-        })
+        mlflow.log_metrics({"accuracy": accuracy, "precision": precision, "recall": recall})
 
         # Save model and pipeline
         os.makedirs("models", exist_ok=True)
@@ -77,6 +82,7 @@ def run_training(config_path: str):
         mlflow.log_artifact(model_path)
         mlflow.log_artifact(pipeline_path)
         print("Training complete. Artifacts saved.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run training pipeline.")

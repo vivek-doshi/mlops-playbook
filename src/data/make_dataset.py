@@ -1,6 +1,8 @@
+import os
+
 import pandas as pd
 from sklearn.datasets import make_classification
-import os
+
 
 def generate_synthetic_data(output_path: str, n_samples: int = 1000) -> pd.DataFrame:
     """Generates a synthetic dataset for classification."""
@@ -9,7 +11,7 @@ def generate_synthetic_data(output_path: str, n_samples: int = 1000) -> pd.DataF
         n_features=10,
         n_informative=5,
         n_redundant=2,
-        random_state=42
+        random_state=42,
     )
 
     # Create DataFrame
@@ -24,6 +26,7 @@ def generate_synthetic_data(output_path: str, n_samples: int = 1000) -> pd.DataF
     df.to_csv(output_path, index=False)
     print(f"Synthetic data generated and saved to {output_path}")
     return df
+
 
 if __name__ == "__main__":
     generate_synthetic_data("data/raw/dataset.csv")

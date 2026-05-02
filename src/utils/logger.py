@@ -1,9 +1,9 @@
 import logging
-import os
+
 
 def setup_logger(name: str, log_file: str = "app.log", level=logging.INFO):
     """Function setup as many loggers as you want"""
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)
@@ -19,5 +19,6 @@ def setup_logger(name: str, log_file: str = "app.log", level=logging.INFO):
 
     return logger
 
+
 # Example usage available to import across pipelines
-logger = setup_logger('mlops_playbook', 'mlops.log')
+logger = setup_logger("mlops_playbook", "mlops.log")
