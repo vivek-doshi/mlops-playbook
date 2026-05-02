@@ -1,0 +1,35 @@
+[tool.black]
+line-length = 127
+target-version = ["py312"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+  | notebooks
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 127
+known_first_party = ["src", "pipelines", "monitoring"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.flake8]
+max-line-length = 127
+max-complexity = 10
+exclude = [".git", "__pycache__", ".venv", "build", "dist", "notebooks"]
+per-file-ignores = [
+    "tests/*:S101",
+]

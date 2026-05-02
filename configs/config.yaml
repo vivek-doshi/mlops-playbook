@@ -1,14 +1,27 @@
 data:
-  raw_path: data/raw/dataset.csv
   processed_path: data/processed/dataset.csv
-  test_size: 0.2
   random_state: 42
-
-model:
-  type: RandomForest
-  n_estimators: 100
-  max_depth: 5
-
+  raw_path: data/raw/dataset.csv
+  test_size: 0.2
 mlflow:
   experiment_name: churn_prediction
   tracking_uri: sqlite:///mlruns.db
+model:
+  max_depth: 5
+  n_estimators: 100
+  type: RandomForest
+tuning:
+  enabled: false
+  n_trials: 20
+  study_name: rf_tuning
+
+registry:
+  enabled: true
+  model_name: churn_prediction_rf
+  accuracy_threshold: 0.70
+  promote_to: Production
+
+monitoring:
+  drift_threshold: 0.3
+  reference_data_path: data/raw/dataset.csv
+  reports_dir: monitoring/reports
