@@ -46,13 +46,30 @@ def run_training(config_path: str):
         random_state=config["data"]["random_state"],
     )
 
-    feature_pipeline = build_feature_pipeline()
-    model = build_model(
-        n_estimators=config["model"]["n_estimators"],
-        max_depth=config["model"]["max_depth"],
-    )
-
     with mlflow.start_run():
+        # Hyperparameter tuning (optional — controlled by config)
+        if config.get("tuning", {}).get("enabled", False):
+            from src.models.tune_model import run_tuning
+            from src.utils.logger import logger
+
+            logger.info("Running Optuna hyperparameter tuning...")
+            best_params = run_tuning(
+                X_train,
+                y_train,
+                n_trials=config["tuning"]["n_trials"],
+                study_name=config["tuning"]["study_name"],
+            )
+            # Override config model params with tuned values
+            config["model"]["n_estimators"] = best_params["n_estimators"]
+            config["model"]["max_depth"] = best_params["max_depth"]
+            logger.info(f"Using tuned params: {best_params}")
+
+        feature_pipeline = build_feature_pipeline()
+        model = build_model(
+            n_estimators=config["model"]["n_estimators"],
+            max_depth=config["model"]["max_depth"],
+        )
+
         print("Transforming features...")
         X_train_transformed = feature_pipeline.fit_transform(X_train)
         X_test_transformed = feature_pipeline.transform(X_test)
@@ -82,6 +99,25 @@ def run_training(config_path: str):
         mlflow.log_artifact(model_path)
         mlflow.log_artifact(pipeline_path)
         print("Training complete. Artifacts saved.")
+
+        # Model registry (optional — controlled by config)
+        if config.get("registry", {}).get("enabled", True):
+            from src.models.registry import promote_model, register_model
+
+            run_id = mlflow.active_run().info.run_id
+            version = register_model(
+                run_id=run_id,
+                model_artifact_path="model.pkl",
+                model_name=config["registry"]["model_name"],
+                accuracy=accuracy,
+                accuracy_threshold=config["registry"]["accuracy_threshold"],
+            )
+            if version:
+                promote_model(
+                    model_name=config["registry"]["model_name"],
+                    version=version,
+                    stage=config["registry"]["promote_to"],
+                )
 
 
 if __name__ == "__main__":

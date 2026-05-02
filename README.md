@@ -59,11 +59,12 @@ mlops-playbook/
 ├── src/                # Core ML code (training, features, inference)
 ├── pipelines/          # Training & inference pipelines
 ├── models/             # Saved models & artifacts
-├── experiments/        # Experiment tracking metadata
+├── outputs/            # Offline batch prediction outputs
+├── experiments/        # Experiment tracking metadata & run reports
 ├── deployment/         # Docker, K8s, serving configs
-├── monitoring/         # Drift & performance monitoring
+├── monitoring/         # Drift monitoring reports & Grafana/Prometheus configs
 ├── configs/            # Config-driven workflows
-├── notebooks/          # Exploration & prototyping
+├── notebooks/          # Exploration & prototyping notebooks
 └── README.md
 
 
@@ -75,22 +76,28 @@ mlops-playbook/
 ✅ CI/CD-ready structure for ML workflows
 ✅ Monitoring hooks for drift & performance
 ✅ Config-driven pipeline execution
+## Architecture
+
+The standard ML pipeline flow in this repository is:
+`ingest → validate → train (+ tune) → register → serve → monitor → drift alert`
+
 🧰 Recommended Tech Stack
 🟢 Beginner
 Scikit-learn
-MLflow
 FastAPI
 Docker
 🔵 Intermediate
+MLflow (Tracking & Registry)
 PyTorch / XGBoost
 DVC
 Airflow / Prefect
 Kubernetes
+Prometheus + Grafana
+Evidently
 🔴 Advanced (Production)
 Kubeflow Pipelines
 Feast (Feature Store)
 KServe / Seldon
-Prometheus + Evidently
 
 🚀 Getting Started
 # Clone the repository
@@ -111,8 +118,27 @@ python pipelines/data_ingestion.py
 # Run training pipeline (This must be run to generate model artifacts in `models/` before inference)
 python pipelines/training_pipeline.py
 
-# Start inference service
-uvicorn src.inference.api:app --reload
+# Or use Make to run end-to-end:
+make run-all
+make serve
+
+# In another terminal, generate an experiment report and check for drift
+make report
+make monitor
+
+## Docker Image
+
+The CI pipeline automatically builds and pushes the inference image to GitHub Container Registry on every push to `main`.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/vivek-doshi/mlops-playbook:latest
+
+# Run the inference API
+docker run -p 8000:8000 \
+  -v $(pwd)/models:/app/models \
+  ghcr.io/vivek-doshi/mlops-playbook:latest
+```
 
 ## Alternatively, using Docker
 ```bash
@@ -121,6 +147,24 @@ python pipelines/training_pipeline.py
 
 docker-compose up --build
 ```
+
+## Monitoring
+
+- Start the monitoring stack with `make monitoring-up` (requires Docker Compose).
+- Access Grafana at `http://localhost:3000` (credentials: `admin`/`admin`). A pre-built MLOps dashboard is included out of the box.
+- Prometheus scrapes `/metrics` directly from the inference API.
+- Custom metrics tracked: prediction count, prediction latency, class distribution, and model load status.
+
+## Phase 3 Features
+
+- **Optuna Hyperparameter Tuning:** Automated hyperparameter search integrated into the training pipeline.
+- **Evidently Drift Detection:** Robust drift detection monitoring that produces HTML reports.
+- **Prometheus & Grafana:** Containerised observability stack with a custom ML dashboard.
+- **MLflow Model Registry:** Automated promotion of models to "Production" based on configurable accuracy thresholds.
+- **GHCR Docker CI/CD:** GitHub Actions workflow that automatically builds and pushes the Docker inference image to GHCR.
+- **Kubernetes HPA:** HorizontalPodAutoscaler manifests with dynamic resource requests and probes.
+- **Batch Prediction API:** New `/predict/batch` endpoint and an offline batch scoring pipeline.
+- **Experiment Reports:** Command to automatically generate `runs_summary.md` comparing MLflow experiments.
 
 🧪 Example Use Case
 

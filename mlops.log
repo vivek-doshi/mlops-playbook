@@ -1,0 +1,95 @@
+2026-05-02 15:34:59,595 INFO Optuna best CV accuracy: 0.8108 | params: {'n_estimators': 300, 'max_depth': 8, 'min_samples_split': 3, 'min_samples_leaf': 2, 'max_features': 'sqrt'}
+2026-05-02 15:35:50,886 INFO Running Optuna hyperparameter tuning...
+2026-05-02 15:36:03,993 INFO Optuna best CV accuracy: 0.9275 | params: {'n_estimators': 150, 'max_depth': 13, 'min_samples_split': 7, 'min_samples_leaf': 1, 'max_features': 'sqrt'}
+2026-05-02 15:36:03,993 INFO Using tuned params: {'n_estimators': 150, 'max_depth': 13, 'min_samples_split': 7, 'min_samples_leaf': 1, 'max_features': 'sqrt'}
+2026-05-02 15:51:15,197 INFO Optuna best CV accuracy: 0.8105 | params: {'n_estimators': 200, 'max_depth': 10, 'min_samples_split': 8, 'min_samples_leaf': 2, 'max_features': 'sqrt'}
+2026-05-02 15:56:28,108 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 15:56:28,108 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 15:56:28,229 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 15:56:28,229 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 15:56:28,252 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 15:56:28,252 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 15:56:30,918 INFO Registering model 'test_model' from run abc...
+2026-05-02 15:56:30,918 INFO Model registered as version 1
+2026-05-02 15:56:30,922 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 15:56:30,926 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 15:56:30,930 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 15:56:30,933 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 15:56:36,844 INFO Optuna best CV accuracy: 0.8105 | params: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 4, 'min_samples_leaf': 2, 'max_features': 'sqrt'}
+2026-05-02 16:05:25,588 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:25,588 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:25,669 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:25,670 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:25,691 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:25,691 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:25,708 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:25,709 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:26,189 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:26,189 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:26,208 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:05:26,208 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:05:28,071 INFO Registering model 'test_model' from run abc...
+2026-05-02 16:05:28,071 INFO Model registered as version 1
+2026-05-02 16:05:28,074 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 16:05:28,076 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 16:05:28,079 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 16:05:28,082 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 16:05:34,669 INFO Optuna best CV accuracy: 0.8108 | params: {'n_estimators': 250, 'max_depth': 7, 'min_samples_split': 5, 'min_samples_leaf': 2, 'max_features': 'log2'}
+2026-05-02 16:07:15,958 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:15,959 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:16,096 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:16,096 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:16,123 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:16,123 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:16,143 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:16,143 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:16,166 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:16,166 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:16,188 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:07:16,188 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:07:19,392 INFO Registering model 'test_model' from run abc...
+2026-05-02 16:07:19,392 INFO Model registered as version 1
+2026-05-02 16:07:19,398 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 16:07:19,402 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 16:07:19,406 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 16:07:19,410 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 16:07:28,051 INFO Optuna best CV accuracy: 0.8004 | params: {'n_estimators': 150, 'max_depth': 13, 'min_samples_split': 8, 'min_samples_leaf': 1, 'max_features': 'sqrt'}
+2026-05-02 16:14:22,783 INFO Run report saved to experiments/runs_summary.md
+2026-05-02 16:28:34,773 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,774 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:34,852 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,852 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:34,868 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,868 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:34,883 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,884 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:34,899 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,900 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:34,916 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 16:28:34,917 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 16:28:36,646 INFO Registering model 'test_model' from run abc...
+2026-05-02 16:28:36,646 INFO Model registered as version 1
+2026-05-02 16:28:36,649 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 16:28:36,652 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 16:28:36,655 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 16:28:36,657 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 16:28:41,914 INFO Optuna best CV accuracy: 0.8203 | params: {'n_estimators': 200, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 1, 'max_features': 'log2'}
+2026-05-02 17:07:01,535 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,536 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:01,665 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,665 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:01,679 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,679 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:01,692 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,692 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:01,705 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,705 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:01,720 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:07:01,721 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:07:03,745 INFO Registering model 'test_model' from run abc...
+2026-05-02 17:07:03,746 INFO Model registered as version 1
+2026-05-02 17:07:03,748 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 17:07:03,750 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 17:07:03,753 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 17:07:03,754 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 17:07:10,580 INFO Optuna best CV accuracy: 0.8209 | params: {'n_estimators': 100, 'max_depth': 5, 'min_samples_split': 3, 'min_samples_leaf': 3, 'max_features': 'log2'}

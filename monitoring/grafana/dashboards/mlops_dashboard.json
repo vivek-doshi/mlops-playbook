@@ -1,0 +1,64 @@
+{
+  "uid": "mlops-playbook-v1",
+  "title": "MLOps Playbook",
+  "tags": [ "mlops" ],
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Prediction Latency p95",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(mlops_prediction_latency_seconds_bucket[5m]))",
+          "legendFormat": "p95 Latency"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Predictions by Class",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(mlops_predictions_total[1m])",
+          "legendFormat": "Class {{prediction_class}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Model Load Status",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "mlops_model_load_attempts_total",
+          "legendFormat": "Status {{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate (5xx)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{status=~\"5..\"}[1m])",
+          "legendFormat": "5xx Errors"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38
+}

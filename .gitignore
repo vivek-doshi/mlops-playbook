@@ -41,6 +41,8 @@ venv.bak/
 # Jupyter outputs (keep notebooks, ignore outputs)
 notebooks/.ipynb_checkpoints/
 
+experiments/runs_summary.md
+
 # ML artifacts
 models/*.pkl
 models/*.joblib
@@ -54,6 +56,8 @@ data/processed/*
 # IDEs
 .vscode/
 .idea/
+
+monitoring/reports/*.html
 
 # OS generated files
 .DS_Store
