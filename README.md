@@ -102,6 +102,9 @@ cd mlops-playbook
 # Install dependencies
 pip install -r requirements.txt
 
+# Install pre-commit hooks (one-time setup)
+make pre-commit-install
+
 # Run data ingestion pipeline
 python pipelines/data_ingestion.py
 
@@ -150,7 +153,7 @@ Teams building scalable ML systems
 
 
 📄 License
-Apache 2.0 
+Apache 2.0
 
 ⭐ Final Note
 

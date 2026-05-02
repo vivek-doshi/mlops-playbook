@@ -1,20 +1,33 @@
 import os
+
 import hydra
-from omegaconf import DictConfig
+import joblib
 import mlflow
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from omegaconf import DictConfig
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-import joblib
+from sklearn.model_selection import train_test_split
 
 from src.features.build_features import build_feature_pipeline
 from src.models.train_model import build_model
 
+
 @hydra.main(version_base=None, config_path="../configs", config_name="hydra_config")
 def run_training_hydra(config: DictConfig):
     # MLflow Setup
-    mlflow.set_tracking_uri(config.mlflow.tracking_uri)
-    mlflow.set_experiment(config.mlflow.experiment_name)
+    tracking_uri = (
+        config.mlflow.tracking_uri
+        if "mlflow" in config and "tracking_uri" in config.mlflow
+        else os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlruns.db")
+    )
+    experiment_name = (
+        config.mlflow.experiment_name
+        if "mlflow" in config and "experiment_name" in config.mlflow
+        else os.getenv("MLFLOW_EXPERIMENT_NAME", "churn_prediction")
+    )
+
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(experiment_name)
 
     print(f"Loading data from {config.data.raw_path}...")
     df = pd.read_csv(config.data.raw_path)
@@ -23,16 +36,11 @@ def run_training_hydra(config: DictConfig):
     y = df["target"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
-        test_size=config.data.test_size,
-        random_state=config.data.random_state
+        X, y, test_size=config.data.test_size, random_state=config.data.random_state
     )
 
     feature_pipeline = build_feature_pipeline()
-    model = build_model(
-        n_estimators=config.model.n_estimators,
-        max_depth=config.model.max_depth
-    )
+    model = build_model(n_estimators=config.model.n_estimators, max_depth=config.model.max_depth)
 
     with mlflow.start_run():
         print("Transforming features...")
@@ -52,11 +60,7 @@ def run_training_hydra(config: DictConfig):
 
         # Log to MLflow
         mlflow.log_params(dict(config.model))
-        mlflow.log_metrics({
-            "accuracy": accuracy,
-            "precision": precision,
-            "recall": recall
-        })
+        mlflow.log_metrics({"accuracy": accuracy, "precision": precision, "recall": recall})
 
         # Save model and pipeline
         os.makedirs("models", exist_ok=True)
@@ -68,6 +72,7 @@ def run_training_hydra(config: DictConfig):
         mlflow.log_artifact(model_path)
         mlflow.log_artifact(pipeline_path)
         print("Training complete. Artifacts saved.")
+
 
 if __name__ == "__main__":
     run_training_hydra()

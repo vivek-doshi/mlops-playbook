@@ -1,14 +1,17 @@
 import logging
-import pandas as pd
 from typing import Optional
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
+
 
 class DriftDetector:
     """
     Placeholder for Data Drift Detection logic.
     In a real production system, you would integrate a tool like Evidently AI here.
     """
+
     def __init__(self, reference_data_path: Optional[str] = None):
         self.reference_data_path = reference_data_path
         if reference_data_path:

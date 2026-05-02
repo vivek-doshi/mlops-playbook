@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+mlruns/
+mlruns.db
+data/raw/*
+data/processed/*
+notebooks/
+tests/

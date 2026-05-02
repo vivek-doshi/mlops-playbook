@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, ValidationError
-from typing import List, Dict
 import pandas as pd
+from pydantic import BaseModel, Field, ValidationError
+
 
 class DataSchema(BaseModel):
     feature_0: float
@@ -14,6 +14,7 @@ class DataSchema(BaseModel):
     feature_8: float
     feature_9: float
     target: int = Field(ge=0, le=1)
+
 
 def validate_data(df: pd.DataFrame) -> bool:
     """Validates dataframe against Pydantic schema."""

@@ -38,8 +38,8 @@ venv.bak/
 # Environment variables
 .env
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Jupyter outputs (keep notebooks, ignore outputs)
+notebooks/.ipynb_checkpoints/
 
 # ML artifacts
 models/*.pkl
