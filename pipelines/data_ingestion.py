@@ -5,6 +5,13 @@ from src.data.validation import validate_data
 
 
 def run_ingestion(output_path: str):
+    """
+    EDUCATIONAL NOTE:
+    Data ingestion is the first step of an ML Pipeline.
+    It fetches raw data from a source (DB, S3, API) and immediately validates it
+    against a schema (using Pydantic, Pandera, etc). Failing early prevents garbage
+    data from corrupting the downstream model training.
+    """
     print("Starting data ingestion...")
     df = generate_synthetic_data(output_path)
     print("Validating ingested data...")

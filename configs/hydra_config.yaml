@@ -1,3 +1,8 @@
+# EDUCATIONAL NOTE:
+# Hydra is an advanced configuration management tool popular in complex ML projects.
+# It allows dynamic overrides from the CLI (e.g. `python script.py model.max_depth=10`).
+# Note that this file shares a similar structure to config.yaml but uses Hydra's syntax.
+
 defaults:
   - _self_
 

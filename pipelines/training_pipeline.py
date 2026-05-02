@@ -46,6 +46,10 @@ def run_training(config_path: str):
         random_state=config["data"]["random_state"],
     )
 
+    # EDUCATIONAL NOTE:
+    # A training pipeline integrates data loading, feature engineering, and model training.
+    # We wrap the training logic in `mlflow.start_run()` to ensure everything (metrics,
+    # parameters, models) is logged together as a single experiment in MLflow.
     with mlflow.start_run():
         # Hyperparameter tuning (optional — controlled by config)
         if config.get("tuning", {}).get("enabled", False):
@@ -85,6 +89,9 @@ def run_training(config_path: str):
 
         print(f"Metrics - Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}")
 
+        # EDUCATIONAL NOTE:
+        # Logging parameters (inputs) and metrics (outputs) allows Data Scientists to
+        # compare hundreds of experiments in the MLflow UI and easily identify the best model.
         # Log to MLflow
         mlflow.log_params(config["model"])
         mlflow.log_metrics({"accuracy": accuracy, "precision": precision, "recall": recall})

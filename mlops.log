@@ -93,3 +93,22 @@
 2026-05-02 17:07:03,753 INFO Falling back to file-based model: models/fallback.pkl
 2026-05-02 17:07:03,754 INFO Loaded production model URI: models:/test_model/Production
 2026-05-02 17:07:10,580 INFO Optuna best CV accuracy: 0.8209 | params: {'n_estimators': 100, 'max_depth': 5, 'min_samples_split': 3, 'min_samples_leaf': 3, 'max_features': 'log2'}
+2026-05-02 17:43:06,714 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,716 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:06,864 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,865 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:06,889 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,889 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:06,907 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,907 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:06,925 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,925 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:06,945 WARNING Could not retrieve production model from registry: Registered Model with name=churn_prediction_rf not found
+2026-05-02 17:43:06,946 INFO Falling back to file-based model: models/model.pkl
+2026-05-02 17:43:09,183 INFO Registering model 'test_model' from run abc...
+2026-05-02 17:43:09,184 INFO Model registered as version 1
+2026-05-02 17:43:09,187 WARNING Model accuracy 0.7000 below threshold 0.8000. Skipping registry registration.
+2026-05-02 17:43:09,189 INFO Model 'test_model' v1 promoted to Production
+2026-05-02 17:43:09,192 INFO Falling back to file-based model: models/fallback.pkl
+2026-05-02 17:43:09,194 INFO Loaded production model URI: models:/test_model/Production
+2026-05-02 17:43:17,256 INFO Optuna best CV accuracy: 0.8206 | params: {'n_estimators': 100, 'max_depth': 9, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 'sqrt'}

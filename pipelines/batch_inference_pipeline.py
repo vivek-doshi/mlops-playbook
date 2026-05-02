@@ -26,7 +26,13 @@ from src.utils.logger import logger
 
 
 def batch_predict_via_api(df: pd.DataFrame, api_url: str, chunk_size: int = 500) -> list:
-    """Send data to the /predict/batch endpoint in chunks."""
+    """
+    Send data to the /predict/batch endpoint in chunks.
+
+    EDUCATIONAL NOTE:
+    We chunk the data into batches of 500. This prevents massive payloads from causing
+    Out-Of-Memory (OOM) errors or HTTP timeouts on the FastAPI server.
+    """
     all_predictions = []
     feature_cols = [c for c in df.columns if c != "target"]
 

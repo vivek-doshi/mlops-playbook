@@ -42,6 +42,13 @@ MODEL_LOAD_STATUS = Counter(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    EDUCATIONAL NOTE:
+    FastAPI lifespans run once when the server starts. We load the machine learning model
+    into memory here (via MLflow Registry or local file).
+    Loading models is computationally expensive, so it MUST be done on startup, never
+    inside the /predict route (which would cause massive latency on every request).
+    """
     global MODEL_LOADED
     try:
         import mlflow
@@ -103,7 +110,15 @@ class BatchInferenceResponse(BaseModel):
 
 @app.post("/predict", response_model=InferenceResponse)
 def predict(request: InferenceRequest, api_req: Request):
+    """
+    EDUCATIONAL NOTE:
+    This is an Online (Real-time) Inference endpoint. It expects a JSON payload matching
+    `InferenceRequest`. It transforms the data using the loaded `feature_pipeline`
+    and predicts using the loaded `model`.
+    """
     if not MODEL_LOADED:
+        # We return a 503 instead of crashing to signal to Kubernetes that we are
+        # temporarily unavailable (often caught by readiness probes).
         raise HTTPException(status_code=503, detail="Model not loaded. Run the training pipeline first.")
 
     start = time.time()

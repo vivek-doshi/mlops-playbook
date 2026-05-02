@@ -1,27 +1,35 @@
+# EDUCATIONAL NOTE:
+# This YAML file centralizes all configurable parameters for the MLOps pipeline.
+# By avoiding hardcoded values in scripts, Data Scientists can easily run experiments
+# with different parameters just by changing this file or passing overrides.
+
 data:
   processed_path: data/processed/dataset.csv
   random_state: 42
   raw_path: data/raw/dataset.csv
   test_size: 0.2
+
 mlflow:
   experiment_name: churn_prediction
   tracking_uri: sqlite:///mlruns.db
+
 model:
   max_depth: 5
   n_estimators: 100
   type: RandomForest
+
 tuning:
-  enabled: false
+  enabled: false          # set to true to run Optuna before training
   n_trials: 20
   study_name: rf_tuning
 
 registry:
-  enabled: true
+  enabled: true           # If true, high performing models are registered automatically
   model_name: churn_prediction_rf
-  accuracy_threshold: 0.70
+  accuracy_threshold: 0.70 # Minimum accuracy required to promote a model to Production
   promote_to: Production
 
 monitoring:
-  drift_threshold: 0.3
+  drift_threshold: 0.3    # Alert if >30% of features drift
   reference_data_path: data/raw/dataset.csv
   reports_dir: monitoring/reports
