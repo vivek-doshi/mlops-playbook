@@ -102,11 +102,22 @@ cd mlops-playbook
 # Install dependencies
 pip install -r requirements.txt
 
-# Run training pipeline
+# Run data ingestion pipeline
+python pipelines/data_ingestion.py
+
+# Run training pipeline (This must be run to generate model artifacts in `models/` before inference)
 python pipelines/training_pipeline.py
 
 # Start inference service
 uvicorn src.inference.api:app --reload
+
+## Alternatively, using Docker
+```bash
+# Important: ensure training pipeline is run first to generate models in models/
+python pipelines/training_pipeline.py
+
+docker-compose up --build
+```
 
 🧪 Example Use Case
 

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-inference
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mlops-inference
+  template:
+    metadata:
+      labels:
+        app: mlops-inference
+    spec:
+      containers:
+      - name: inference-api
+        image: mlops-inference:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: MODEL_PATH
+          value: "models/model.pkl"
+        - name: PIPELINE_PATH
+          value: "models/feature_pipeline.pkl"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlops-inference-service
+spec:
+  selector:
+    app: mlops-inference
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: LoadBalancer

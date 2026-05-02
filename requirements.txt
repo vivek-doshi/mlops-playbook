@@ -1,0 +1,11 @@
+pandas
+scikit-learn
+pydantic
+mlflow
+fastapi
+uvicorn
+pytest
+pyyaml
+httpx
+hydra-core
+flake8
