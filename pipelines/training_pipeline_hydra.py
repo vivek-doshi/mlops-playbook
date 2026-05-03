@@ -3,6 +3,7 @@ import os
 import hydra
 import joblib
 import mlflow
+import mlflow.sklearn
 import pandas as pd
 from omegaconf import DictConfig
 from sklearn.metrics import accuracy_score, precision_score, recall_score
@@ -69,10 +70,28 @@ def run_training_hydra(config: DictConfig):
         joblib.dump(model, model_path)
         joblib.dump(feature_pipeline, pipeline_path)
 
-        mlflow.log_artifact(model_path)
+        mlflow.sklearn.log_model(model, "model")
         mlflow.log_artifact(pipeline_path)
         print("Training complete. Artifacts saved.")
 
+        # Model registry (optional — controlled by config)
+        if "registry" in config and config.registry.get("enabled", True):
+            from src.models.registry import promote_model, register_model
+
+            run_id = mlflow.active_run().info.run_id
+            version = register_model(
+                run_id=run_id,
+                model_artifact_path="model",
+                model_name=config.registry.model_name,
+                accuracy=accuracy,
+                accuracy_threshold=config.registry.accuracy_threshold,
+            )
+            if version:
+                promote_model(
+                    model_name=config.registry.model_name,
+                    version=version,
+                    stage=config.registry.promote_to,
+                )
 
 if __name__ == "__main__":
     run_training_hydra()
