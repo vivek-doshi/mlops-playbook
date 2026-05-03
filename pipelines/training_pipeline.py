@@ -22,6 +22,20 @@ def load_config(config_path: str) -> dict:
 
 
 def run_training(config_path: str):
+    """
+    EDUCATIONAL NOTE:
+    This pipeline acts as the orchestrator for the training phase. It handles:
+    1. Loading data
+    2. Optional Hyperparameter tuning (finding the best settings for the model)
+    3. Feature Engineering (transforming data so the model can understand it)
+    4. Model Training (learning patterns)
+    5. Evaluation (calculating accuracy/metrics)
+    6. Tracking (logging metrics and saving model artifacts via MLflow)
+    7. Registry (optional: promoting good models to a staging or production status)
+
+    By using configurations, we avoid hardcoding things like file paths or model parameters,
+    making the pipeline highly reusable.
+    """
     config = load_config(config_path)
 
     # MLflow Setup
