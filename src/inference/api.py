@@ -72,6 +72,10 @@ app = FastAPI(title="MLOps Playbook Inference API", version="1.0", lifespan=life
 Instrumentator().instrument(app).expose(app)
 
 
+# EDUCATIONAL NOTE:
+# This Pydantic model defines the exact shape of the JSON that the API expects.
+# It acts as a strict contract between the client (e.g., a web app) and our model.
+# If a client sends 'feature_0' as a string when we expect a float, Pydantic throws a clear error.
 class InferenceRequest(BaseModel):
     feature_0: float
     feature_1: float

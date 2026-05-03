@@ -5,7 +5,14 @@ from sklearn.datasets import make_classification
 
 
 def generate_synthetic_data(output_path: str, n_samples: int = 1000) -> pd.DataFrame:
-    """Generates a synthetic dataset for classification."""
+    """
+    Generates a synthetic dataset for classification.
+
+    EDUCATIONAL NOTE:
+    In a real-world scenario, this function would connect to a database (like PostgreSQL or Snowflake)
+    or cloud storage (like S3) using credentials to fetch your organization's real data.
+    We use synthetic data here purely so the repository runs out-of-the-box.
+    """
     X, y = make_classification(
         n_samples=n_samples,
         n_features=10,
