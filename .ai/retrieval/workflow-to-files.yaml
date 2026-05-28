@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-05-22
+updated: 2026-05-28
 workflow_to_files:
   kubernetes_microservice:
     entrypoints:
@@ -78,6 +78,64 @@ workflow_to_files:
       - cd/
       - terraform/
       - security/
+
+  # -------------------------------------------------------------------------
+  # MLOps Workflows
+  # -------------------------------------------------------------------------
+
+  mlops_experiment:
+    description: "Log and track an ML experiment with MLflow and DVC"
+    entrypoints:
+      - docs/golden-paths/experiment-tracking.md
+      - GETTING_STARTED.md
+    implementation:
+      - mlflow/tracking-server/docker-compose.yml
+      - dvc/pipeline-templates/train-eval-deploy.yaml
+      - ci/github-actions/model-training/train.yml
+    guardrails:
+      - policy/data-governance/README.md
+      - ci/github-actions/_shared/reusable-mlops-scan.yml
+
+  mlops_model_promotion:
+    description: "Promote a trained model through Staging to Production"
+    entrypoints:
+      - docs/golden-paths/model-registry.md
+      - policy/model-approval/README.md
+    implementation:
+      - ci/github-actions/model-evaluation/evaluate.yml
+      - policy/model-approval/approved-versions.yaml
+      - monitoring/evidently/drift_report.py
+    guardrails:
+      - policy/model-approval/README.md
+      - policy/data-governance/pii-model-checklist.md
+
+  mlops_serving:
+    description: "Deploy a model to a serving runtime (Triton, TorchServe, vLLM)"
+    entrypoints:
+      - docs/golden-paths/model-serving.md
+      - serving/README.md
+    implementation:
+      - serving/triton/
+      - serving/torchserve/
+      - serving/vllm/
+      - ci/github-actions/model-deployment/deploy.yml
+      - terraform/gpu-cluster/main.tf
+    guardrails:
+      - docs/guides/gpu-cost-governance.md
+      - policy/model-approval/README.md
+
+  mlops_monitoring:
+    description: "Monitor production model for data drift and accuracy degradation"
+    entrypoints:
+      - docs/golden-paths/model-monitoring.md
+      - monitoring/README.md
+    implementation:
+      - monitoring/evidently/drift_report.py
+      - monitoring/alerts/drift-alerts.yaml
+      - monitoring/dashboards/model-health.json
+      - ci/github-actions/model-monitoring/drift-check.yml
+    guardrails:
+      - policy/model-approval/README.md
       - observability/
       - finops/
     guardrails:

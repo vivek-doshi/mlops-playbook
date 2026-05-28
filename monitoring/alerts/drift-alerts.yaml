@@ -1,0 +1,153 @@
+# Prometheus Alert Rules — ML Model Drift and Health
+#
+# These alert rules complement the platform infrastructure alerts in
+# devops-playbook/observability/prometheus/.
+#
+# HOW TO USE:
+#   1. Mount this file into your Prometheus configuration directory.
+#   2. Add a `rule_files` entry in prometheus.yml:
+#        rule_files:
+#          - /etc/prometheus/rules/drift-alerts.yaml
+#   3. Prometheus evaluates these rules every `evaluation_interval` (default: 1m).
+#
+# ALERT ROUTING:
+#   These alerts are labelled with `team: ml-ops`.
+#   Configure your Alertmanager to route `team: ml-ops` alerts to your team's
+#   Slack channel or PagerDuty integration.
+#
+# BEGINNER NOTE:
+#   Each alert has:
+#     - expr: a PromQL query. When it evaluates to > 0, the alert is "firing".
+#     - for: how long the condition must be true before alerting (avoids flapping).
+#     - labels: metadata for routing in Alertmanager.
+#     - annotations: human-readable description shown in the alert notification.
+#
+# METRIC SOURCES:
+#   The metrics queried here are exposed by:
+#   - monitoring/evidently/drift_report.py  (via prometheus_client push gateway or expose)
+#   - serving runtime /metrics endpoints (Triton, TorchServe, vLLM)
+
+groups:
+  - name: ml-data-drift
+    # Check drift metrics every 5 minutes.
+    interval: 5m
+
+    rules:
+      # ------------------------------------------------------------------ #
+      # DATA DRIFT WARNING
+      # Fires when the dataset drift score has been above 0.3 for 30 minutes.
+      # Drift score is set by the scheduled drift check pipeline.
+      # Action: investigate which features are drifting; may not require
+      # immediate retraining if the drift is expected (e.g., seasonal effect).
+      # ------------------------------------------------------------------ #
+      - alert: DataDriftDetected
+        expr: ml_dataset_drift_score > 0.3
+        for: 30m
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Data drift detected for model {{ $labels.model_name }}"
+          description: >
+            Dataset drift score {{ $value | humanizePercentage }} exceeds the warning
+            threshold of 0.3 for model {{ $labels.model_name }} in
+            environment {{ $labels.environment }}.
+            Review the Evidently report in MLflow and check for upstream data changes.
+
+      # ------------------------------------------------------------------ #
+      # SEVERE DATA DRIFT — CRITICAL
+      # Fires when drift score exceeds 0.6 for 10 minutes.
+      # At this level of drift, model accuracy is likely degraded.
+      # Action: pause automated deployments, trigger retraining pipeline.
+      # ------------------------------------------------------------------ #
+      - alert: SevereDriftDetected
+        expr: ml_dataset_drift_score > 0.6
+        for: 10m
+        labels:
+          severity: critical
+          team: ml-ops
+        annotations:
+          summary: "SEVERE data drift for model {{ $labels.model_name }}"
+          description: >
+            Dataset drift score {{ $value | humanizePercentage }} exceeds the critical
+            threshold of 0.6 for model {{ $labels.model_name }}.
+            Retraining is strongly recommended. Automated deployments are blocked
+            until drift is resolved.
+
+  - name: ml-model-accuracy
+    interval: 15m
+
+    rules:
+      # ------------------------------------------------------------------ #
+      # MODEL ACCURACY DEGRADATION
+      # Fires when the accuracy metric (computed from labelled validation batches)
+      # drops more than 10% below the registered baseline accuracy.
+      # Requires labels to be available — applicable for batch prediction workflows.
+      # ------------------------------------------------------------------ #
+      - alert: ModelAccuracyDegraded
+        expr: |
+          (
+            ml_model_accuracy_score
+            /
+            ml_model_baseline_accuracy_score offset 7d
+          ) < 0.9
+        for: 1h
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Model accuracy degraded: {{ $labels.model_name }}"
+          description: >
+            Model {{ $labels.model_name }} accuracy {{ $value | humanizePercentage }}
+            is more than 10% below the baseline from 7 days ago.
+            Consider triggering a retraining run.
+
+  - name: ml-prediction-volume
+    interval: 2m
+
+    rules:
+      # ------------------------------------------------------------------ #
+      # PREDICTION VOLUME ANOMALY — TOO LOW
+      # Fires when prediction request rate drops to near zero for 15 minutes.
+      # This usually indicates the serving endpoint is down or upstream pipeline
+      # has stopped sending data.
+      # ------------------------------------------------------------------ #
+      - alert: PredictionVolumeTooLow
+        expr: |
+          rate(ml_predictions_total[5m]) < 0.1
+          and
+          on() hour() >= 8
+          and
+          on() hour() < 20
+        for: 15m
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Very low prediction volume for {{ $labels.model_name }}"
+          description: >
+            Prediction rate for {{ $labels.model_name }} has been below 0.1 req/s
+            for 15 minutes during business hours (8am–8pm UTC).
+            Check the serving endpoint and upstream data pipeline.
+
+      # ------------------------------------------------------------------ #
+      # PREDICTION VOLUME SPIKE — TOO HIGH
+      # Fires when prediction request rate is 5x the normal rate for 10 minutes.
+      # This can indicate a traffic flood, a runaway retry loop, or an upstream
+      # system sending duplicate requests.
+      # ------------------------------------------------------------------ #
+      - alert: PredictionVolumeSpike
+        expr: |
+          rate(ml_predictions_total[5m])
+          >
+          5 * avg_over_time(rate(ml_predictions_total[5m])[1h:5m])
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Abnormal prediction volume spike for {{ $labels.model_name }}"
+          description: >
+            Prediction rate for {{ $labels.model_name }} is {{ $value | humanize }}
+            req/s — more than 5x the hourly average.
+            Check for retry storms or unexpected traffic bursts.

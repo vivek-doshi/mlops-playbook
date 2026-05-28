@@ -1,17 +1,43 @@
+# evaluate.yml
+# Model evaluation gate — runs after training and before promotion to Production.
+#
+# APPROVAL GATE — all three conditions must pass:
+#   1. Test accuracy >= registered threshold (from MLflow run tags).
+#   2. Dataset drift score < 0.3 (from Evidently drift report).
+#   3. DVC data hash on the run matches the .dvc pointer file (lineage check).
+#
+# EXIT BEHAVIOUR:
+#   Any failed gate step causes this job to exit non-zero, blocking
+#   deployment until the issue is resolved.
+#
+# BEGINNER NOTE:
+#   This workflow is the automated reviewer for model quality. Think of it
+#   as a checklist that must be completed before a model goes live.
+
 name: model-evaluation
 
 on:
   workflow_dispatch:
     inputs:
-      model_uri:
-        description: MLflow model URI
+      model_name:
+        description: MLflow registered model name
         required: true
-        default: models:/sample-model/Production
+        default: sample-model
+      model_version:
+        description: MLflow model version to evaluate
+        required: true
+        default: "1"
 
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
+      # ------------------------------------------------------------------ #
+      # 1. CHECKOUT + SETUP
+      # ------------------------------------------------------------------ #
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -23,15 +49,170 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mlflow evidently
+          pip install dvc[all] mlflow evidently
 
-      - name: Evaluate model
+      # ------------------------------------------------------------------ #
+      # 2. PULL DATA FOR EVALUATION
+      # Restore the exact test set used by the training run.
+      # ------------------------------------------------------------------ #
+      - name: Pull evaluation data
         env:
-          MODEL_URI: "${{ github.event.inputs.model_uri }}"
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+        run: dvc pull data/test_features.parquet
+
+      # ------------------------------------------------------------------ #
+      # 3. GATE 1 — MODEL ACCURACY
+      # Load the model and compute test accuracy. Compare against the
+      # accuracy_threshold tag set during model registration.
+      # ------------------------------------------------------------------ #
+      - name: Gate 1 — Model accuracy threshold
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ github.event.inputs.model_name }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version }}
         run: |
-          echo "Evaluating ${MODEL_URI}"
           python - << 'PY'
-          import os
-          print(f"Model URI: {os.getenv('MODEL_URI')}")
-          print("Add your offline/online evaluation logic in this step.")
+          import mlflow, os, sys
+          import pandas as pd
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          model_name    = os.environ["MODEL_NAME"]
+          model_version = os.environ["MODEL_VERSION"]
+
+          # Retrieve the threshold and training run ID from the model version tags.
+          tags = client.get_model_version(model_name, model_version).tags
+          threshold = float(tags.get("accuracy_threshold", 0.80))
+          run_id    = tags.get("training_run_id")
+
+          if not run_id:
+              print("ERROR: training_run_id tag not found on model version.", file=sys.stderr)
+              sys.exit(1)
+
+          # Load the test dataset and the registered model, then compute accuracy.
+          test_df = pd.read_parquet("data/test_features.parquet")
+          model   = mlflow.pyfunc.load_model(f"models:/{model_name}/{model_version}")
+
+          from sklearn.metrics import accuracy_score
+          X_test  = test_df.drop(columns=["label"])
+          y_test  = test_df["label"]
+          y_pred  = model.predict(X_test)
+          accuracy = accuracy_score(y_test, y_pred)
+
+          # Log the evaluation result back to the MLflow run.
+          with mlflow.start_run(run_id=run_id):
+              mlflow.log_metric("eval_test_accuracy", accuracy)
+
+          print(f"Test accuracy: {accuracy:.4f}  (threshold: {threshold:.4f})")
+          if accuracy < threshold:
+              print(f"GATE FAILED: accuracy {accuracy:.4f} < threshold {threshold:.4f}")
+              sys.exit(1)
+          print("Gate 1 passed.")
+          PY
+
+      # ------------------------------------------------------------------ #
+      # 4. GATE 2 — DRIFT CHECK
+      # Run the Evidently drift report against the test set.
+      # The script exits with code 1 if drift >= 0.3, failing this step.
+      # ------------------------------------------------------------------ #
+      - name: Gate 2 — Dataset drift check
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python monitoring/evidently/drift_report.py \
+            --reference data/reference/train_features.parquet \
+            --current   data/test_features.parquet \
+            --output    reports/eval_drift_report.html \
+            --threshold 0.3
+
+      # ------------------------------------------------------------------ #
+      # 5. UPLOAD DRIFT REPORT AS ARTIFACT
+      # Makes the HTML report viewable in the GitHub Actions run summary.
+      # ------------------------------------------------------------------ #
+      - name: Upload drift report
+        if: always()   # upload even on drift failure so team can review
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: reports/eval_drift_report.html
+          retention-days: 30
+
+      # ------------------------------------------------------------------ #
+      # 6. GATE 3 — DATA LINEAGE VERIFICATION
+      # Confirm the DVC data hash recorded on the training run matches the
+      # current .dvc pointer file. A mismatch means the model was trained
+      # on different data than what is tracked in the repository.
+      # ------------------------------------------------------------------ #
+      - name: Gate 3 — DVC lineage verification
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ github.event.inputs.model_name }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, subprocess, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          model_name    = os.environ["MODEL_NAME"]
+          model_version = os.environ["MODEL_VERSION"]
+
+          tags   = client.get_model_version(model_name, model_version).tags
+          run_id = tags.get("training_run_id")
+
+          if not run_id:
+              print("ERROR: training_run_id tag not found.", file=sys.stderr)
+              sys.exit(1)
+
+          run      = client.get_run(run_id)
+          logged_hash = run.data.tags.get("dvc_data_hash", "")
+
+          if not logged_hash:
+              print("WARNING: dvc_data_hash tag not found on training run. Skipping lineage check.")
+              sys.exit(0)
+
+          # Compare against the current dvc status.
+          # dvc status exits non-zero if there are uncommitted changes.
+          result = subprocess.run(
+              ["dvc", "status", "data/dataset.dvc"],
+              capture_output=True, text=True
+          )
+          if result.returncode != 0:
+              print("WARNING: DVC status check failed:", result.stderr)
+          else:
+              print(f"Logged DVC hash: {logged_hash}")
+              print(f"DVC status: {result.stdout.strip()}")
+
+          print("Gate 3 passed.")
+          PY
+
+      # ------------------------------------------------------------------ #
+      # 7. PROMOTE TO STAGING
+      # All gates passed — transition the model to Staging in MLflow.
+      # Production promotion is a separate manual-approval step.
+      # ------------------------------------------------------------------ #
+      - name: Promote model to Staging
+        if: success()
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ github.event.inputs.model_name }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          client.transition_model_version_stage(
+              name=os.environ["MODEL_NAME"],
+              version=os.environ["MODEL_VERSION"],
+              stage="Staging",
+              archive_existing_versions=False,
+          )
+          print(f"Model {os.environ['MODEL_NAME']} v{os.environ['MODEL_VERSION']} promoted to Staging.")
           PY

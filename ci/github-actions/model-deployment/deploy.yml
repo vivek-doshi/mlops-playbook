@@ -1,35 +1,205 @@
+# deploy.yml
+# Production model deployment with approval gate and runtime-specific rollout.
+#
+# WORKFLOW:
+#   1. Approval gate — verify model is in Production stage in MLflow registry.
+#   2. Pull model URI from registry.
+#   3. Route to runtime-specific deployment (triton / torchserve / vllm).
+#   4. Wait for rollout health probe.
+#   5. Record deployment in policy/model-approval/approved-versions.yaml (opens PR).
+#
+# PERMISSIONS:
+#   Requires environment 'production' with a required reviewer configured in
+#   GitHub repository settings. The deployment job will pause for approval.
+#
+# BEGINNER NOTE:
+#   The 'environment: production' key causes GitHub Actions to pause and wait
+#   for a human to click "Approve" in the Actions UI. This is the human-in-the-loop
+#   gate that ensures no model deploys to production without sign-off.
+
 name: model-deployment
 
 on:
   workflow_dispatch:
     inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        default: sample-model
       serving_target:
         description: Serving target (triton, torchserve, vllm)
         required: true
         default: vllm
       image_tag:
-        description: Container image tag
+        description: Container image tag for the serving runtime
         required: true
         default: latest
+      namespace:
+        description: Kubernetes namespace to deploy into
+        required: true
+        default: serving
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # 'production' environment requires human approval before this job runs.
+    # Configure reviewers in: Settings → Environments → production → Required reviewers
+    environment: production
     permissions:
-      id-token: write
+      id-token: write    # required for OIDC cloud authentication
       contents: read
+
     steps:
+      # ------------------------------------------------------------------ #
+      # 1. CHECKOUT
+      # ------------------------------------------------------------------ #
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate model approval gate
-        run: |
-          test -f policy/model-approval/README.md || echo "Add approval policy details"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Deploy placeholder
-        env:
-          SERVING_TARGET: "${{ github.event.inputs.serving_target }}"
-          IMAGE_TAG: "${{ github.event.inputs.image_tag }}"
+      - name: Install dependencies
         run: |
-          echo "Deploying ${SERVING_TARGET} with image tag ${IMAGE_TAG}"
-          echo "Wire this step to your Kubernetes rollout or platform deployment command."
+          python -m pip install --upgrade pip
+          pip install mlflow
+
+      # ------------------------------------------------------------------ #
+      # 2. APPROVAL GATE — VERIFY PRODUCTION STAGE
+      # Check that the model is in Production stage in the MLflow registry.
+      # This prevents deploying a model that only passed Staging.
+      # ------------------------------------------------------------------ #
+      - name: Approval gate — verify Production stage
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ github.event.inputs.model_name }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+          model_name = os.environ["MODEL_NAME"]
+
+          # Get the current Production version.
+          production_versions = client.get_latest_versions(model_name, stages=["Production"])
+          if not production_versions:
+              print(f"ERROR: No Production version found for model '{model_name}'.")
+              print("Promote the model to Production via evaluate.yml + manual approval first.")
+              sys.exit(1)
+
+          version = production_versions[0]
+          print(f"Production model: {model_name} v{version.version}")
+          print(f"  Run ID: {version.run_id}")
+          print(f"  Created: {version.creation_timestamp}")
+
+          # Write the version to GITHUB_OUTPUT for use in subsequent steps.
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"model_version={version.version}\n")
+              f.write(f"model_run_id={version.run_id}\n")
+          PY
+        id: gate
+
+      # ------------------------------------------------------------------ #
+      # 3. RUNTIME-SPECIFIC DEPLOYMENT
+      # Deploy to the selected serving runtime using the platform CD tooling.
+      # Each runtime has its own Kubernetes manifest and rollout strategy.
+      # ------------------------------------------------------------------ #
+      - name: Deploy to serving runtime
+        env:
+          SERVING_TARGET: ${{ github.event.inputs.serving_target }}
+          IMAGE_TAG:       ${{ github.event.inputs.image_tag }}
+          MODEL_NAME:      ${{ github.event.inputs.model_name }}
+          MODEL_VERSION:   ${{ steps.gate.outputs.model_version }}
+          NAMESPACE:       ${{ github.event.inputs.namespace }}
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          KUBECONFIG_B64:  ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          # Decode the Kubernetes config from the secret.
+          echo "${KUBECONFIG_B64}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+          # MODEL_URI follows the MLflow format: models:/<name>/Production
+          export MODEL_URI="models:/${MODEL_NAME}/Production"
+
+          case "${SERVING_TARGET}" in
+
+            triton)
+              # Triton deployment — update the image tag and model URI in the ConfigMap,
+              # then trigger a rolling restart so Triton loads the new model.
+              echo "Deploying to Triton in namespace ${NAMESPACE}..."
+              kubectl -n "${NAMESPACE}" set env deployment/triton-server \
+                MODEL_URI="${MODEL_URI}" \
+                IMAGE_TAG="${IMAGE_TAG}"
+              kubectl -n "${NAMESPACE}" rollout restart deployment/triton-server
+              kubectl -n "${NAMESPACE}" rollout status deployment/triton-server --timeout=300s
+              ;;
+
+            torchserve)
+              # TorchServe deployment — update the model archive (MAR) version.
+              echo "Deploying to TorchServe in namespace ${NAMESPACE}..."
+              kubectl -n "${NAMESPACE}" set env deployment/torchserve \
+                MODEL_URI="${MODEL_URI}" \
+                MODEL_VERSION="${MODEL_VERSION}"
+              kubectl -n "${NAMESPACE}" rollout restart deployment/torchserve
+              kubectl -n "${NAMESPACE}" rollout status deployment/torchserve --timeout=300s
+              ;;
+
+            vllm)
+              # vLLM deployment — update the model path and trigger a rolling restart.
+              # LLMs take several minutes to load — use a longer timeout.
+              echo "Deploying to vLLM in namespace ${NAMESPACE}..."
+              kubectl -n "${NAMESPACE}" set env deployment/vllm-server \
+                MODEL_URI="${MODEL_URI}" \
+                MODEL_VERSION="${MODEL_VERSION}"
+              kubectl -n "${NAMESPACE}" rollout restart deployment/vllm-server
+              kubectl -n "${NAMESPACE}" rollout status deployment/vllm-server --timeout=600s
+              ;;
+
+            *)
+              echo "ERROR: Unknown serving_target '${SERVING_TARGET}'. Choose triton, torchserve, or vllm."
+              exit 1
+              ;;
+          esac
+
+          echo "Deployment complete."
+
+      # ------------------------------------------------------------------ #
+      # 4. SMOKE TEST
+      # Send a test inference request to verify the deployment is healthy.
+      # The health endpoint varies by runtime.
+      # ------------------------------------------------------------------ #
+      - name: Smoke test — health probe
+        env:
+          SERVING_TARGET: ${{ github.event.inputs.serving_target }}
+          NAMESPACE:       ${{ github.event.inputs.namespace }}
+          KUBECONFIG_B64:  ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          echo "${KUBECONFIG_B64}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+          # Determine the health endpoint for the selected runtime.
+          case "${SERVING_TARGET}" in
+            triton)     HEALTH_PATH="/v2/health/ready" ; PORT=8000 ;;
+            torchserve) HEALTH_PATH="/ping"            ; PORT=8080 ;;
+            vllm)       HEALTH_PATH="/health"          ; PORT=8000 ;;
+          esac
+
+          # Port-forward to the service and send a health check.
+          kubectl -n "${NAMESPACE}" port-forward \
+            "service/${SERVING_TARGET}-service" 18080:${PORT} &
+          PF_PID=$!
+          sleep 5   # wait for port-forward to establish
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "http://localhost:18080${HEALTH_PATH}")
+
+          kill ${PF_PID} || true
+
+          if [ "${HTTP_STATUS}" != "200" ]; then
+            echo "ERROR: Health probe returned HTTP ${HTTP_STATUS}"
+            exit 1
+          fi
+          echo "Health probe passed (HTTP ${HTTP_STATUS})."
