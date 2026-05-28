@@ -13,7 +13,7 @@ This repository consumes platform primitives from `cicd-reference` and focuses o
 
 This repository assumes your platform layer is already provisioned.
 
-The recommended platform foundation is: [cicd-reference](https://github.com/your-org/cicd-reference)
+The recommended platform foundation is: [cicd-reference](https://github.com/vivek-doshi/devops-playbook)
 
 Specifically, you need:
 
