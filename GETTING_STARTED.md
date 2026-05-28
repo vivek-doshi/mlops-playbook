@@ -8,20 +8,50 @@ cloning the repo to viewing your model in the MLflow UI — in under 30 minutes.
 ## Prerequisites
 
 | Tool | Minimum version | Install guide |
-|------|----------------|--------------|
+|------|----------------|----------------------|
 | Python | 3.11 | https://python.org |
 | Git | 2.40 | https://git-scm.com |
 | DVC | 3.x | `pip install dvc[all]` |
 | MLflow | 2.14 | `pip install mlflow` |
-| Docker (optional, for serving) | 24 | https://docker.com |
+| Docker (for MLflow stack + serving) | 24 | https://docker.com |
+| VS Code + Dev Containers extension | latest | https://code.visualstudio.com |
 | kubectl (optional, for Kubernetes serving) | 1.28 | https://kubernetes.io/docs/tasks/tools |
+
+> **GPU / RTX 5070 users** → see [docs/local-setup.md](docs/local-setup.md) for NVIDIA driver setup, Docker GPU passthrough, and running vLLM / Triton locally.
 
 You do **not** need a cloud account for the local development path.
 DVC will use a local directory as the remote, and MLflow will store artifacts locally.
 
 ---
 
-## Quick Bootstrap
+## Recommended Setup: Dev Container
+
+The fastest way to get a fully working environment is to open the repo in the included Dev Container. It ships Python 3.11, DVC, MLflow, Terraform, kubectl, GitHub CLI, and GPU passthrough pre-configured.
+
+1. Install **Docker Desktop** ≥ 4.28 and the **Dev Containers** VS Code extension.
+2. Clone the repo and open it in VS Code:
+
+   ```powershell
+   git clone https://github.com/your-org/mlops-playbook.git
+   code mlops-playbook
+   ```
+
+3. VS Code shows: **“Reopen in Container”** — click it (or `Ctrl+Shift+P` → *Dev Containers: Reopen in Container*).
+4. After the build completes (~3 min first time), run:
+
+   ```bash
+   task setup:dev
+   ```
+
+That’s it. Skip to [Step 2 — Pull Training Data](#step-2--pull-training-data) below.
+
+For GPU-specific setup (RTX 5070, CUDA 12.8, vLLM, Triton), see the full guide: [docs/local-setup.md](docs/local-setup.md).
+
+---
+
+## Manual Bootstrap (Bare-Metal Alternative)
+
+Skip this section if you are using the Dev Container (recommended above).
 
 Run the bootstrap script to create the local environment, install dependencies,
 and configure DVC and MLflow for local development:
@@ -158,6 +188,7 @@ See [Model Registry](docs/golden-paths/model-registry.md) for the full flow.
 | I want to… | Go to… |
 |-----------|-------|
 | Add drift monitoring to my deployed model | [Model Monitoring](docs/golden-paths/model-monitoring.md) |
+| Set up the local environment with GPU | [Local Setup Guide](docs/local-setup.md) |
 | Understand architectural decisions | [docs/decisions/](docs/decisions/) |
 | Set up CI for automated training | [ci/github-actions/](ci/github-actions/) |
 | Deploy to Kubernetes | [Model Serving](docs/golden-paths/model-serving.md) |
@@ -168,6 +199,7 @@ See [Model Registry](docs/golden-paths/model-registry.md) for the full flow.
 ## Getting Help
 
 1. Check the relevant golden path guide in `docs/golden-paths/`.
-2. Check the ADRs in `docs/decisions/` for rationale behind platform choices.
+2. Check the ADRs in `docs/decisions/` for rationale behind platform choices (9 records: ADR-ML-001 – ADR-ML-009).
 3. Search the `monitoring/` and `policy/` directories for operational runbooks.
-4. Open a GitHub Issue using the "MLOps Question" template.
+4. For GPU / local setup issues, see [docs/local-setup.md](docs/local-setup.md) § Troubleshooting.
+5. Open a GitHub Issue using the issue template (select the appropriate category: bug, feature request, or model quality issue).

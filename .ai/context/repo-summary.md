@@ -23,9 +23,10 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Drift monitoring** — Evidently AI scripts, Prometheus alert rules, and Grafana dashboard in `monitoring/`.
 - **Model approval policy** — three-gate CI evaluation + approval registry in `policy/model-approval/`.
 - **Data governance policy** — classification levels, PII handling rules, retention, and PII checklist in `policy/data-governance/`.
-- **Architecture Decision Records** — MLflow (ADR-001), DVC (ADR-002), three-runtime serving (ADR-003) in `docs/decisions/`.
+- **Architecture Decision Records** — MLflow (ADR-001), DVC (ADR-002), three-runtime serving (ADR-003), Evidently drift monitoring (ADR-004), GitHub Actions CI (ADR-005), Terraform IaC (ADR-006), Dev Containers (ADR-007), three-gate model approval (ADR-008), pre-commit toolchain (ADR-009) in `docs/decisions/`.
 - **Security hardening** — reusable CI security scan (pip-audit + gitleaks + model size check) in `ci/github-actions/_shared/`.
-- `GETTING_STARTED.md` — 5-step first experiment walkthrough and ML lifecycle quick links.
+- **Local setup guide** — RTX 5070 GPU passthrough, Dev Container setup, vLLM/Triton local testing in `docs/local-setup.md`.
+- `GETTING_STARTED.md` — Dev Container quickstart + 5-step first experiment walkthrough and ML lifecycle quick links.
 
 ## How Teams Use It
 

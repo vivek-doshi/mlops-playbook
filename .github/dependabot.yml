@@ -1,0 +1,154 @@
+# .github/dependabot.yml
+#
+# Dependabot automatically opens pull requests to keep dependencies up to date.
+# It checks the ecosystems configured below on the defined schedule and opens
+# one PR per outdated dependency (or group).
+#
+# BEGINNER NOTE:
+#   A Dependabot PR looks like any other PR — review the changelog, check CI,
+#   then merge. Dependabot PRs are labelled `dependencies` automatically.
+#
+# DOCS: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # ──────────────────────────────────────────────────────────────────────────
+  # GitHub Actions — workflow dependencies
+  # Updates `uses: owner/action@vX.Y.Z` pins in all workflow files.
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
+    # Group all GitHub Actions updates into a single PR to reduce noise.
+    groups:
+      github-actions-all:
+        patterns: ["*"]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Python (pip) — ML and monitoring dependencies
+  # Watches the root requirements files. If you have per-module requirements,
+  # add additional entries pointing to those directories.
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+    # Group ML framework updates together; security patches still get individual PRs.
+    groups:
+      mlflow:
+        patterns: ["mlflow*"]
+      evidently:
+        patterns: ["evidently*"]
+      dvc:
+        patterns: ["dvc*"]
+      data-science:
+        patterns: ["pandas*", "numpy*", "scikit-learn*", "pyarrow*"]
+      dev-tooling:
+        patterns: ["black*", "isort*", "ruff*", "bandit*", "pre-commit*", "pytest*"]
+    # Allow both direct and indirect (transitive) dependency updates.
+    versioning-strategy: "auto"
+    # Limit open PRs to avoid overwhelming the team.
+    open-pull-requests-limit: 10
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Docker — base image updates in docker-compose.yml files
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/mlflow/tracking-server"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+    groups:
+      mlflow-stack:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/serving/vllm"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "serving"
+    commit-message:
+      prefix: "chore(docker)"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Terraform — provider version updates
+  # Dependabot reads `required_providers` blocks in .tf files.
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "terraform"
+    directory: "/terraform/aws-sagemaker"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "aws"
+    commit-message:
+      prefix: "chore(terraform)"
+    groups:
+      aws-providers:
+        patterns: ["hashicorp/aws*", "hashicorp/random*"]
+
+  - package-ecosystem: "terraform"
+    directory: "/terraform/gcp-vertex-ai"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "gcp"
+    commit-message:
+      prefix: "chore(terraform)"
+    groups:
+      gcp-providers:
+        patterns: ["hashicorp/google*"]
+
+  - package-ecosystem: "terraform"
+    directory: "/terraform/gpu-cluster"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "gpu"
+    commit-message:
+      prefix: "chore(terraform)"

@@ -29,7 +29,8 @@ Routes user intent to the minimum correct repository domain.
 - "Feature store / Vertex AI features" -> docs/guides/feature-store-patterns.md + terraform/gcp-vertex-ai/
 - "GPU cost / GPU approval / KEDA scale-to-zero" -> docs/guides/gpu-cost-governance.md
 - "End-to-end MLOps workflow" -> docs/golden-paths/mlops-workflow.md
-- "Architecture decision / why MLflow / why DVC / why three runtimes" -> docs/decisions/
+- "Architecture decision / why MLflow / why DVC / why three runtimes / why Evidently / why GitHub Actions / why Terraform / why Dev Container / why pre-commit" -> docs/decisions/
+- "Local setup / dev container / GPU setup / CUDA / RTX / vLLM local / Triton local / Windows setup" -> docs/local-setup.md
 - "Security scan / CVE / secrets scan / gitleaks" -> ci/github-actions/_shared/reusable-mlops-scan.yml
 - "MLflow authentication / MLflow auth" -> mlflow/tracking-server/docker-compose.yml
 

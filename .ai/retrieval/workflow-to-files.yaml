@@ -138,6 +138,38 @@ workflow_to_files:
       - policy/model-approval/README.md
       - observability/
       - finops/
+
+  mlops_local_setup:
+    description: "Set up local dev environment with GPU passthrough and Dev Container"
+    entrypoints:
+      - docs/local-setup.md
+      - GETTING_STARTED.md
+    implementation:
+      - .devcontainer/devcontainer.json
+      - scripts/bootstrap.sh
+      - scripts/bootstrap.ps1
+      - serving/vllm/docker-compose.yml
+      - mlflow/tracking-server/docker-compose.yml
+    guardrails:
+      - .pre-commit-config.yaml
+      - Taskfile.yml
+
+  mlops_adr_review:
+    description: "Review or create architecture decision records for the ML platform"
+    entrypoints:
+      - docs/decisions/
+    implementation:
+      - docs/decisions/ADR-ML-001-experiment-tracking.md
+      - docs/decisions/ADR-ML-002-data-versioning.md
+      - docs/decisions/ADR-ML-003-model-serving.md
+      - docs/decisions/ADR-ML-004-drift-monitoring.md
+      - docs/decisions/ADR-ML-005-ci-cd-platform.md
+      - docs/decisions/ADR-ML-006-infrastructure-terraform.md
+      - docs/decisions/ADR-ML-007-dev-container.md
+      - docs/decisions/ADR-ML-008-model-approval-policy.md
+      - docs/decisions/ADR-ML-009-pre-commit-toolchain.md
+    guardrails:
+      - .ai/context/repo-summary.md
     guardrails:
       - policy/
       - secops/

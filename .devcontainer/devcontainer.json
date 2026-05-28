@@ -1,0 +1,188 @@
+{
+  // ──────────────────────────────────────────────────────────────────────────
+  // Dev Container — MLOps Playbook
+  // ──────────────────────────────────────────────────────────────────────────
+  //
+  // WHAT IS A DEV CONTAINER?
+  //   A Dev Container is a Docker-based development environment defined as code.
+  //   When you open this repo in VS Code (or GitHub Codespaces), it automatically
+  //   builds a container with all tools pre-installed: Python, DVC, MLflow,
+  //   Terraform, kubectl, the GitHub CLI, and Docker-in-Docker.
+  //
+  //   This means every team member gets an identical environment — no more
+  //   "works on my machine" problems.
+  //
+  // HOW TO USE:
+  //   1. Install the "Dev Containers" VS Code extension.
+  //   2. Open the command palette → "Dev Containers: Reopen in Container".
+  //   3. Wait for the container to build (~3 minutes on first run).
+  //   4. Run `task setup:dev` to install Python dev dependencies.
+  //
+  // PORTS FORWARDED:
+  //   5000  — MLflow UI
+  //   9000  — MinIO S3 API
+  //   9001  — MinIO Console
+  //   8000  — Triton / vLLM inference
+  //   8080  — TorchServe inference
+  //   5432  — PostgreSQL (for direct DB inspection)
+
+  "name": "MLOps Playbook",
+
+  // Python 3.11 base image — matches production Python version.
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // GPU passthrough — RTX 5070 (Blackwell, SM_120, 12 GB GDDR7)
+  // --gpus all passes all host NVIDIA GPUs into the container via the NVIDIA
+  // Container Toolkit (bundled with Docker Desktop for Windows ≥ 4.28).
+  // Prerequisites: NVIDIA driver ≥ 572.x, CUDA 12.8+, WSL 2, Docker Desktop.
+  // See: docs/local-setup.md § Part 1 for full host setup instructions.
+  // ──────────────────────────────────────────────────────────────────────────
+  "runArgs": ["--gpus", "all"],
+
+  // GPU requirement declaration — Codespaces will request a GPU instance.
+  "hostRequirements": {
+    "gpu": "optional"
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Dev Container Features
+  // Features are modular add-ons that layer tooling onto the base image.
+  // ──────────────────────────────────────────────────────────────────────────
+  "features": {
+    // Docker-in-Docker: lets you run `docker compose` from inside the container.
+    // Required to start the MLflow stack (PostgreSQL + MinIO + MLflow).
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+
+    // Terraform CLI — for editing and validating IaC in terraform/.
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.8"
+    },
+
+    // kubectl — for interacting with Kubernetes clusters (serving deployments).
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+
+    // GitHub CLI — for creating PRs, checking workflow runs, managing releases.
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+
+    // AWS CLI — for DVC remote (S3) and SageMaker Terraform.
+    "ghcr.io/devcontainers/features/aws-cli:1": {
+      "version": "latest"
+    },
+
+    // Google Cloud CLI — for DVC remote (GCS) and Vertex AI Terraform.
+    "ghcr.io/devcontainers/features/gcloud-cli:1": {
+      "version": "latest"
+    },
+
+    // Node.js (LTS) — required by some pre-commit hooks and markdownlint.
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Post-create command — runs once after the container is built.
+  // ──────────────────────────────────────────────────────────────────────────
+  "postCreateCommand": {
+    // Install Taskfile (cross-platform task runner — alternative to Make).
+    "install-task": "sh -c \"$(curl --location https://taskfile.dev/install.sh)\" -- -d -b /usr/local/bin",
+
+    // Install core ML + dev Python dependencies.
+    "pip-install": "pip install --upgrade pip && pip install mlflow==2.14.2 'dvc[s3,gcs,azure]>=3.0' 'evidently>=0.4' pandas scikit-learn pyarrow pre-commit black isort ruff bandit detect-secrets pip-audit pytest pytest-cov",
+
+    // Install pre-commit hooks so they run on every commit inside the container.
+    "pre-commit-install": "pre-commit install && pre-commit install --hook-type commit-msg",
+
+    // Install markdownlint (used by pre-commit markdownlint hook).
+    "markdownlint": "npm install -g markdownlint-cli",
+
+    // Install actionlint (GitHub Actions workflow linter).
+    "actionlint": "curl -L https://github.com/rhysd/actionlint/releases/latest/download/actionlint_linux_amd64.tar.gz | tar xz -C /usr/local/bin"
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // VS Code settings applied inside the container.
+  // ──────────────────────────────────────────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // Use Black as the Python formatter.
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        // Show Terraform formatting on save.
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform",
+          "editor.formatOnSave": true
+        },
+        // Trim trailing whitespace on every save.
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        // DVC file associations — treat .dvc files as YAML.
+        "files.associations": {
+          "*.dvc": "yaml",
+          "dvc.lock": "yaml",
+          "Taskfile.yml": "yaml"
+        }
+      },
+      "extensions": [
+        // Python
+        "ms-python.python",
+        "ms-python.pylance",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "charliermarsh.ruff",
+        // Notebooks (for exploratory analysis)
+        "ms-toolsai.jupyter",
+        // Terraform / IaC
+        "hashicorp.terraform",
+        // Docker & Kubernetes
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        // GitHub Actions
+        "github.vscode-github-actions",
+        // YAML (DVC pipeline files, GitHub Actions)
+        "redhat.vscode-yaml",
+        // Markdown
+        "yzhang.markdown-all-in-one",
+        // Git
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        // Environment variable files
+        "irongeek.vscode-env"
+      ]
+    }
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Port forwarding — these ports will be accessible on localhost.
+  // ──────────────────────────────────────────────────────────────────────────
+  "forwardPorts": [5000, 9000, 9001, 8000, 8080, 8001, 5432],
+  "portsAttributes": {
+    "5000": { "label": "MLflow UI",            "onAutoForward": "notify" },
+    "9001": { "label": "MinIO Console",         "onAutoForward": "notify" },
+    "9000": { "label": "MinIO S3 API",          "onAutoForward": "silent" },
+    "8000": { "label": "Triton / vLLM",         "onAutoForward": "silent" },
+    "8080": { "label": "TorchServe",            "onAutoForward": "silent" },
+    "8001": { "label": "Triton gRPC",           "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL",            "onAutoForward": "silent" }
+  },
+
+  // Run the container as non-root (vscode user) for security.
+  "remoteUser": "vscode"
+}

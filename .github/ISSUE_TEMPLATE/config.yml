@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: MLOps Playbook Discussions
+    url: https://github.com/your-org/mlops-playbook/discussions
+    about: Questions, ideas, and general MLOps discussion
+  - name: Platform Team (devops-playbook)
+    url: https://github.com/your-org/devops-playbook/issues
+    about: GPU cluster, Kubernetes, secrets management, and platform infrastructure issues
