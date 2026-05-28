@@ -1,0 +1,35 @@
+name: model-deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      serving_target:
+        description: Serving target (triton, torchserve, vllm)
+        required: true
+        default: vllm
+      image_tag:
+        description: Container image tag
+        required: true
+        default: latest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate model approval gate
+        run: |
+          test -f policy/model-approval/README.md || echo "Add approval policy details"
+
+      - name: Deploy placeholder
+        env:
+          SERVING_TARGET: "${{ github.event.inputs.serving_target }}"
+          IMAGE_TAG: "${{ github.event.inputs.image_tag }}"
+        run: |
+          echo "Deploying ${SERVING_TARGET} with image tag ${IMAGE_TAG}"
+          echo "Wire this step to your Kubernetes rollout or platform deployment command."

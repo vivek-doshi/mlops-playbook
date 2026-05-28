@@ -1,0 +1,11 @@
+# One relative folder path per line.
+# Lines starting with # are ignored.
+
+.ai
+.kiro
+.github/prompts
+.github/skills
+website
+catalog/scripts/__pycache__
+finops/scripts/__pycache__
+secops/compliance/scripts/__pycache__

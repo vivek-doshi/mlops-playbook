@@ -1,0 +1,5 @@
+[core]
+    remote = origin
+
+['remote "origin"']
+    url = gs://my-mlops-dvc-bucket

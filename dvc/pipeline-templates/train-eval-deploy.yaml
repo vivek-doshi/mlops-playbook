@@ -1,0 +1,23 @@
+stages:
+  train:
+    cmd: python pipelines/train.py
+    deps:
+      - pipelines/train.py
+      - data/processed
+    outs:
+      - artifacts/model
+
+  evaluate:
+    cmd: python pipelines/evaluate.py
+    deps:
+      - pipelines/evaluate.py
+      - artifacts/model
+    metrics:
+      - metrics/eval.json
+
+  deploy_candidate:
+    cmd: python pipelines/deploy_candidate.py
+    deps:
+      - pipelines/deploy_candidate.py
+      - artifacts/model
+      - metrics/eval.json
