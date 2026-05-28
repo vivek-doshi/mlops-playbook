@@ -1,0 +1,123 @@
+name: Model Quality Issue
+description: Report accuracy regression, data drift, or unexpected model behaviour in production.
+title: "[Model]: "
+labels: ["model-quality", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when a deployed model is behaving unexpectedly — accuracy has dropped,
+        drift is detected, predictions are wrong, or latency is degraded.
+        For bugs in CI/tooling, use the "Bug Report" template.
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue type
+      options:
+        - Data drift (input distribution shifted from training data)
+        - Target drift (prediction distribution shifted)
+        - Accuracy regression (metric fell below threshold)
+        - Latency / throughput degradation
+        - Model loading failure
+        - Unexpected prediction output
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: model-name
+    attributes:
+      label: Model name (MLflow registry)
+      placeholder: "fraud-detector"
+    validations:
+      required: true
+
+  - type: input
+    id: model-version
+    attributes:
+      label: Model version
+      placeholder: "v3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: serving-runtime
+    attributes:
+      label: Serving runtime
+      options:
+        - Triton
+        - TorchServe
+        - vLLM
+        - Other / unknown
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - staging
+        - production
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the issue
+      description: |
+        Include:
+        - Current metric value vs expected threshold
+        - Evidently drift score (if available)
+        - How long the issue has been occurring
+        - Any recent data or code changes that may have triggered it
+    validations:
+      required: true
+
+  - type: input
+    id: drift-score
+    attributes:
+      label: Evidently drift score (if available)
+      placeholder: "0.42"
+
+  - type: input
+    id: drift-report
+    attributes:
+      label: Link to drift report artifact
+      placeholder: "https://github.com/your-org/mlops-playbook/actions/runs/..."
+
+  - type: input
+    id: mlflow-run
+    attributes:
+      label: Training run ID (MLflow)
+      placeholder: "runs:/abc123def456"
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Business impact
+      description: Describe the downstream impact of this issue (e.g. increased false positives, revenue impact).
+    validations:
+      required: true
+
+  - type: dropdown
+    id: retraining
+    attributes:
+      label: Should retraining be triggered?
+      options:
+        - "Yes — trigger retraining immediately"
+        - "Yes — but gather more data first"
+        - "No — rollback to previous model version"
+        - "Unsure — needs investigation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Sample predictions, screenshots, relevant logs, links to monitoring dashboards.

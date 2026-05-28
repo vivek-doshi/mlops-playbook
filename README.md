@@ -2,7 +2,7 @@
 
 A production-oriented, opinionated guide for the full ML lifecycle — from raw data to monitored, production-serving models. Built for engineering teams that want reproducible experiments, auditable model promotion, and operational confidence in deployed models.
 
-**New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md)
+**New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) | GPU / Dev Container setup → [docs/local-setup.md](docs/local-setup.md)
 
 ---
 
@@ -74,6 +74,12 @@ Specifically, you need:
 - [ADR-ML-001: Experiment Tracking → MLflow](docs/decisions/ADR-ML-001-experiment-tracking.md)
 - [ADR-ML-002: Data Versioning → DVC](docs/decisions/ADR-ML-002-data-versioning.md)
 - [ADR-ML-003: Model Serving → Three-runtime strategy](docs/decisions/ADR-ML-003-model-serving.md)
+- [ADR-ML-004: Drift Monitoring → Evidently AI](docs/decisions/ADR-ML-004-drift-monitoring.md)
+- [ADR-ML-005: CI/CD Platform → GitHub Actions](docs/decisions/ADR-ML-005-ci-cd-platform.md)
+- [ADR-ML-006: Infrastructure → Terraform](docs/decisions/ADR-ML-006-infrastructure-terraform.md)
+- [ADR-ML-007: Dev Environment → Dev Containers](docs/decisions/ADR-ML-007-dev-container.md)
+- [ADR-ML-008: Model Approval → Three-Gate Policy](docs/decisions/ADR-ML-008-model-approval-policy.md)
+- [ADR-ML-009: Code Quality → Pre-commit Toolchain](docs/decisions/ADR-ML-009-pre-commit-toolchain.md)
 
 ### Infrastructure
 - AWS SageMaker Terraform: [`terraform/aws-sagemaker/`](terraform/aws-sagemaker/)
@@ -87,6 +93,7 @@ Specifically, you need:
 | Task | Start here |
 |------|-----------|
 | First experiment | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| Local / GPU / Dev Container setup | [docs/local-setup.md](docs/local-setup.md) |
 | Full lifecycle walkthrough | [docs/golden-paths/mlops-workflow.md](docs/golden-paths/mlops-workflow.md) |
 | Log metrics in code | [experiment-tracking.md](docs/golden-paths/experiment-tracking.md) |
 | Version a dataset | [data-versioning.md](docs/golden-paths/data-versioning.md) |

@@ -1,0 +1,73 @@
+name: Feature Request
+description: Propose a new golden path, serving runtime, CI pattern, or tooling improvement.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose additions or improvements to the MLOps Playbook.
+        For bugs, use the "Bug Report" template. For model quality issues, use "Model Quality Issue".
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this feature relate to?
+      options:
+        - New golden path (docs/golden-paths/)
+        - New serving runtime
+        - New CI/CD pattern
+        - Monitoring improvement
+        - Policy / governance
+        - Infrastructure (Terraform)
+        - Developer tooling
+        - Security
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the gap or pain point. Link to related issues if any.
+      placeholder: |
+        Currently there is no golden path for deploying to AWS SageMaker endpoints.
+        Teams are manually writing deployment scripts with no consistent pattern.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to see added. Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider, and why do you prefer the proposed solution?
+
+  - type: dropdown
+    id: adr-needed
+    attributes:
+      label: Does this require an Architecture Decision Record (ADR)?
+      description: An ADR is required for any new tool adoption or significant architectural change.
+      options:
+        - "Yes — I will draft the ADR"
+        - "Yes — I need help drafting the ADR"
+        - "No — this is an implementation detail, not an architectural choice"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links to relevant docs, prior art in other repos, Slack discussions, etc.

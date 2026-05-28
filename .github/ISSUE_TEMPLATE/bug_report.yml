@@ -1,0 +1,90 @@
+name: Bug Report
+description: Report a broken CI pipeline, script error, or incorrect template behaviour.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as many fields as possible.
+        For **model quality issues** (drift, accuracy regression), use the "Model Quality Issue" template instead.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of the playbook is broken?
+      options:
+        - CI pipeline (training / evaluation / deployment / monitoring)
+        - MLflow tracking server
+        - DVC pipeline or remote storage
+        - Serving infrastructure (Triton / TorchServe / vLLM)
+        - Monitoring (Evidently / Prometheus / Grafana)
+        - Terraform (SageMaker / Vertex AI / GPU cluster)
+        - Policy / governance
+        - Developer tooling (Makefile / Taskfile / pre-commit / devcontainer)
+        - Documentation / golden path
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Include error messages verbatim.
+      placeholder: |
+        Running `make train` fails with:
+        ```
+        Error: ...
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the issue.
+      placeholder: |
+        1. Run `make mlflow-up`
+        2. Run `make train`
+        3. See error in CI log
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: "OS, Python version, Docker version, relevant tool versions."
+      placeholder: "Ubuntu 22.04, Python 3.11.9, Docker 26.1, DVC 3.50, MLflow 2.14.2"
+    validations:
+      required: true
+
+  - type: input
+    id: mlflow-run
+    attributes:
+      label: MLflow Run ID (if applicable)
+      placeholder: "runs:/abc123def456"
+
+  - type: input
+    id: github-run
+    attributes:
+      label: GitHub Actions Run URL (if applicable)
+      placeholder: "https://github.com/your-org/mlops-playbook/actions/runs/..."
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      render: shell

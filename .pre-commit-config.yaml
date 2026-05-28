@@ -1,0 +1,141 @@
+# .pre-commit-config.yaml
+#
+# Pre-commit hooks for the MLOps Playbook repository.
+#
+# WHAT IS PRE-COMMIT?
+#   Pre-commit is a framework that runs lightweight checks (hooks) automatically
+#   before each `git commit`. It catches issues locally — before code reaches CI —
+#   saving expensive CI minutes.
+#
+# INSTALL:
+#   pip install pre-commit
+#   pre-commit install           # installs the git hook
+#   pre-commit install --hook-type commit-msg   # optional: commit message lint
+#
+# RUN MANUALLY AGAINST ALL FILES:
+#   pre-commit run --all-files
+#
+# UPDATE ALL HOOK VERSIONS:
+#   pre-commit autoupdate
+
+default_language_version:
+  python: python3.11
+
+repos:
+  # --------------------------------------------------------------------------
+  # General hygiene — trim whitespace, fix line endings, validate common files.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace       # Remove accidental trailing spaces.
+      - id: end-of-file-fixer         # Ensure all files end with a newline.
+      - id: check-yaml                # Catch broken YAML (GitHub Actions, DVC, etc.).
+        args: [--allow-multiple-documents]
+      - id: check-json                # Catch broken JSON (Grafana dashboards, etc.).
+      - id: check-toml                # Catch broken TOML (pyproject.toml, etc.).
+      - id: check-added-large-files   # Block accidental model file commits.
+        args: [--maxkb=10240]         # 10 MB limit — use DVC for larger files.
+      - id: check-merge-conflict      # Block commits with unresolved merge markers.
+      - id: check-case-conflict       # Prevent file naming issues on case-insensitive OSes.
+      - id: detect-private-key        # Block committing private keys.
+      - id: mixed-line-ending         # Normalise CRLF → LF.
+        args: [--fix=lf]
+      - id: no-commit-to-branch       # Prevent direct commits to main.
+        args: [--branch, main, --branch, master]
+
+  # --------------------------------------------------------------------------
+  # Python — code formatting.
+  # Black is the zero-configuration Python formatter. It enforces a single,
+  # consistent style so code reviews focus on logic, not style.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  # --------------------------------------------------------------------------
+  # Python — import sorting.
+  # isort groups and sorts Python imports consistently. Configured to be
+  # compatible with Black (profile = black).
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile, black]
+
+  # --------------------------------------------------------------------------
+  # Python — fast linting.
+  # Ruff replaces flake8, pyflakes, pycodestyle, and many plugins in a single
+  # Rust-based tool. It catches unused imports, undefined names, and style issues.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.7
+    hooks:
+      - id: ruff
+        args: [--fix]                 # Auto-fix safe issues.
+
+  # --------------------------------------------------------------------------
+  # Python — security linting.
+  # Bandit scans Python code for common security vulnerabilities (OWASP Top 10):
+  # hardcoded passwords, use of insecure functions (eval, pickle), etc.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: [-r, --severity-level, medium]
+        # Only scan pipeline and monitoring scripts, not docs or config.
+        files: ^(monitoring|serving|scripts)/.*\.py$
+
+  # --------------------------------------------------------------------------
+  # Secret detection.
+  # detect-secrets scans for accidentally committed credentials: API keys,
+  # tokens, passwords, connection strings. Safer than gitleaks for pre-commit
+  # because it runs on staged files only (fast).
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: (\.lock$|dvc/remote-storage/.*\.sample$)
+
+  # --------------------------------------------------------------------------
+  # Terraform — formatting and validation.
+  # terraform fmt enforces canonical HCL formatting. The validate hook requires
+  # `terraform init` to have been run in each module directory.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.90.0
+    hooks:
+      - id: terraform_fmt            # Format all .tf files.
+      - id: terraform_validate       # Validate HCL syntax.
+        args:
+          - --args=-no-color
+      - id: terraform_trivy          # Security scan Terraform configs (IaC SAST).
+        args:
+          - --args=--severity HIGH,CRITICAL
+
+  # --------------------------------------------------------------------------
+  # GitHub Actions — workflow linting.
+  # actionlint validates GitHub Actions workflow files for correctness:
+  # undefined contexts, wrong event syntax, missing required inputs, etc.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.1
+    hooks:
+      - id: actionlint
+
+  # --------------------------------------------------------------------------
+  # Markdown — consistent formatting.
+  # --------------------------------------------------------------------------
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+        # Allow long lines in generated files and decision docs.
+        exclude: ^(docs/decisions/|\.ai/)

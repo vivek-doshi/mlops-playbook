@@ -1,0 +1,99 @@
+# CODEOWNERS
+#
+# CODEOWNERS defines who must review changes to different parts of the repo.
+# GitHub automatically adds these reviewers to any PR that touches matching files.
+#
+# RULES:
+#   - More specific patterns (deeper paths) override broader patterns.
+#   - The last matching rule wins.
+#   - Teams must be created in GitHub Org settings before they can be referenced.
+#   - Replace @your-org/* with your actual GitHub organisation and team slugs.
+#
+# DOCS: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Default owner — catches everything not matched by a more specific rule below.
+# ──────────────────────────────────────────────────────────────────────────────
+*                                       @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CI / CD pipelines
+# Any change to a GitHub Actions workflow must be reviewed by the platform team.
+# This prevents accidental introduction of supply-chain risks.
+# ──────────────────────────────────────────────────────────────────────────────
+.github/                                @your-org/ml-platform-team
+ci/                                     @your-org/ml-platform-team
+
+# The shared security scan is extra-sensitive — require two teams.
+ci/github-actions/_shared/              @your-org/ml-platform-team @your-org/security-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Infrastructure / Terraform
+# Cloud resource changes require the platform infra team.
+# ──────────────────────────────────────────────────────────────────────────────
+terraform/                              @your-org/platform-infra-team
+terraform/gpu-cluster/                  @your-org/platform-infra-team @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Serving infrastructure
+# Changes to serving configs affect production model latency and availability.
+# ──────────────────────────────────────────────────────────────────────────────
+serving/                                @your-org/ml-platform-team
+serving/vllm/                           @your-org/ml-platform-team @your-org/ml-engineers
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Monitoring
+# Drift thresholds and alert rules directly affect retraining decisions.
+# ──────────────────────────────────────────────────────────────────────────────
+monitoring/                             @your-org/ml-platform-team
+monitoring/alerts/                      @your-org/ml-platform-team @your-org/sre-team
+monitoring/dashboards/                  @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Policy & Governance
+# Policy changes must be reviewed by the governance/legal team and ML platform.
+# ──────────────────────────────────────────────────────────────────────────────
+policy/                                 @your-org/ml-governance-team @your-org/ml-platform-team
+policy/data-governance/                 @your-org/ml-governance-team @your-org/data-protection-officer
+policy/model-approval/                  @your-org/ml-governance-team @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MLflow Tracking Server
+# Any authentication or storage changes are security-sensitive.
+# ──────────────────────────────────────────────────────────────────────────────
+mlflow/                                 @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DVC pipeline templates
+# Changes here affect reproducibility of all training runs.
+# ──────────────────────────────────────────────────────────────────────────────
+dvc/                                    @your-org/ml-platform-team @your-org/ml-engineers
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Architecture Decision Records
+# ADRs must be reviewed by architects — they record permanent design decisions.
+# ──────────────────────────────────────────────────────────────────────────────
+docs/decisions/                         @your-org/ml-architects @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Golden paths and guides
+# Documentation changes reviewed by the team that owns the topic.
+# ──────────────────────────────────────────────────────────────────────────────
+docs/golden-paths/                      @your-org/ml-platform-team
+docs/guides/                            @your-org/ml-platform-team
+GETTING_STARTED.md                      @your-org/ml-platform-team
+README.md                               @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Repository intelligence (.ai/)
+# These files guide AI assistants. Changes affect all future AI-assisted work.
+# ──────────────────────────────────────────────────────────────────────────────
+.ai/                                    @your-org/ml-architects @your-org/ml-platform-team
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pre-commit and developer tooling
+# ──────────────────────────────────────────────────────────────────────────────
+.pre-commit-config.yaml                 @your-org/ml-platform-team
+Makefile                                @your-org/ml-platform-team
+Taskfile.yml                            @your-org/ml-platform-team
+.devcontainer/                          @your-org/ml-platform-team

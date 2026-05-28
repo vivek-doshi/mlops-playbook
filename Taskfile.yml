@@ -1,0 +1,252 @@
+# Taskfile.yml — MLOps Playbook task runner (Taskfile v3)
+#
+# Taskfile is a modern, cross-platform task runner with a clean YAML syntax.
+# It works on Windows (PowerShell), macOS, and Linux without needing `make`.
+#
+# INSTALL:
+#   # macOS / Linux
+#   sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+#   # Windows (Scoop)
+#   scoop install task
+#   # Windows (Chocolatey)
+#   choco install go-task
+#
+# USAGE:
+#   task                   # Show all available tasks
+#   task setup             # Install Python dependencies
+#   task mlflow:up         # Start MLflow stack
+#   task train             # Run DVC training pipeline
+#   task drift-check       # Run Evidently drift report
+#
+# BEGINNER NOTE:
+#   Taskfile is a drop-in alternative to Makefile that works natively on Windows
+#   without WSL or MinGW. Each `task` block is equivalent to a Makefile target.
+
+version: "3"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Global variables — override at runtime: task drift-check DRIFT_THRESHOLD=0.6
+# ──────────────────────────────────────────────────────────────────────────────
+vars:
+  MLFLOW_DIR: mlflow/tracking-server
+  DVC_REMOTE: '{{.DVC_REMOTE | default "s3"}}'
+  REFERENCE_DATA: '{{.REFERENCE_DATA | default "data/reference/train_features.parquet"}}'
+  CURRENT_DATA: '{{.CURRENT_DATA | default "data/current/today_features.parquet"}}'
+  DRIFT_REPORT: '{{.DRIFT_REPORT | default "reports/drift_report.html"}}'
+  DRIFT_THRESHOLD: '{{.DRIFT_THRESHOLD | default "0.3"}}'
+  PYTHON: python
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Setup
+# ──────────────────────────────────────────────────────────────────────────────
+tasks:
+  default:
+    desc: Show all available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: Install core Python dependencies (mlflow, dvc, evidently, pandas)
+    cmds:
+      - pip install --upgrade pip
+      - pip install
+          mlflow==2.14.2
+          "dvc[s3,gcs,azure]>=3.0"
+          "evidently>=0.4"
+          pandas
+          scikit-learn
+          pyarrow
+
+  setup:dev:
+    desc: Install dev tooling + pre-commit hooks on top of core deps
+    deps: [setup]
+    cmds:
+      - pip install pre-commit black isort ruff bandit detect-secrets pytest pytest-cov
+      - pre-commit install
+      - pre-commit install --hook-type commit-msg
+      - task: secrets-baseline
+
+  secrets-baseline:
+    desc: Generate initial detect-secrets baseline file (run once after setup:dev)
+    cmds:
+      - detect-secrets scan
+          --exclude-files "\.lock$"
+          --exclude-files "dvc/remote-storage/.*\.sample$"
+          > .secrets.baseline
+    generates:
+      - .secrets.baseline
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MLflow Tracking Stack
+  # ──────────────────────────────────────────────────────────────────────────
+  mlflow:up:
+    desc: Start MLflow tracking stack (PostgreSQL + MinIO + MLflow v2.14.2)
+    dir: "{{.MLFLOW_DIR}}"
+    preconditions:
+      - sh: test -f .env
+        msg: "Copy .env.example to {{.MLFLOW_DIR}}/.env and fill in secrets first."
+    cmds:
+      - docker compose up -d
+      - echo "MLflow UI  → http://localhost:5000"
+      - echo "MinIO UI   → http://localhost:9001"
+
+  mlflow:down:
+    desc: Stop and remove MLflow stack containers
+    dir: "{{.MLFLOW_DIR}}"
+    cmds:
+      - docker compose down
+
+  mlflow:logs:
+    desc: Tail MLflow server logs (Ctrl+C to stop)
+    dir: "{{.MLFLOW_DIR}}"
+    cmds:
+      - docker compose logs -f mlflow
+
+  mlflow:ps:
+    desc: Show running MLflow stack container status
+    dir: "{{.MLFLOW_DIR}}"
+    cmds:
+      - docker compose ps
+
+  mlflow:reset:
+    desc: "DESTRUCTIVE: Remove all MLflow volumes (wipes experiments, runs, artifacts)"
+    prompt: "This will delete all MLflow data. Are you sure?"
+    dir: "{{.MLFLOW_DIR}}"
+    cmds:
+      - docker compose down -v
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # DVC — Data Versioning
+  # ──────────────────────────────────────────────────────────────────────────
+  dvc:pull:
+    desc: "Pull dataset and artifacts from DVC remote (default: {{.DVC_REMOTE}})"
+    cmds:
+      - dvc pull --remote {{.DVC_REMOTE}}
+
+  dvc:push:
+    desc: Push new dataset versions and artifacts to DVC remote
+    cmds:
+      - dvc push --remote {{.DVC_REMOTE}}
+
+  dvc:status:
+    desc: Show which DVC-tracked files differ from the remote
+    cmds:
+      - dvc status --remote {{.DVC_REMOTE}}
+
+  dvc:repro:
+    desc: Reproduce the full DVC pipeline (train → evaluate → deploy-candidate)
+    cmds:
+      - dvc repro
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # ML Pipeline
+  # ──────────────────────────────────────────────────────────────────────────
+  train:
+    desc: Pull data from DVC remote then reproduce the training pipeline
+    deps: [dvc:pull]
+    cmds:
+      - dvc repro train
+      - echo "✓ Training complete. Check MLflow UI at http://localhost:5000"
+
+  evaluate:
+    desc: Run standalone model evaluation (requires MLFLOW_RUN_ID env var)
+    preconditions:
+      - sh: test -n "$MLFLOW_RUN_ID"
+        msg: "Set the MLFLOW_RUN_ID environment variable before running evaluate."
+    cmds:
+      - "{{.PYTHON}} pipelines/evaluate.py --run-id $MLFLOW_RUN_ID"
+
+  drift-check:
+    desc: Run Evidently drift report against current production data
+    cmds:
+      - mkdir -p reports
+      - "{{.PYTHON}} monitoring/evidently/drift_report.py
+          --reference {{.REFERENCE_DATA}}
+          --current   {{.CURRENT_DATA}}
+          --output    {{.DRIFT_REPORT}}
+          --threshold {{.DRIFT_THRESHOLD}}"
+      - echo "✓ Drift report written to {{.DRIFT_REPORT}}"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Code Quality
+  # ──────────────────────────────────────────────────────────────────────────
+  format:
+    desc: Auto-format Python source files with Black + isort
+    cmds:
+      - black monitoring/ scripts/
+      - isort --profile black monitoring/ scripts/
+
+  lint:
+    desc: Lint Python source files with Ruff (fast flake8 replacement)
+    cmds:
+      - ruff check monitoring/ scripts/
+
+  security:bandit:
+    desc: Run Bandit security scan on Python source files
+    cmds:
+      - bandit -r monitoring/ scripts/ --severity-level medium
+
+  security:pip-audit:
+    desc: Audit Python dependencies for known CVEs
+    cmds:
+      - pip-audit --format columns
+
+  security:
+    desc: Run full security scan (Bandit + pip-audit + detect-secrets)
+    deps: [security:bandit, security:pip-audit]
+    cmds:
+      - detect-secrets scan --baseline .secrets.baseline
+
+  pre-commit:
+    desc: Run all pre-commit hooks against all staged files
+    cmds:
+      - pre-commit run
+
+  pre-commit:all:
+    desc: Run all pre-commit hooks against ALL files in the repo
+    cmds:
+      - pre-commit run --all-files
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Terraform
+  # ──────────────────────────────────────────────────────────────────────────
+  tf:fmt:
+    desc: Format all Terraform files recursively
+    cmds:
+      - terraform fmt -recursive terraform/
+
+  tf:validate:sagemaker:
+    desc: Validate AWS SageMaker Terraform module syntax
+    dir: terraform/aws-sagemaker
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:vertex:
+    desc: Validate GCP Vertex AI Terraform module syntax
+    dir: terraform/gcp-vertex-ai
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:
+    desc: Validate all Terraform modules
+    deps: [tf:fmt, tf:validate:sagemaker, tf:validate:vertex]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Repo Maintenance
+  # ──────────────────────────────────────────────────────────────────────────
+  repo-map:
+    desc: Regenerate .ai/context/repo_map.md using the repo map generator script
+    platforms: [windows]
+    cmds:
+      - powershell -File scripts/generate-repo-map.ps1
+
+  clean:
+    desc: Remove generated reports, __pycache__, and cache directories
+    cmds:
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+      - rm -rf reports/
+      - echo "✓ Clean complete."
