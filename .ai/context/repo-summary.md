@@ -15,12 +15,17 @@ The two repos are not islands. You create a deliberate, documented dependency.
 ## Core Capabilities In This Repository
 
 - MLOps golden paths in `docs/golden-paths/`.
-- CI workflow templates for train, evaluate, and deploy in `ci/github-actions/`.
+- CI workflow templates for train, evaluate, deploy, and drift monitoring in `ci/github-actions/`.
 - Terraform starter configurations for SageMaker, Vertex AI, and GPU cluster integration in `terraform/`.
 - MLflow local tracking stack bootstrap in `mlflow/tracking-server/`.
 - DVC remote storage patterns and pipeline templates in `dvc/`.
-- Serving topology placeholders in `serving/` for Triton, TorchServe, and vLLM.
-- Monitoring and policy boundaries in `monitoring/` and `policy/`.
+- **Serving infrastructure** — production-ready configs for Triton, TorchServe, and vLLM in `serving/`.
+- **Drift monitoring** — Evidently AI scripts, Prometheus alert rules, and Grafana dashboard in `monitoring/`.
+- **Model approval policy** — three-gate CI evaluation + approval registry in `policy/model-approval/`.
+- **Data governance policy** — classification levels, PII handling rules, retention, and PII checklist in `policy/data-governance/`.
+- **Architecture Decision Records** — MLflow (ADR-001), DVC (ADR-002), three-runtime serving (ADR-003) in `docs/decisions/`.
+- **Security hardening** — reusable CI security scan (pip-audit + gitleaks + model size check) in `ci/github-actions/_shared/`.
+- `GETTING_STARTED.md` — 5-step first experiment walkthrough and ML lifecycle quick links.
 
 ## How Teams Use It
 

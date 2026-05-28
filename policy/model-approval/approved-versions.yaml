@@ -1,0 +1,40 @@
+# Model Approval Registry
+#
+# PURPOSE:
+#   Records every model version that has been approved for Production deployment.
+#   This file provides a human-readable audit trail alongside the MLflow registry.
+#
+# HOW TO UPDATE:
+#   When promoting a model to Production:
+#   1. Run the CI evaluation pipeline — it must pass all three gates.
+#   2. Add an entry below in the format shown in the template.
+#   3. Open a PR with this change. The PR requires approval from @ml-approvers.
+#   4. Merge the PR. The CI pipeline then transitions the model in MLflow.
+#
+# FIELD DESCRIPTIONS:
+#   model_name     : MLflow registered model name (must match exactly)
+#   version        : MLflow model version number (string)
+#   approved_by    : Email or GitHub handle of the approver
+#   approved_at    : ISO 8601 UTC timestamp of approval
+#   mlflow_run_id  : The training run that produced this model version
+#   dvc_data_hash  : DVC pointer hash of the training dataset (for lineage)
+#   test_accuracy  : The accuracy (or primary metric) achieved on the test set
+#   accuracy_threshold: The minimum threshold required for promotion
+#   notes          : Any additional context, especially for overrides
+#   override       : true if the normal gate was bypassed (requires 2 approvals)
+
+approvals: []
+
+# Example entry (uncomment and fill in when promoting a model):
+#
+# approvals:
+#   - model_name: fraud-detection
+#     version: "7"
+#     approved_by: alice@example.com
+#     approved_at: "2024-06-15T09:00:00Z"
+#     mlflow_run_id: "abc123def456789"
+#     dvc_data_hash: "a3f8c1d2e4b5..."
+#     test_accuracy: 0.943
+#     accuracy_threshold: 0.92
+#     notes: "First production release of fraud-detection v2. All gates passed."
+#     override: false

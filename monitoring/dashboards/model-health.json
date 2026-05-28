@@ -1,0 +1,193 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource connected to the MLOps cluster.",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    }
+  ],
+  "title": "Model Health",
+  "uid": "mlops-model-health",
+  "description": "ML model drift, accuracy, and prediction volume. Pairs with monitoring/alerts/drift-alerts.yaml.",
+  "tags": ["mlops", "model-health", "drift"],
+  "timezone": "utc",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Dataset Drift Score",
+      "description": "Evidently dataset drift score. Above 0.3 = warning. Above 0.6 = critical. Score is computed by the scheduled drift check pipeline.",
+      "type": "gauge",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "minVizValue": 0,
+        "maxVizValue": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "red", "value": 0.6 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "ml_dataset_drift_score",
+          "legendFormat": "Drift Score"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Drifted Feature Columns",
+      "description": "Number of individual feature columns with drift detected. Helps identify which features are changing.",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 7 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "ml_drifted_columns",
+          "legendFormat": "Drifted Columns"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Prediction Request Rate",
+      "description": "Requests per second to the serving endpoint. Sudden drops may indicate serving issues. Sudden spikes may indicate retry storms.",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "rate(ml_predictions_total[5m])",
+          "legendFormat": "{{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Serving Latency (p99)",
+      "description": "99th percentile inference latency. Spikes may indicate model loading issues, resource contention, or new code being deployed.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.99, rate(ml_inference_duration_seconds_bucket[5m])) * 1000",
+          "legendFormat": "p99 {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Dataset Drift Score Over Time",
+      "description": "Historical trend of drift score. Use this to detect gradual seasonal drift (expected) vs sudden distribution changes (unexpected).",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "red", "value": 0.6 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "ml_dataset_drift_score",
+          "legendFormat": "{{model_name}} drift"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+# Triton Python Backend — Minimal Model Configuration
+#
+# This file tells Triton Inference Server:
+#   - Which backend to use (python = custom Python code in model.py)
+#   - The model name (must match the directory name in model_repository/)
+#   - Maximum batch size (0 = batching disabled; > 0 enables dynamic batching)
+#   - Input and output tensor shapes and data types
+#
+# Triton reads this file at startup from: model_repository/<name>/config.pbtxt
+#
+# For other backends, change `backend` to:
+#   - "onnxruntime"  for ONNX models (place model.onnx in the version directory)
+#   - "tensorrt"     for TensorRT engines (place model.plan in the version directory)
+#   - "pytorch_libtorch" for TorchScript models
+#
+# DATA TYPE REFERENCE:
+#   TYPE_FP32  = 32-bit float (most common for classical ML)
+#   TYPE_FP16  = 16-bit float (GPU-optimised, less precision)
+#   TYPE_INT32  = 32-bit integer
+#   TYPE_BYTES  = variable-length bytes / strings
+#
+# DIMS REFERENCE:
+#   -1  = dynamic dimension (variable batch size or sequence length)
+#   N   = fixed dimension of size N
+
+name: "my-model"
+backend: "python"
+
+# Set max_batch_size to 0 to disable dynamic batching (simplest starting point).
+# Set to > 0 to enable Triton dynamic batching, which groups multiple requests
+# into one batch for better GPU utilisation (requires model to support batching).
+max_batch_size: 32
+
+input [
+  {
+    name: "INPUT0"
+    data_type: TYPE_FP32
+    # dims: [-1] means this input accepts any number of elements.
+    # Replace with your actual input shape, e.g. [10] for 10 features.
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "OUTPUT0"
+    data_type: TYPE_FP32
+    # dims: [-1] means output length can vary.
+    # Replace with your actual output shape, e.g. [1] for a single prediction.
+    dims: [ -1 ]
+  }
+]
+
+# Optional: enable dynamic batching to improve GPU throughput.
+# Triton will collect requests for up to 100 microseconds before batching.
+# dynamic_batching {
+#   preferred_batch_size: [8, 16, 32]
+#   max_queue_delay_microseconds: 100
+# }
+
+# Optional: serve multiple versions simultaneously.
+# The default policy ("NONE") serves all available versions.
+# "LATEST" serves only the latest version.
+# version_policy { latest { num_versions: 1 } }

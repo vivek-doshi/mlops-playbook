@@ -1,0 +1,175 @@
+# _shared/reusable-mlops-scan.yml
+#
+# Reusable security scanning workflow for ML repositories.
+#
+# Runs three security checks:
+#   1. pip-audit    — scan Python dependencies for known CVEs.
+#   2. gitleaks     — scan for hardcoded secrets (API keys, passwords, tokens).
+#   3. model-size   — warn when model artifacts exceed 500 MB without justification.
+#
+# HOW TO CALL THIS WORKFLOW:
+#   Add the following to your workflow file:
+#
+#   jobs:
+#     security-scan:
+#       uses: ./.github/workflows/_shared/reusable-mlops-scan.yml
+#       with:
+#         max_model_size_mb: 500
+#       secrets: inherit
+#
+# BEGINNER NOTE:
+#   A reusable workflow (workflow_call) lets multiple workflows share the same
+#   security scan steps without copy-pasting. Any change here automatically
+#   applies to all callers.
+
+name: reusable-mlops-security-scan
+
+on:
+  workflow_call:
+    inputs:
+      max_model_size_mb:
+        description: "Maximum allowed model artifact size in MB (default: 500)"
+        type: number
+        required: false
+        default: 500
+      python_version:
+        description: "Python version to use for pip-audit"
+        type: string
+        required: false
+        default: "3.11"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # JOB 1: pip-audit
+  # Checks all Python dependencies in requirements.txt / pyproject.toml for
+  # known CVEs from the PyPI Advisory Database and OSV.
+  #
+  # Exit codes:
+  #   0 — no vulnerabilities found.
+  #   1 — vulnerabilities found (blocks merge).
+  # --------------------------------------------------------------------------
+  pip-audit:
+    name: "Security: pip-audit (CVE scan)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      # pip-audit scans the current environment's packages against the PyPI
+      # Advisory Database. We output JSON for easy parsing by security tooling.
+      - name: Run pip-audit
+        run: |
+          # If a requirements file exists, install it first so pip-audit can scan it.
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt --dry-run 2>/dev/null || true
+          fi
+          pip-audit --output json --format json -o pip-audit-results.json || AUDIT_EXIT=$?
+          pip-audit --format columns    # human-readable output for the log
+
+          # Exit with the audit exit code to fail the job on vulnerabilities.
+          exit ${AUDIT_EXIT:-0}
+
+      - name: Upload pip-audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-results
+          path: pip-audit-results.json
+          retention-days: 30
+
+  # --------------------------------------------------------------------------
+  # JOB 2: gitleaks
+  # Scans the repository for hardcoded secrets: API keys, passwords, tokens,
+  # private keys, and other credentials.
+  #
+  # gitleaks checks the full git history, not just the current working tree.
+  # This catches secrets that were committed and later "deleted" — those still
+  # exist in git history and can be extracted by anyone with repository access.
+  # --------------------------------------------------------------------------
+  gitleaks:
+    name: "Security: gitleaks (secret scan)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full git history required for gitleaks
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set GITLEAKS_LICENSE if you have a commercial license for Teams/Enterprise.
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          args: detect --source . --exit-code 1 --redact
+
+  # --------------------------------------------------------------------------
+  # JOB 3: model-artifact-size-check
+  # Warns when any model artifact (.pkl, .pt, .onnx, .bin, .safetensors) in the
+  # repository exceeds the configured size limit.
+  #
+  # Large model files should be stored in the DVC remote (S3/GCS/Azure Blob),
+  # NOT committed to Git. If a file is intentionally large, add an exception
+  # comment in this job with a justification.
+  # --------------------------------------------------------------------------
+  model-artifact-size-check:
+    name: "Security: model artifact size check"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check model artifact sizes
+        env:
+          MAX_SIZE_MB: ${{ inputs.max_model_size_mb }}
+        run: |
+          MAX_BYTES=$(( MAX_SIZE_MB * 1024 * 1024 ))
+          FOUND_LARGE=0
+
+          # Search for common ML model file extensions.
+          # These file types should be stored in DVC remote, not in Git.
+          for ext in pkl pt pth onnx bin safetensors h5 pb; do
+            while IFS= read -r filepath; do
+              if [ -f "${filepath}" ]; then
+                FILE_SIZE=$(stat -c%s "${filepath}" 2>/dev/null || stat -f%z "${filepath}" 2>/dev/null)
+                FILE_SIZE_MB=$(( FILE_SIZE / 1024 / 1024 ))
+
+                if [ "${FILE_SIZE}" -gt "${MAX_BYTES}" ]; then
+                  echo "WARNING: Large model artifact found: ${filepath} (${FILE_SIZE_MB} MB > ${MAX_SIZE_MB} MB)"
+                  echo "  Action required: move this file to DVC remote storage."
+                  echo "    dvc add ${filepath}"
+                  echo "    git rm --cached ${filepath}"
+                  FOUND_LARGE=1
+                else
+                  echo "OK: ${filepath} (${FILE_SIZE_MB} MB)"
+                fi
+              fi
+            done < <(find . -name "*.${ext}" -not -path "./.git/*" -not -path "./.dvc/*")
+          done
+
+          if [ "${FOUND_LARGE}" -eq 1 ]; then
+            echo ""
+            echo "ERROR: One or more model artifacts exceed the ${MAX_SIZE_MB} MB limit."
+            echo "Move them to DVC remote storage using 'dvc add' before merging."
+            exit 1
+          fi
+
+          echo "All model artifacts are within the ${MAX_SIZE_MB} MB size limit."

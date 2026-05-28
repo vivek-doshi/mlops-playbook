@@ -1,72 +1,127 @@
 # MLOps Playbook
 
+A production-oriented, opinionated guide for the full ML lifecycle — from raw data to monitored, production-serving models. Built for engineering teams that want reproducible experiments, auditable model promotion, and operational confidence in deployed models.
+
+**New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md)
+
+---
+
 ## The Integration Bridge
 
 This repository and the platform repository are intentionally coupled through a documented dependency, not treated as isolated islands.
 
-- Platform layer lives in the DevOps repository (`cicd-reference`): GPU cluster provisioning, Kubernetes base manifests, secrets management, OIDC federation, Kyverno policies, and observability stack.
-- ML lifecycle layer lives in this repository: experiment tracking, data versioning, model registry, model serving infrastructure, and drift monitoring.
+- **Platform layer** lives in the DevOps repository (`devops-playbook`): GPU cluster provisioning, Kubernetes base manifests, secrets management, OIDC federation, Kyverno policies, and observability stack.
+- **ML lifecycle layer** lives in this repository: experiment tracking, data versioning, model registry, serving infrastructure, drift monitoring, and approval policy.
 
-This repository consumes platform primitives from `cicd-reference` and focuses on ML-specific operational workflows on top of that foundation.
+This repository consumes platform primitives from `devops-playbook` and focuses on ML-specific operational workflows on top of that foundation.
+
+---
 
 ## Prerequisites
 
 This repository assumes your platform layer is already provisioned.
 
-The recommended platform foundation is: [cicd-reference](https://github.com/vivek-doshi/devops-playbook)
+The recommended platform foundation is: [devops-playbook](https://github.com/vivek-doshi/devops-playbook)
 
 Specifically, you need:
 
-- GPU cluster: `cicd-reference/docs/golden-paths/mlops-workflow.md`
-- Secrets management: `cicd-reference/secrets/`
-- Observability stack: `cicd-reference/observability/`
+- GPU cluster: `devops-playbook/docs/golden-paths/mlops-workflow.md`
+- Secrets management: `devops-playbook/secrets/`
+- Observability stack: `devops-playbook/observability/`
 
-## What Stays in This Repository
+---
 
-Keep GPU cluster Terraform/Kubernetes patterns and platform-focused provisioning guidance in the platform repository where they belong. That work is legitimately owned by a DevOps/platform team:
+## What's Implemented
 
-- GPU node pool provisioning
-- Cost controls via Infracost
-- Kyverno FinOps label enforcement
-- Devcontainer GPU setup
+### Experiment Tracking
+- MLflow tracking server (Docker Compose: PostgreSQL + MinIO + MLflow v2.14.2) in [`mlflow/tracking-server/`](mlflow/tracking-server/)
+- Built-in basic authentication enabled via `--app-name basic-auth`
+- Golden path: [`docs/golden-paths/experiment-tracking.md`](docs/golden-paths/experiment-tracking.md)
 
-Boundary definition:
+### Data Versioning
+- DVC remote storage samples (S3, GCS, Azure Blob) in [`dvc/remote-storage/`](dvc/remote-storage/)
+- DVC pipeline template in [`dvc/pipeline-templates/train-eval-deploy.yaml`](dvc/pipeline-templates/train-eval-deploy.yaml)
+- Golden path: [`docs/golden-paths/data-versioning.md`](docs/golden-paths/data-versioning.md)
 
-- Infrastructure and compute provisioning live in `cicd-reference`
-- ML lifecycle tooling and practices live in this repository
+### CI/CD Pipelines
+- **Train** — DVC repro + MLflow run ID capture: [`ci/github-actions/model-training/train.yml`](ci/github-actions/model-training/train.yml)
+- **Evaluate** — Three-gate evaluation (accuracy + drift + lineage): [`ci/github-actions/model-evaluation/evaluate.yml`](ci/github-actions/model-evaluation/evaluate.yml)
+- **Deploy** — GitHub approval gate + runtime-specific kubectl rollout: [`ci/github-actions/model-deployment/deploy.yml`](ci/github-actions/model-deployment/deploy.yml)
+- **Drift check** — Scheduled daily Evidently scan: [`ci/github-actions/model-monitoring/drift-check.yml`](ci/github-actions/model-monitoring/drift-check.yml)
+- **Security scan** — Reusable pip-audit + gitleaks + model size check: [`ci/github-actions/_shared/reusable-mlops-scan.yml`](ci/github-actions/_shared/reusable-mlops-scan.yml)
 
-## Governance Recommendation
+### Model Serving
+- **Triton** — Multi-framework ONNX/TensorRT/Python serving: [`serving/triton/`](serving/triton/)
+- **TorchServe** — Custom PyTorch .mar archive serving: [`serving/torchserve/`](serving/torchserve/)
+- **vLLM** — LLM serving with OpenAI-compatible API: [`serving/vllm/`](serving/vllm/)
+- Decision tree for choosing a runtime: [`serving/README.md`](serving/README.md)
+- Golden path: [`docs/golden-paths/model-serving.md`](docs/golden-paths/model-serving.md)
 
-Apply the same structural discipline from day one that makes the platform repository valuable:
+### Monitoring
+- Evidently AI drift report script: [`monitoring/evidently/drift_report.py`](monitoring/evidently/drift_report.py)
+- Prometheus alert rules (warning at 0.3, critical at 0.6): [`monitoring/alerts/drift-alerts.yaml`](monitoring/alerts/drift-alerts.yaml)
+- Grafana model health dashboard: [`monitoring/dashboards/model-health.json`](monitoring/dashboards/model-health.json)
+- Golden path: [`docs/golden-paths/model-monitoring.md`](docs/golden-paths/model-monitoring.md)
 
-- Engineering principles document
-- Golden paths before templates
-- Guardrails embedded directly in golden paths
-- ADRs for major tool choices (`MLflow` vs `W&B`, `DVC` vs `LakeFS`, `Triton` vs `TorchServe`)
+### Policy & Governance
+- Model approval registry + three-gate promotion process: [`policy/model-approval/`](policy/model-approval/)
+- Data classification levels (public → restricted): [`policy/data-governance/README.md`](policy/data-governance/README.md)
+- PII model promotion checklist (DPO sign-off required): [`policy/data-governance/pii-model-checklist.md`](policy/data-governance/pii-model-checklist.md)
+- Feature store patterns: [`docs/guides/feature-store-patterns.md`](docs/guides/feature-store-patterns.md)
+- GPU cost governance: [`docs/guides/gpu-cost-governance.md`](docs/guides/gpu-cost-governance.md)
 
-A common failure mode is turning MLOps repositories into a dumping ground for notebooks and ad hoc scripts. Keep an opinionated posture with clearly documented paths and ownership boundaries.
+### Architecture Decisions (ADRs)
+- [ADR-ML-001: Experiment Tracking → MLflow](docs/decisions/ADR-ML-001-experiment-tracking.md)
+- [ADR-ML-002: Data Versioning → DVC](docs/decisions/ADR-ML-002-data-versioning.md)
+- [ADR-ML-003: Model Serving → Three-runtime strategy](docs/decisions/ADR-ML-003-model-serving.md)
+
+### Infrastructure
+- AWS SageMaker Terraform: [`terraform/aws-sagemaker/`](terraform/aws-sagemaker/)
+- GCP Vertex AI Terraform (with IAM, lifecycle, outputs): [`terraform/gcp-vertex-ai/`](terraform/gcp-vertex-ai/)
+- GPU cluster reference (documentation-as-code stub, consumes platform module): [`terraform/gpu-cluster/`](terraform/gpu-cluster/)
+
+---
+
+## Quick Links
+
+| Task | Start here |
+|------|-----------|
+| First experiment | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| Full lifecycle walkthrough | [docs/golden-paths/mlops-workflow.md](docs/golden-paths/mlops-workflow.md) |
+| Log metrics in code | [experiment-tracking.md](docs/golden-paths/experiment-tracking.md) |
+| Version a dataset | [data-versioning.md](docs/golden-paths/data-versioning.md) |
+| Promote a model | [model-registry.md](docs/golden-paths/model-registry.md) |
+| Choose a serving runtime | [model-serving.md](docs/golden-paths/model-serving.md) |
+| Monitor for drift | [model-monitoring.md](docs/golden-paths/model-monitoring.md) |
+| Understand tool choices | [docs/decisions/](docs/decisions/) |
+
+---
 
 ## Default Tooling Posture
 
-Recommended defaults based on the current landscape:
+| Tool | Role | Why |
+|------|------|-----|
+| MLflow | Experiment tracking + model registry | Self-hostable, no vendor lock-in, data residency |
+| DVC | Data versioning + pipeline runner | Git-native, remote-agnostic, zero server required |
+| Evidently AI | Drift monitoring | Open-source, Prometheus-compatible, works offline |
+| Triton | Classical model serving | Multi-framework, dynamic batching, GPU acceleration |
+| TorchServe | PyTorch serving | Native .mar handlers, custom pre/post-processing |
+| vLLM | LLM serving | PagedAttention, OpenAI-compatible API |
 
-- MLflow for experiment tracking and model registry (self-hosted, no vendor lock-in)
-- DVC for data versioning
-- Evidently for drift monitoring
-- vLLM for LLM serving
-- Triton for classical model serving
+W&B can be added as an optional integration for teams with budget, but is not the default dependency.
 
-W&B can be added as an optional integration for teams with budget, but should not be the default dependency.
+---
 
-## Implementation Status
+## Governance Boundary
 
-Completed baseline implementation in this repository:
+| What | Where |
+|------|-------|
+| GPU node pool provisioning | `devops-playbook` |
+| Kubernetes RBAC + namespaces | `devops-playbook` |
+| Secrets management / Vault | `devops-playbook` |
+| KEDA scale-to-zero | `devops-playbook` |
+| ML experiment tracking | This repo |
+| Model serving configs | This repo |
+| Drift monitoring | This repo |
+| Model approval policy | This repo |
 
-- CI workflow templates for model training, evaluation, and deployment in `ci/github-actions/`
-- DVC pipeline definition in `ci/dvc/dvc-pipeline.yml`
-- Terraform starter configs in `terraform/aws-sagemaker/`, `terraform/gcp-vertex-ai/`, and `terraform/gpu-cluster/`
-- MLflow tracking stack bootstrap in `mlflow/tracking-server/`
-- DVC remote storage samples in `dvc/remote-storage/`
-- Bootstrap scripts in `scripts/`
-- Copilot guidance in `.github/copilot-instructions.md`
-- Repository intelligence updates in `.ai/` including a new skill: `senior-mlops-architect`

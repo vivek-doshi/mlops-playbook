@@ -1,0 +1,75 @@
+# vLLM — Docker Compose Quickstart
+#
+# Starts a single vLLM instance exposing an OpenAI-compatible API on port 8000.
+#
+# USAGE:
+#   1. Copy .env.example to .env and fill in the required values.
+#   2. Run: docker compose up
+#   3. Test: curl http://localhost:8000/health
+#
+# PREREQUISITES:
+#   - Docker Engine 24+ with NVIDIA Container Toolkit for GPU support.
+#     Install: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#   - A HuggingFace token (HF_TOKEN) if using a gated model (Llama, Gemma, etc.).
+#   - At least 16 GB GPU memory for 7B models; 40+ GB for 13B+ models.
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+
+    # The command tells vLLM which model to load and how to configure the server.
+    command:
+      - --model
+      - ${MODEL_NAME:-mistralai/Mistral-7B-Instruct-v0.3}
+      - --port
+      - "8000"
+      - --dtype
+      - auto        # auto-selects float16 on GPU, float32 on CPU
+      - --max-model-len
+      - "${MAX_MODEL_LEN:-4096}"   # maximum number of tokens in context window
+
+    ports:
+      # 8000: OpenAI-compatible HTTP API
+      # Clients can use the OpenAI Python SDK with base_url=http://localhost:8000/v1
+      - "8000:8000"
+
+    environment:
+      # HuggingFace token for downloading gated models.
+      # Set in .env or export HF_TOKEN before running docker compose up.
+      HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN:-}"
+
+      # MLflow tracking URI — used only if you load models from MLflow artifact store.
+      MLFLOW_TRACKING_URI: "${MLFLOW_TRACKING_URI:-http://localhost:5000}"
+
+      # VLLM_WORKER_MULTIPROC_METHOD controls how worker processes are started.
+      # "spawn" is safer on Linux when using CUDA.
+      VLLM_WORKER_MULTIPROC_METHOD: "spawn"
+
+    volumes:
+      # Cache HuggingFace model downloads between container restarts.
+      # Without this, vLLM re-downloads the model (often several GB) on every restart.
+      - huggingface_cache:/root/.cache/huggingface
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            # Allocate all available GPUs.
+            # Change count to "1" if you want a specific number.
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Health check — vLLM is ready when the /health endpoint returns 200.
+    # The LLM model load takes several minutes; give enough time.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s   # allow 3 minutes for model loading
+
+volumes:
+  # Named volume for HuggingFace model cache.
+  # Persists model weights between container restarts to avoid re-downloading.
+  huggingface_cache:

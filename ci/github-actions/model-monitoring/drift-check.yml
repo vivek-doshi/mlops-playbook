@@ -1,0 +1,178 @@
+# drift-check.yml
+# Scheduled ML drift monitoring workflow.
+#
+# Runs every day at 06:00 UTC against the most recent production traffic data.
+# Also supports manual dispatch for ad-hoc drift investigations.
+#
+# OUTPUTS:
+#   - Evidently HTML report uploaded as a GitHub Actions artifact.
+#   - Drift score logged to MLflow.
+#   - Alerts fire via Prometheus/Alertmanager if the score exceeds 0.3
+#     (configured in monitoring/alerts/drift-alerts.yaml).
+#
+# BEGINNER NOTE:
+#   This workflow is the "smoke alarm" for production model health.
+#   It runs automatically every morning so the team starts the day with
+#   an up-to-date picture of whether the model inputs have changed.
+
+name: model-monitoring-drift-check
+
+on:
+  # Run every day at 06:00 UTC.
+  # Cron syntax: minute hour day-of-month month day-of-week
+  schedule:
+    - cron: "0 6 * * *"
+
+  # Also allow manual trigger for ad-hoc drift checks.
+  workflow_dispatch:
+    inputs:
+      drift_threshold:
+        description: "Drift threshold (0-1). Default: 0.3"
+        required: false
+        default: "0.3"
+      model_name:
+        description: "MLflow registered model name to check against"
+        required: false
+        default: "sample-model"
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. CHECKOUT + SETUP
+      # ------------------------------------------------------------------ #
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dvc[all] mlflow evidently
+
+      # ------------------------------------------------------------------ #
+      # 2. PULL REFERENCE DATASET
+      # Restore the reference (training) dataset from DVC remote.
+      # The reference dataset was saved after the last training run and
+      # versioned as data/reference/train_features.parquet.
+      # ------------------------------------------------------------------ #
+      - name: Pull reference dataset
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+        run: |
+          dvc pull data/reference/train_features.parquet || \
+            echo "WARNING: Reference data pull failed. Check DVC remote configuration."
+
+      # ------------------------------------------------------------------ #
+      # 3. DOWNLOAD CURRENT PRODUCTION DATA
+      # Pull the most recent 24h of prediction request features from the
+      # serving prediction log. The exact source depends on your infrastructure:
+      #   - S3/GCS/Azure blob: use cloud CLI to download the latest partition.
+      #   - Kafka: use a consumer script to read recent messages.
+      # In this template we use a Python script that reads from the MLflow
+      # prediction log artifact.
+      # ------------------------------------------------------------------ #
+      - name: Download current production data
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ github.event.inputs.model_name || 'sample-model' }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, pathlib
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          model_name = os.environ["MODEL_NAME"]
+
+          # Find the most recent drift check run to get yesterday's log path.
+          # In production, replace this with a direct download from your prediction log storage.
+          # Example with S3:
+          #   import boto3
+          #   s3 = boto3.client("s3")
+          #   s3.download_file("my-bucket", "prediction-logs/latest.parquet", "data/current/latest.parquet")
+
+          pathlib.Path("data/current").mkdir(parents=True, exist_ok=True)
+
+          # PLACEHOLDER: copy reference data as current for demonstration.
+          # Replace with actual production traffic download in your environment.
+          import shutil
+          ref_path = "data/reference/train_features.parquet"
+          curr_path = "data/current/latest.parquet"
+          if not os.path.exists(curr_path) and os.path.exists(ref_path):
+              shutil.copy(ref_path, curr_path)
+              print("Using reference data as placeholder for current data.")
+          elif os.path.exists(curr_path):
+              print(f"Current data loaded from: {curr_path}")
+          else:
+              print("ERROR: Neither reference nor current data found.")
+              exit(1)
+          PY
+
+      # ------------------------------------------------------------------ #
+      # 4. RUN DRIFT REPORT
+      # The drift_report.py script exits with code 1 if drift >= threshold.
+      # We use `|| true` here so the workflow continues to upload the report
+      # and log to MLflow even when drift is detected. The alert is handled
+      # by Prometheus/Alertmanager via the metrics pushed in step 5.
+      # ------------------------------------------------------------------ #
+      - name: Run Evidently drift report
+        id: drift
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          THRESHOLD: ${{ github.event.inputs.drift_threshold || '0.3' }}
+        run: |
+          mkdir -p reports
+          python monitoring/evidently/drift_report.py \
+            --reference data/reference/train_features.parquet \
+            --current   data/current/latest.parquet \
+            --output    reports/drift_report.html \
+            --threshold "${THRESHOLD}"
+          DRIFT_EXIT=$?
+
+          # Write drift result to step output for conditional downstream steps.
+          echo "drift_detected=${DRIFT_EXIT}" >> "${GITHUB_OUTPUT}"
+
+          # Always exit 0 here — alerting is handled by Prometheus rules.
+          exit 0
+
+      # ------------------------------------------------------------------ #
+      # 5. UPLOAD REPORT ARTIFACT
+      # Makes the HTML report viewable in the GitHub Actions run summary.
+      # Reports are retained for 30 days.
+      # ------------------------------------------------------------------ #
+      - name: Upload drift report
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report-${{ github.run_id }}
+          path: |
+            reports/drift_report.html
+            reports/drift_report.json
+          retention-days: 30
+
+      # ------------------------------------------------------------------ #
+      # 6. NOTIFY ON DETECTED DRIFT
+      # If drift was detected (exit code 1 from the script), send a Slack
+      # notification so the team can review the report promptly.
+      # ------------------------------------------------------------------ #
+      - name: Notify Slack on drift detected
+        if: steps.drift.outputs.drift_detected == '1'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "${SLACK_WEBHOOK_URL}" ]; then
+            REPORT_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"text\": \":warning: *Drift detected* in production model.\nThreshold exceeded — review the report and consider retraining.\nReport: ${REPORT_URL}\"
+              }"
+          fi
