@@ -1,0 +1,37 @@
+name: model-evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_uri:
+        description: MLflow model URI
+        required: true
+        default: models:/sample-model/Production
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow evidently
+
+      - name: Evaluate model
+        env:
+          MODEL_URI: "${{ github.event.inputs.model_uri }}"
+        run: |
+          echo "Evaluating ${MODEL_URI}"
+          python - << 'PY'
+          import os
+          print(f"Model URI: {os.getenv('MODEL_URI')}")
+          print("Add your offline/online evaluation logic in this step.")
+          PY

@@ -1,0 +1,45 @@
+name: model-training
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+      dvc_remote:
+        description: DVC remote name (s3, gcs, azure)
+        required: true
+        default: s3
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dvc[all] mlflow
+
+      - name: Configure DVC remote
+        run: |
+          dvc remote modify origin endpointurl "${{ secrets.DVC_ENDPOINT_URL }}" || true
+
+      - name: Pull data
+        run: dvc pull --remote "${{ github.event.inputs.dvc_remote }}"
+
+      - name: Train model
+        run: |
+          echo "Running training pipeline"
+          dvc repro train
+
+      - name: Push artifacts
+        run: dvc push --remote "${{ github.event.inputs.dvc_remote }}"

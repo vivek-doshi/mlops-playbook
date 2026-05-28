@@ -1,0 +1,5 @@
+[core]
+    remote = origin
+
+['remote "origin"']
+    url = azure://mlops-dvc-container/path

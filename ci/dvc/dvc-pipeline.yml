@@ -1,0 +1,33 @@
+stages:
+  ingest:
+    cmd: python pipelines/ingest.py
+    deps:
+      - data/raw
+      - pipelines/ingest.py
+    outs:
+      - data/processed
+
+  train:
+    cmd: python pipelines/train.py
+    deps:
+      - data/processed
+      - pipelines/train.py
+    outs:
+      - artifacts/model
+    metrics:
+      - metrics/train.json
+
+  evaluate:
+    cmd: python pipelines/evaluate.py
+    deps:
+      - artifacts/model
+      - pipelines/evaluate.py
+    metrics:
+      - metrics/eval.json
+
+  register:
+    cmd: python pipelines/register_model.py
+    deps:
+      - artifacts/model
+      - metrics/eval.json
+      - pipelines/register_model.py
