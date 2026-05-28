@@ -4,22 +4,22 @@
 
 This repository and the platform repository are intentionally coupled through a documented dependency, not treated as isolated islands.
 
-- Platform layer lives in the DevOps repository (`cicd-reference`): GPU cluster provisioning, Kubernetes base manifests, secrets management, OIDC federation, Kyverno policies, and observability stack.
+- Platform layer lives in the DevOps repository (`devops-playbook`): GPU cluster provisioning, Kubernetes base manifests, secrets management, OIDC federation, Kyverno policies, and observability stack.
 - ML lifecycle layer lives in this repository: experiment tracking, data versioning, model registry, model serving infrastructure, and drift monitoring.
 
-This repository consumes platform primitives from `cicd-reference` and focuses on ML-specific operational workflows on top of that foundation.
+This repository consumes platform primitives from `devops-playbook` and focuses on ML-specific operational workflows on top of that foundation.
 
 ## Prerequisites
 
 This repository assumes your platform layer is already provisioned.
 
-The recommended platform foundation is: [cicd-reference](https://github.com/vivek-doshi/devops-playbook)
+The recommended platform foundation is: [devops-playbook](https://github.com/vivek-doshi/devops-playbook)
 
 Specifically, you need:
 
-- GPU cluster: `cicd-reference/docs/golden-paths/mlops-workflow.md`
-- Secrets management: `cicd-reference/secrets/`
-- Observability stack: `cicd-reference/observability/`
+- GPU cluster: `devops-playbook/docs/golden-paths/mlops-workflow.md`
+- Secrets management: `devops-playbook/secrets/`
+- Observability stack: `devops-playbook/observability/`
 
 ## What Stays in This Repository
 
@@ -32,7 +32,7 @@ Keep GPU cluster Terraform/Kubernetes patterns and platform-focused provisioning
 
 Boundary definition:
 
-- Infrastructure and compute provisioning live in `cicd-reference`
+- Infrastructure and compute provisioning live in `devops-playbook`
 - ML lifecycle tooling and practices live in this repository
 
 ## Governance Recommendation
