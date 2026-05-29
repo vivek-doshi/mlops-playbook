@@ -45,6 +45,7 @@ Specifically, you need:
 
 ### CI/CD Pipelines
 - **Train** — DVC repro + MLflow run ID capture: [`ci/github-actions/model-training/train.yml`](ci/github-actions/model-training/train.yml)
+- **Continuous training (Phase 1)** — Scheduled + event-driven retraining with lineage artifact output: [`ci/github-actions/model-training/continuous-training.yml`](ci/github-actions/model-training/continuous-training.yml)
 - **Evaluate** — Three-gate evaluation (accuracy + drift + lineage): [`ci/github-actions/model-evaluation/evaluate.yml`](ci/github-actions/model-evaluation/evaluate.yml)
 - **Deploy** — GitHub approval gate + runtime-specific kubectl rollout: [`ci/github-actions/model-deployment/deploy.yml`](ci/github-actions/model-deployment/deploy.yml)
 - **Drift check** — Scheduled daily Evidently scan: [`ci/github-actions/model-monitoring/drift-check.yml`](ci/github-actions/model-monitoring/drift-check.yml)
@@ -52,6 +53,7 @@ Specifically, you need:
 
 ### Model Serving
 - **Triton** — Multi-framework ONNX/TensorRT/Python serving: [`serving/triton/`](serving/triton/)
+- **Triton shadow deployment (Phase 1)** — Mirror traffic to shadow model safely: [`serving/triton/shadow-deployment.yaml`](serving/triton/shadow-deployment.yaml)
 - **TorchServe** — Custom PyTorch .mar archive serving: [`serving/torchserve/`](serving/torchserve/)
 - **vLLM** — LLM serving with OpenAI-compatible API: [`serving/vllm/`](serving/vllm/)
 - Decision tree for choosing a runtime: [`serving/README.md`](serving/README.md)
@@ -60,6 +62,7 @@ Specifically, you need:
 ### Monitoring
 - Evidently AI drift report script: [`monitoring/evidently/drift_report.py`](monitoring/evidently/drift_report.py)
 - Prometheus alert rules (warning at 0.3, critical at 0.6): [`monitoring/alerts/drift-alerts.yaml`](monitoring/alerts/drift-alerts.yaml)
+- vLLM serving SLO rules (Phase 1): [`monitoring/slos/vllm-serving-slo.yaml`](monitoring/slos/vllm-serving-slo.yaml)
 - Grafana model health dashboard: [`monitoring/dashboards/model-health.json`](monitoring/dashboards/model-health.json)
 - Golden path: [`docs/golden-paths/model-monitoring.md`](docs/golden-paths/model-monitoring.md)
 
@@ -68,6 +71,9 @@ Specifically, you need:
 - Data classification levels (public → restricted): [`policy/data-governance/README.md`](policy/data-governance/README.md)
 - PII model promotion checklist (DPO sign-off required): [`policy/data-governance/pii-model-checklist.md`](policy/data-governance/pii-model-checklist.md)
 - Feature store patterns: [`docs/guides/feature-store-patterns.md`](docs/guides/feature-store-patterns.md)
+- Feast feature store integration (Phase 1): [`feature-store/feast/`](feature-store/feast/)
+- Metadata lineage store schema + client (Phase 1): [`mlflow/metadata-store/`](mlflow/metadata-store/)
+- Fraud model card (Phase 1): [`docs/model-cards/fraud-detection-model-card.md`](docs/model-cards/fraud-detection-model-card.md)
 - GPU cost governance: [`docs/guides/gpu-cost-governance.md`](docs/guides/gpu-cost-governance.md)
 
 ### Architecture Decisions (ADRs)
@@ -131,4 +137,3 @@ W&B can be added as an optional integration for teams with budget, but is not th
 | Model serving configs | This repo |
 | Drift monitoring | This repo |
 | Model approval policy | This repo |
-

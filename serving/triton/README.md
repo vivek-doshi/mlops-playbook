@@ -175,5 +175,6 @@ curl -X POST http://localhost:8000/v2/models/my-model/infer \
 ## Related
 
 - `serving/triton/config.pbtxt.example` — full config example
+- `serving/triton/shadow-deployment.yaml` — shadow rollout manifest with mirrored traffic
 - `docs/golden-paths/model-serving.md` — end-to-end serving golden path
 - `docs/guides/gpu-cost-governance.md` — GPU resource limits
