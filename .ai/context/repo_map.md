@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: d:/projects/mlops-playbook
-- Generated: 2026-05-30 00:22:59
+- Generated: 2026-05-30 00:33:53
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -16,6 +16,7 @@ Generated from current workspace structure.
 │   │   ├── config.yml
 │   │   ├── feature_request.yml
 │   │   └── model_quality_issue.yml
+│   ├── Azure -gap-copilot-instructions.md
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
 │   ├── dependabot.yml
@@ -62,6 +63,8 @@ Generated from current workspace structure.
 │           ├── ray-job.yaml
 │           └── tf-job.yaml
 ├── ci
+│   ├── azure-ml
+│   │   └── train-job.yaml
 │   ├── dvc
 │   │   └── dvc-pipeline.yml
 │   └── github-actions
@@ -248,6 +251,15 @@ Generated from current workspace structure.
 ├── terraform
 │   ├── aws-sagemaker
 │   │   ├── main.tf
+│   │   └── variables.tf
+│   ├── azure-ml
+│   │   ├── environments
+│   │   │   ├── dev.tfvars
+│   │   │   ├── production.tfvars
+│   │   │   └── staging.tfvars
+│   │   ├── main.tf
+│   │   ├── outputs.tf
+│   │   ├── README.md
 │   │   └── variables.tf
 │   ├── gcp-vertex-ai
 │   │   ├── main.tf

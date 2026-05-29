@@ -4,9 +4,11 @@ Store datasets and model artifacts outside Git and track pointers in the reposit
 
 ## Supported remote patterns
 
-- S3-compatible remote: `s3.remote.sample`
-- GCS remote: `gcs.remote.sample`
-- Azure Blob remote: `azure.remote.sample`
+| Cloud | Sample file | Auth method |
+|---|---|---|
+| AWS S3 | `s3.remote.sample` | IAM role / access key |
+| GCP Cloud Storage | `gcs.remote.sample` | Workload Identity / service account key |
+| Azure Blob Storage (ADLS Gen2) | `azure.remote.sample` | Managed Identity (recommended) / SAS token / connection string |
 
 ## Setup pattern
 
