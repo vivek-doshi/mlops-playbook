@@ -1,0 +1,58 @@
+# environments/dev/kustomization.yaml
+# Kustomize overlay for the dev environment.
+# Applies on top of cd/kubernetes/_base/ with dev-specific patches.
+#
+# Namespace convention: <model-name>-dev
+# Auto-deployed on every merge to main (no human approval required).
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference the base manifests.
+resources:
+  - ../../_base
+  - resource-quota.yaml
+  - network-policy.yaml
+
+# Namespace is set per model at deploy time via --namespace flag.
+# The placeholder here documents the convention.
+namespace: model-dev  # replaced by CI with <model-name>-dev
+
+# Dev-specific image tag — overridden by CI with the actual image digest.
+images:
+  - name: model-serving
+    newTag: dev-latest
+
+# Dev-specific patches.
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: model-serving
+      spec:
+        replicas: 1
+        template:
+          metadata:
+            labels:
+              environment: dev
+          spec:
+            containers:
+              - name: model-server
+                resources:
+                  requests:
+                    cpu: "250m"
+                    memory: "512Mi"
+                  limits:
+                    cpu: "1"
+                    memory: "2Gi"
+                env:
+                  - name: ENVIRONMENT
+                    value: dev
+                  - name: LOG_LEVEL
+                    value: DEBUG
+
+# Common labels for all dev resources.
+commonLabels:
+  environment: dev
+  tier: dev

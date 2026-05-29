@@ -1,0 +1,93 @@
+---
+# Scheduled batch inference workflow.
+#
+# Trigger:  schedule (cron), workflow_dispatch (manual)
+# Inputs:   model_name, environment, job_config, schedule (read from env vars)
+# Outputs:  none (notifies via downstream_notifier.py)
+#
+# Beginner tip: This workflow wraps trigger-batch-job.yml and runs it on a cron
+# schedule.  Configure one workflow per model per environment by creating a copy
+# of this file with a unique name and updating MODEL_NAME / JOB_CONFIG below.
+
+name: Scheduled Batch Inference
+
+on:
+  schedule:
+    # Default: daily at 02:00 UTC.  Update per model.
+    - cron: "0 2 * * *"
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — validate config only, do not submit job"
+        required: false
+        default: "false"
+        type: boolean
+
+env:
+  MODEL_NAME:  fraud-detection
+  ENVIRONMENT: production
+  JOB_CONFIG:  batch/jobs/fraud-detection-production-batch-job.yaml
+  IMAGE_TAG:   latest
+
+jobs:
+  # ── Dry-run / config check ──────────────────────────────────────────────────
+  config-check:
+    name: Validate job config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check config file exists
+        run: |
+          if [ ! -f "${{ env.JOB_CONFIG }}" ]; then
+            echo "ERROR: Job config not found: ${{ env.JOB_CONFIG }}"
+            exit 1
+          fi
+          echo "Config found: ${{ env.JOB_CONFIG }}"
+
+      - name: Validate YAML
+        run: |
+          pip install pyyaml --quiet
+          python - <<'EOF'
+          import yaml, sys
+          with open("${{ env.JOB_CONFIG }}") as fh:
+              cfg = yaml.safe_load(fh)
+          for k in ["job_name", "model", "input", "output"]:
+              if k not in cfg:
+                  print(f"Missing required field: {k}")
+                  sys.exit(1)
+          print("Config valid.")
+          EOF
+
+  # ── Submit the batch job (skip on dry-run) ─────────────────────────────────
+  run-batch:
+    name: Run scheduled batch
+    needs: config-check
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    uses: ./.github/workflows/ci/github-actions/batch/trigger-batch-job.yml
+    with:
+      model_name:  ${{ env.MODEL_NAME }}
+      environment: ${{ env.ENVIRONMENT }}
+      job_config:  ${{ env.JOB_CONFIG }}
+      image_tag:   ${{ env.IMAGE_TAG }}
+    secrets: inherit
+
+  # ── Notify on failure ───────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on failure
+    runs-on: ubuntu-latest
+    needs: run-batch
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send failure notification
+        run: |
+          pip install requests pyyaml --quiet
+          python batch/runner/downstream_notifier.py \
+            --job-config ${{ env.JOB_CONFIG }} \
+            --status failure \
+            --rows-scored 0
+        env:
+          SLACK_BATCH_WEBHOOK_URL: ${{ secrets.SLACK_BATCH_WEBHOOK_URL }}

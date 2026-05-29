@@ -37,6 +37,16 @@ It spans development, build, test, security scanning, deployment, runtime operat
 ### 6. Cost And Operational Excellence Layer
 
 - finops/ provides label governance, budget alerts, rightsizing analysis, reserved-capacity planning, cross-cloud normalization, dashboards, and CI/CD cost estimation patterns.
+- monitoring/dashboards/ml-cost-attribution.json provides Grafana cost visibility by model, team, and environment.
+
+### 7. ML Lifecycle Execution Layer
+
+- pipelines/ contains local-mode pipeline runners (training, batch inference, drift-triggered retraining) and reusable step components under pipelines/components/.
+- cd/argo/pipelines/ provides Argo Workflows DAG definitions for production execution on Kubernetes.
+- batch/ implements MLflow pyfunc-based batch scoring with input validation, output quality gating, and downstream notification.
+- training/ implements distributed training scripts for KubeRay (primary) and Kubeflow (secondary).
+- fairness/ implements Fairlearn bias metrics and SHAP explainability analysis with CI enforcement.
+- All pipeline pods carry four mandatory cost labels: cost-center, team, model-name, environment.
 
 ## Reference Flow
 

@@ -1,0 +1,39 @@
+# finops/data/instance-rates.yaml
+#
+# Compute cost rates used by ml-cost-attribution.py to estimate ML workload spend.
+# Update these rates to match your cloud provider's on-demand pricing or your
+# internal chargeback rates.
+#
+# All rates are in USD per unit per hour.
+
+# vCPU (general-purpose cloud compute, e.g. AWS m5.xlarge = 0.048/vCPU/hr)
+cpu_per_core_per_hour: 0.048
+
+# Memory GiB (general-purpose, e.g. AWS m5 = ~0.006/GiB/hr)
+memory_per_gib_per_hour: 0.006
+
+# NVIDIA GPU unit (e.g. A10G ~$2.10/hr, V100 ~$3.06/hr, A100 ~$4.10/hr)
+# Use the rate for the GPU type used in your cluster; adjust if mixed.
+gpu_per_unit_per_hour: 2.10
+
+# Spot discount factor applied when a pod runs on spot/preemptible instances.
+# Cost = base_cost * (1 - spot_discount_factor)
+# 0.70 means spot nodes are 70% cheaper than on-demand.
+spot_discount_factor: 0.70
+
+# ─────────────────────────────────────────────
+# Optional: GPU-specific rates for multi-GPU environments.
+# If present, ml-cost-attribution.py will use these rates based on the
+# node label "nvidia.com/gpu.product" if available.
+gpu_type_rates:
+  "NVIDIA-A10G":   2.10
+  "NVIDIA-V100":   3.06
+  "NVIDIA-A100":   4.10
+  "NVIDIA-H100":   8.50
+
+# ─────────────────────────────────────────────
+# Last updated
+last_updated: "2026-05-29"
+notes: >
+  Rates are approximate AWS on-demand us-east-1 prices.
+  Adjust for your region and reserved instance discounts.

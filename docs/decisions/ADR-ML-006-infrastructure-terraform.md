@@ -33,6 +33,7 @@ Module layout:
 |--------|------|---------|
 | AWS SageMaker | `terraform/aws-sagemaker/` | `hashicorp/aws` |
 | GCP Vertex AI | `terraform/gcp-vertex-ai/` | `hashicorp/google` |
+| Azure ML | `terraform/azure-ml/` | `hashicorp/azurerm` |
 | GPU cluster (reference) | `terraform/gpu-cluster/` | Consumes platform module |
 
 Conventions:
@@ -80,6 +81,7 @@ Conventions:
 
 **Neutral:**
 - Provider version pins in `required_providers` blocks are managed by Dependabot (see `.github/dependabot.yml`) — weekly PRs keep providers current without manual tracking.
+- **Azure GPU quota lead time**: NDv4 (`Standard_ND96asr_v4`) and NDv5 (`Standard_ND96isr_H100_v5`) series are restricted SKUs in most Azure regions. Quota increases require a support ticket and typically take **1–4 weeks** to approve. Teams planning production GPU training on Azure should open the quota request at project kickoff, not at deployment time. The `gpu_cluster_max_nodes` variable in `terraform/azure-ml/variables.tf` is validated to a maximum of 16, which aligns with typical enterprise quota limits after approval and prevents accidental over-allocation during initial provisioning.
 
 ---
 

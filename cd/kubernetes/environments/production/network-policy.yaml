@@ -1,0 +1,43 @@
+# environments/production/network-policy.yaml
+# NetworkPolicy for the production namespace.
+# Default-deny with explicit ingress from load-balancer and egress to MLflow/KMS.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: production-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: production-allow-serving
+spec:
+  podSelector:
+    matchLabels:
+      app: model-serving
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow inbound HTTP from ingress controller / load balancer namespace only.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # MLflow tracking server and KMS.
+    - ports:
+        - port: 5000
+        - port: 443

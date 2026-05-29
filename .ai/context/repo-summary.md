@@ -27,6 +27,12 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Security hardening** — reusable CI security scan (pip-audit + gitleaks + model size check) in `ci/github-actions/_shared/`.
 - **Local setup guide** — RTX 5070 GPU passthrough, Dev Container setup, vLLM/Triton local testing in `docs/local-setup.md`.
 - `GETTING_STARTED.md` — Dev Container quickstart + 5-step first experiment walkthrough and ML lifecycle quick links.
+- **Multi-environment promotion** — env overlays, staging/canary/production gates, approval workflows in `cd/kubernetes/promotion/` and `ci/github-actions/promotion/`. ADR-ML-010 through ADR-ML-015.
+- **Fairness & Explainability** — Fairlearn bias metrics, SHAP global/local explanations, CI fairness gate in `fairness/` and `ci/github-actions/fairness/`.
+- **ML Cost Attribution** — pod-level cost labelling, budget alerts, cross-cloud normalization, Grafana dashboard in `finops/` and `monitoring/dashboards/ml-cost-attribution.json`.
+- **Distributed Training** — KubeRay (primary) and Kubeflow PyTorchJob/TFJob (secondary), spot node pools, checkpoint callback in `training/`, `cd/kubernetes/training/`, `terraform/ray-cluster/`. ADR-ML-016.
+- **Batch Inference** — MLflow pyfunc scorer, input validation, output quality gate, downstream notifier, K8s Job + CronJob manifests in `batch/`, `cd/kubernetes/batch/`. ADR-ML-018.
+- **Pipeline Orchestration** — Argo Workflows DAGs, reusable Python components, drift-triggered retraining pipeline, Vertex AI optional backend in `pipelines/`, `cd/argo/`, `ci/github-actions/pipelines/`, `terraform/vertex-pipelines/`. ADR-ML-017.
 
 ## How Teams Use It
 

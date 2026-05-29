@@ -1,0 +1,26 @@
+# policy/fairness/example-fairness-config.yaml
+#
+# Example fairness configuration for the fraud-detection model.
+# Copy this file to policy/fairness/<your-model>-fairness.yaml and
+# adjust the values to match your model and dataset.
+
+model_name: fraud-detection
+
+label_column: is_fraud
+
+sensitive_features:
+  - age_group     # binned age: "18-24", "25-34", "35-44", "45-54", "55+"
+  - gender        # "M", "F", "NB", "unknown"
+
+thresholds:
+  disparate_impact_ratio:    0.80
+  equalised_odds_difference: 0.10
+  fnr_disparity:             0.10
+
+notes: |
+  The fraud-detection model is used to flag card-not-present transactions.
+  False negatives result in fraud losses; high FNR for any demographic group
+  is therefore a primary fairness concern alongside selection rate parity.
+
+reviewed_by:  ml-approvers
+review_date:  2026-05-29

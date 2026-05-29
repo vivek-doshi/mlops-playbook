@@ -1,0 +1,40 @@
+# environments/dev/network-policy.yaml
+# NetworkPolicy for the dev namespace.
+# Default-deny with explicit allow for serving traffic and MLflow egress.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-allow-serving
+spec:
+  podSelector:
+    matchLabels:
+      app: model-serving
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow inbound HTTP from within the cluster (internal callers only in dev).
+    - ports:
+        - port: 8080
+  egress:
+    # Allow DNS resolution.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow outbound to MLflow tracking server.
+    - ports:
+        - port: 5000
+        - port: 443

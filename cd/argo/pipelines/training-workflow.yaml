@@ -1,0 +1,218 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: training-pipeline
+  namespace: mlops
+  labels:
+    cost-center: ml-platform
+    team: mlops
+    model-name: "{{workflow.parameters.model_name}}"
+    environment: "{{workflow.parameters.environment}}"
+spec:
+  entrypoint: training-pipeline
+  arguments:
+    parameters:
+      - name: model_name
+        value: my-model
+      - name: environment
+        value: staging
+      - name: config_path
+        value: pipelines/config/my-model.yaml
+      - name: mlflow_tracking_uri
+        value: http://mlflow.mlops.svc.cluster.local:5000
+
+  # Shared volume for inter-step artifact passing.
+  volumeClaimTemplates:
+    - metadata:
+        name: pipeline-workspace
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 10Gi
+
+  templates:
+
+    # ------------------------------------------------------------------ #
+    # DAG: defines step dependencies                                       #
+    # ------------------------------------------------------------------ #
+    - name: training-pipeline
+      dag:
+        tasks:
+          - name: data-ingestion
+            template: data-ingestion
+
+          - name: preprocessing
+            template: preprocessing
+            dependencies: [data-ingestion]
+
+          - name: training
+            template: training
+            dependencies: [preprocessing]
+
+          - name: evaluation
+            template: evaluation
+            dependencies: [training]
+
+          - name: registration
+            template: registration
+            dependencies: [evaluation]
+
+    # ------------------------------------------------------------------ #
+    # Step: data-ingestion                                                 #
+    # ------------------------------------------------------------------ #
+    - name: data-ingestion
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, pipelines/components/data_ingestion/component.py]
+        args:
+          - --source-uri
+          - "{{workflow.parameters.config_path}}"   # resolved inside component
+          - --output-path
+          - /workspace/raw.parquet
+          - --config-file
+          - "{{workflow.parameters.config_path}}"
+        volumeMounts:
+          - name: pipeline-workspace
+            mountPath: /workspace
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "{{workflow.parameters.mlflow_tracking_uri}}"
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: preprocessing                                                  #
+    # ------------------------------------------------------------------ #
+    - name: preprocessing
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, pipelines/components/preprocessing/component.py]
+        args:
+          - --input-path
+          - /workspace/raw.parquet
+          - --output-dir
+          - /workspace/processed/
+          - --config-file
+          - "{{workflow.parameters.config_path}}"
+        volumeMounts:
+          - name: pipeline-workspace
+            mountPath: /workspace
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: training                                                       #
+    # ------------------------------------------------------------------ #
+    - name: training
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, pipelines/components/training/component.py]
+        args:
+          - --data-dir
+          - /workspace/processed/
+          - --run-id-path
+          - /workspace/run_id.txt
+          - --config-file
+          - "{{workflow.parameters.config_path}}"
+        volumeMounts:
+          - name: pipeline-workspace
+            mountPath: /workspace
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "{{workflow.parameters.mlflow_tracking_uri}}"
+        resources:
+          requests:
+            cpu: "4"
+            memory: 8Gi
+          limits:
+            cpu: "8"
+            memory: 16Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: evaluation                                                     #
+    # ------------------------------------------------------------------ #
+    - name: evaluation
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, pipelines/components/evaluation/component.py]
+        args:
+          - --run-id-path
+          - /workspace/run_id.txt
+          - --data-dir
+          - /workspace/processed/
+          - --metrics-path
+          - /workspace/metrics.json
+          - --config-file
+          - "{{workflow.parameters.config_path}}"
+        volumeMounts:
+          - name: pipeline-workspace
+            mountPath: /workspace
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "{{workflow.parameters.mlflow_tracking_uri}}"
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: registration                                                   #
+    # ------------------------------------------------------------------ #
+    - name: registration
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, pipelines/components/registration/component.py]
+        args:
+          - --run-id-path
+          - /workspace/run_id.txt
+          - --metrics-path
+          - /workspace/metrics.json
+          - --config-file
+          - "{{workflow.parameters.config_path}}"
+        volumeMounts:
+          - name: pipeline-workspace
+            mountPath: /workspace
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "{{workflow.parameters.mlflow_tracking_uri}}"
+        resources:
+          requests:
+            cpu: "1"
+            memory: 1Gi
+          limits:
+            cpu: "2"
+            memory: 2Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false

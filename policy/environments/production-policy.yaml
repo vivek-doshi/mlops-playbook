@@ -1,0 +1,69 @@
+# policy/environments/production-policy.yaml
+# Allowed runtimes, resource caps, and governance rules for the production environment.
+# Production has NO hard resource quota — governed by VPA recommendations.
+# However, the budget cap in finops/budgets/ must be set before prod deploy.
+
+environment: production
+
+namespace_pattern: "{model_name}-prod"
+
+# No hard resource quota in production (VPA-governed).
+# Set VPA recommendation: update policy on the production Deployment.
+resource_caps:
+  cpu_limit:    null   # VPA-governed
+  memory_limit: null   # VPA-governed
+  gpu_limit:    null   # VPA-governed
+
+allowed_runtimes:
+  - vllm
+  - torchserve
+  - triton
+
+gates:
+  smoke_test:     required
+  unit_metrics:   required
+  schema_check:   required
+  drift_check:    required
+  load_test:      required
+  integration:    required
+  fairness:       required
+  compliance:     required   # production-only compliance check
+  slo_baseline:   required   # production-only SLO baseline verification
+  lineage_check:  required   # DVC lineage must be complete
+
+approvals:
+  required_reviewers: 2                   # minimum 2 from @ml-approvers
+  reviewer_team:      ml-approvers
+  blast_radius_delay: 10m                 # 10-minute wait after approval
+  change_freeze_check: true               # check for active change freezes
+  rollback_plan_required: true
+
+mlflow_experiment_suffix: "-production"
+
+deployment_strategy:
+  type:            RollingUpdate
+  max_unavailable: 1
+  max_surge: 1
+  canary_analysis: recommended   # use canary before full rollout
+
+# PodDisruptionBudget is mandatory in production.
+pdb_required: true
+pdb_min_available: 2
+
+required_labels:
+  - cost-center
+  - team
+  - model-name
+  - environment
+
+spot_required: false   # on-demand in production for reliability
+spot_override_approval: null   # not applicable — on-demand is the default
+
+# Budget and cost alerts are mandatory before production deployment.
+budget_required: true
+budget_path: "finops/budgets/{model_name}.yaml"
+cost_alert_required: true
+cost_alert_path: "finops/alerts/ml-cost-alerts.yaml"
+
+# Minimum replicas for production serving.
+min_replicas: 3

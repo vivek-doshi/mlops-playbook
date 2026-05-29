@@ -35,8 +35,10 @@ jobs:
   train:
     runs-on: ubuntu-latest
     # Grant minimal permissions — training only needs to read repo contents.
+    # id-token: write is required for Azure OIDC federation (no stored secrets).
     permissions:
       contents: read
+      id-token: write
 
     steps:
       # ------------------------------------------------------------------ #
@@ -67,6 +69,47 @@ jobs:
       - name: Configure DVC remote
         run: |
           dvc remote modify origin endpointurl "${{ secrets.DVC_ENDPOINT_URL }}" || true
+
+      # ------------------------------------------------------------------ #
+      # 4b. AUTHENTICATE TO AZURE (OIDC — no stored secrets)
+      # Uses federated identity — a short-lived token is exchanged with
+      # Azure AD. No client secret or certificate is stored in GitHub.
+      # Requires three repository secrets:
+      #   AZURE_CLIENT_ID       — app registration or managed identity client ID
+      #   AZURE_TENANT_ID       — Azure AD tenant ID
+      #   AZURE_SUBSCRIPTION_ID — target Azure subscription
+      # And the service principal must have federated credentials configured
+      # for this repository (subject: repo:<org>/<repo>:ref:refs/heads/main).
+      # ------------------------------------------------------------------ #
+      - name: Authenticate to Azure (OIDC)
+        if: github.event.inputs.dvc_remote == 'azure'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ------------------------------------------------------------------ #
+      # 4c. CONFIGURE AZURE ML WORKSPACE
+      # Submits the training job to Azure ML compute using the az ml CLI.
+      # The job YAML (ci/azure-ml/train-job.yaml) references the cluster names
+      # from Terraform outputs. MLFLOW_TRACKING_URI is the azureml:// URI
+      # from: terraform -chdir=terraform/azure-ml output -raw mlflow_tracking_uri
+      # ------------------------------------------------------------------ #
+      - name: Configure Azure ML workspace
+        if: github.event.inputs.dvc_remote == 'azure'
+        env:
+          AZURE_ML_WORKSPACE: ${{ secrets.AZURE_ML_WORKSPACE }}
+          AZURE_ML_RESOURCE_GROUP: ${{ secrets.AZURE_ML_RESOURCE_GROUP }}
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          pip install azure-ai-ml --quiet
+          az extension add --name ml --yes --only-show-errors
+          az ml job create \
+            --workspace-name "${AZURE_ML_WORKSPACE}" \
+            --resource-group "${AZURE_ML_RESOURCE_GROUP}" \
+            --file ci/azure-ml/train-job.yaml \
+            --set environment_variables.MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}"
 
       # ------------------------------------------------------------------ #
       # 4. PULL DATA

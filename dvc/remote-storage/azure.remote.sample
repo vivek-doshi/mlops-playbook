@@ -1,5 +1,43 @@
+# DVC Azure Blob Storage remote configuration sample.
+#
+# Copy this file to .dvc/config and replace the placeholder values.
+# Storage account name comes from: terraform -chdir=terraform/azure-ml output -raw storage_account_name
+# Container name comes from:       terraform -chdir=terraform/azure-ml output -raw dvc_remote_container_name
+#
+# AUTHENTICATION — choose ONE of the three options below.
+# Option 1 (recommended for CI and AKS) requires no extra config here.
+
 [core]
     remote = origin
 
 ['remote "origin"']
-    url = azure://mlops-dvc-container/path
+    url = azure://dvc-remote
+    account_name = <storage-account-name>
+
+    # -----------------------------------------------------------------------
+    # Auth option 1 — Managed Identity (recommended for CI and AKS workloads)
+    # No credentials needed in this file.
+    # The identity must have the Storage Blob Data Contributor role on the
+    # storage account. Grant via:
+    #   az role assignment create \
+    #     --assignee <managed-identity-object-id> \
+    #     --role "Storage Blob Data Contributor" \
+    #     --scope <storage-account-resource-id>
+    # In GitHub Actions: use azure/login@v2 with OIDC (no stored secret).
+    # -----------------------------------------------------------------------
+
+    # -----------------------------------------------------------------------
+    # Auth option 2 — SAS token (for cross-tenant or temporary access)
+    # Store in GitHub Actions secret DVC_AZURE_SAS_TOKEN.
+    # Generate via: az storage account generate-sas ...
+    # Never commit a SAS token to Git — rotate immediately if exposed.
+    # -----------------------------------------------------------------------
+    # sas_token = <token>
+
+    # -----------------------------------------------------------------------
+    # Auth option 3 — Connection string (local dev only, never commit)
+    # Retrieve from Azure Portal → Storage Account → Access Keys.
+    # Set as environment variable instead of writing here:
+    #   export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;..."
+    # -----------------------------------------------------------------------
+    # connection_string = DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net

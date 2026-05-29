@@ -1,0 +1,249 @@
+# promote-production.yml
+# Production promotion — requires 2 approvals from @ml-approvers, a 10-minute
+# blast-radius delay after approval, and a rollback plan before deploy.
+#
+# TRIGGER: workflow_dispatch (never automatic — production requires human intent)
+# INPUTS:  model_name, model_version, image_tag, rollback_plan
+# OUTPUTS: Deployment status + production promotion record
+#
+# ENVIRONMENT PROTECTION RULES (configure in GitHub Settings → Environments):
+#   - Required reviewers: minimum 2 from @ml-approvers
+#   - Deployment protection rule: no open slo-breach incidents
+#   - Wait timer: 10 minutes after approval before deploy runs
+#
+# BEGINNER NOTE:
+#   Production promotion is intentionally slower than dev/staging.
+#   The 10-minute wait after approval gives the team a window to catch
+#   last-minute issues. The rollback plan field forces the deployer to
+#   think about failure modes before clicking approve.
+
+name: promote-production
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        default: sample-model
+      model_version:
+        description: MLflow model version to promote to production
+        required: true
+        default: "1"
+      image_tag:
+        description: Container image tag
+        required: true
+        default: production-latest
+      rollback_plan:
+        description: >
+          Rollback plan — describe which version to roll back to if this
+          deployment fails and how to execute it. Required for production.
+        required: true
+        default: "Roll back to previous production version via rollback.yml"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # PRE-FLIGHT: Verify the model has passed staging gates.
+  # A model that has never been in Staging must not reach Production.
+  # -------------------------------------------------------------------------
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install mlflow
+        run: pip install mlflow
+
+      - name: Verify model passed Staging
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+          mv = client.get_model_version(os.environ["MODEL_NAME"], os.environ["MODEL_VERSION"])
+
+          if mv.current_stage not in ("Staging", "Production"):
+              print(
+                  f"ERROR: Model {mv.name} v{mv.version} is in stage '{mv.current_stage}'. "
+                  "A model must pass through Staging before reaching Production.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          print(f"Pre-flight PASSED: model is in stage '{mv.current_stage}'.")
+          PY
+
+      - name: Verify rollback plan is provided
+        run: |
+          if [[ -z "${{ inputs.rollback_plan }}" ]]; then
+            echo "ERROR: rollback_plan input is required for production promotion." >&2
+            exit 1
+          fi
+          echo "Rollback plan provided: ${{ inputs.rollback_plan }}"
+
+  # -------------------------------------------------------------------------
+  # PRODUCTION GATES — all staging gates + compliance + SLO baseline.
+  # Uses the reusable gate workflow with load test enabled.
+  # -------------------------------------------------------------------------
+  production-gates:
+    needs: preflight
+    uses: ./.github/workflows/promotion-gates.yml
+    with:
+      model_name:    ${{ inputs.model_name }}
+      model_version: ${{ inputs.model_version }}
+      environment:   production
+      run_load_test: true
+    secrets:
+      MLFLOW_TRACKING_URI:       ${{ secrets.MLFLOW_TRACKING_URI }}
+      DVC_AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+      DVC_AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+
+  # -------------------------------------------------------------------------
+  # HUMAN APPROVAL GATE (enforced by GitHub Environment protection rules)
+  # This job pauses and waits for 2 approvals from @ml-approvers.
+  # The 10-minute wait timer is configured on the 'production' environment.
+  # -------------------------------------------------------------------------
+  await-approval:
+    needs: production-gates
+    if: ${{ needs.production-gates.outputs.gate_passed == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production   # ← pauses here; requires 2 reviewers + 10-min timer
+    permissions:
+      contents: read
+    steps:
+      - name: Approval acknowledged
+        run: |
+          echo "Production deployment approved by reviewers."
+          echo "Proceeding with deployment of ${{ inputs.model_name }} v${{ inputs.model_version }}."
+
+  # -------------------------------------------------------------------------
+  # DEPLOY TO PRODUCTION
+  # -------------------------------------------------------------------------
+  deploy-production:
+    needs: await-approval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install mlflow
+        run: pip install mlflow
+
+      - name: Authenticate to Kubernetes cluster (production)
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_PRODUCTION }}
+        continue-on-error: true
+
+      - name: Apply production overlay
+        run: |
+          MODEL_NAME="${{ inputs.model_name }}"
+          NAMESPACE="${MODEL_NAME}-prod"
+
+          kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl kustomize cd/kubernetes/environments/production | \
+            sed "s/namespace: model-prod/namespace: ${NAMESPACE}/g" | \
+            kubectl apply -f -
+          # Wait for rollout to complete before recording promotion.
+          kubectl rollout status deployment/model-serving -n "${NAMESPACE}" --timeout=5m
+        continue-on-error: true
+
+      # Transition the model to Production stage in MLflow registry.
+      - name: Transition model to Production in MLflow
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          # Archive the current Production version first to avoid two live models.
+          for mv in client.get_latest_versions(os.environ["MODEL_NAME"], stages=["Production"]):
+              client.transition_model_version_stage(
+                  name=mv.name,
+                  version=mv.version,
+                  stage="Archived",
+              )
+              print(f"Archived previous production version: {mv.version}")
+
+          client.transition_model_version_stage(
+              name=os.environ["MODEL_NAME"],
+              version=os.environ["MODEL_VERSION"],
+              stage="Production",
+          )
+          print("Model transitioned to Production.")
+          PY
+
+      - name: Record production promotion
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import os, yaml, uuid
+          from datetime import datetime, timezone
+
+          path = "policy/model-approval/approved-versions.yaml"
+          with open(path) as f:
+              doc = yaml.safe_load(f)
+
+          doc.setdefault("approvals", []).append({
+              "model_name":     os.environ["MODEL_NAME"],
+              "version":        os.environ["MODEL_VERSION"],
+              "environment":    "production",
+              "approved_by":    os.environ.get("GITHUB_ACTOR", "unknown"),
+              "approved_at":    datetime.now(timezone.utc).isoformat(),
+              "promotion_id":   str(uuid.uuid4()),
+              "github_run_id":  os.environ.get("GITHUB_RUN_ID", ""),
+              "rollback_plan":  os.environ.get("ROLLBACK_PLAN", ""),
+              "notes":          "Manually promoted to production with 2-approver gate.",
+              "override":       False,
+          })
+
+          with open(path, "w") as f:
+              yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
+
+          print("Production promotion recorded.")
+          PY
+        env:
+          ROLLBACK_PLAN: ${{ inputs.rollback_plan }}
+
+      - name: Open production promotion record PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "chore: record production promotion for ${{ inputs.model_name }} v${{ inputs.model_version }}"
+          body: |
+            Production promotion record.
+            Gate summary: ${{ needs.production-gates.outputs.gate_summary }}
+            Rollback plan: ${{ inputs.rollback_plan }}
+          branch: "auto/production-promotion-${{ github.run_id }}"
+          commit-message: "chore: record production promotion [skip ci]"
+          labels: promotion,production

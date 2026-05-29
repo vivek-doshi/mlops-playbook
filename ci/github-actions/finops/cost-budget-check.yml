@@ -1,0 +1,130 @@
+# ci/github-actions/finops/cost-budget-check.yml
+# Reusable budget gate — called by promotion-gates.yml before staging/production.
+#
+# TRIGGER:     workflow_call
+# INPUTS:      model_name, environment
+# OUTPUTS:     budget_passed (true/false), budget_summary (human-readable)
+# BEGINNER NOTE:
+#   This workflow checks whether a model's current weekly spend is below its
+#   budget limit.  If the model has no budget file, the gate passes with a
+#   warning.  If it has a budget file and weekly spend > limit, the gate fails
+#   and blocks promotion.
+
+name: cost-budget-check
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        type: string
+        required: true
+      environment:
+        description: Target environment (dev|staging|production)
+        type: string
+        required: true
+
+    outputs:
+      budget_passed:
+        description: "'true' if within budget limits"
+        value: ${{ jobs.budget-check.outputs.budget_passed }}
+      budget_summary:
+        description: Human-readable budget check summary
+        value: ${{ jobs.budget-check.outputs.budget_summary }}
+
+    secrets:
+      KUBECONFIG_B64:
+        required: false
+
+jobs:
+  budget-check:
+    name: Budget gate — ${{ inputs.model_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      budget_passed: ${{ steps.check.outputs.budget_passed }}
+      budget_summary: ${{ steps.check.outputs.budget_summary }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --quiet "pandas>=2.0" "pyyaml>=6.0"
+
+      - name: Check budget
+        id: check
+        run: |
+          python - << 'PY'
+          import json, sys, yaml
+          from pathlib import Path
+
+          model = "${{ inputs.model_name }}"
+          env   = "${{ inputs.environment }}"
+
+          budget_path = Path(f"finops/budgets/{model}.yaml")
+          if not budget_path.exists():
+              print(f"No budget file for {model} — gate passes with warning.")
+              print("budget_passed=true", flush=True)
+              with open("$GITHUB_OUTPUT", "a") as f:
+                  f.write("budget_passed=true\n")
+                  f.write(f"budget_summary=No budget configured for {model}\n")
+              sys.exit(0)
+
+          with open(budget_path) as fh:
+              budget = yaml.safe_load(fh)
+
+          weekly_limit = budget.get("weekly_limit_usd")
+          if not weekly_limit:
+              print("No weekly_limit_usd in budget file — gate passes.")
+              with open("$GITHUB_OUTPUT", "a") as f:
+                  f.write("budget_passed=true\n")
+                  f.write(f"budget_summary=No weekly limit configured for {model}\n")
+              sys.exit(0)
+
+          # Find most recent weekly report
+          reports = sorted(Path("finops/reports/weekly").glob("*-weekly-report.json"), reverse=True)
+          if not reports:
+              print("No weekly reports found — gate passes (no data).")
+              with open("$GITHUB_OUTPUT", "a") as f:
+                  f.write("budget_passed=true\n")
+                  f.write("budget_summary=No weekly cost data available\n")
+              sys.exit(0)
+
+          with open(reports[0]) as fh:
+              weekly = json.load(fh)
+
+          model_cost = sum(
+              row["total_cost_usd"]
+              for row in weekly.get("by_model", [])
+              if row.get("model_name") == model
+          )
+
+          pct = model_cost / weekly_limit * 100
+          summary = (
+              f"{model}: ${model_cost:.2f} / ${weekly_limit:.2f} weekly "
+              f"({pct:.1f}%)"
+          )
+          print(summary)
+
+          passed = model_cost <= weekly_limit
+          with open("$GITHUB_OUTPUT", "a") as f:
+              f.write(f"budget_passed={'true' if passed else 'false'}\n")
+              f.write(f"budget_summary={summary}\n")
+
+          if not passed:
+              print(
+                  f"BUDGET EXCEEDED: {model} weekly cost ${model_cost:.2f} "
+                  f"> limit ${weekly_limit:.2f}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          PY

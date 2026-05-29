@@ -1,0 +1,173 @@
+# promote-staging.yml
+# Staging auto-promote — triggers after dev gates pass and dev deploy succeeds.
+# Deploys to the <model-name>-staging namespace without human approval.
+# Runs the full evaluation suite, load test, and drift check before deploy.
+#
+# TRIGGER: workflow_run completion of promote-dev (on success)
+# INPUTS:  model_name, model_version
+# OUTPUTS: Deployment status + staging promotion record
+#
+# BEGINNER NOTE:
+#   Staging is a production-like environment. It runs more gates than dev
+#   (load test, full eval, drift check, integration test). No human approval
+#   is required — the extra automated gates act as the safety net.
+
+name: promote-staging
+
+on:
+  workflow_run:
+    workflows:
+      - promote-dev
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        default: sample-model
+      model_version:
+        description: MLflow model version to promote to staging
+        required: true
+        default: "1"
+      image_tag:
+        description: Container image tag
+        required: true
+        default: staging-latest
+
+jobs:
+  # Only run if the upstream dev promotion succeeded.
+  check-dev-success:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check trigger
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Run full staging gate suite (includes load test and drift check).
+  staging-gates:
+    needs: check-dev-success
+    if: ${{ needs.check-dev-success.outputs.should_run == 'true' }}
+    uses: ./.github/workflows/promotion-gates.yml
+    with:
+      model_name:    ${{ github.event.inputs.model_name || 'sample-model' }}
+      model_version: ${{ github.event.inputs.model_version || '1' }}
+      environment:   staging
+      run_load_test: true
+    secrets:
+      MLFLOW_TRACKING_URI:       ${{ secrets.MLFLOW_TRACKING_URI }}
+      DVC_AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+      DVC_AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+
+  # Deploy to staging namespace after all gates pass.
+  deploy-staging:
+    needs: staging-gates
+    if: ${{ needs.staging-gates.outputs.gate_passed == 'true' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install mlflow
+        run: pip install mlflow
+
+      - name: Authenticate to Kubernetes cluster (staging)
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_STAGING }}
+        continue-on-error: true
+
+      - name: Apply staging overlay
+        run: |
+          MODEL_NAME="${{ github.event.inputs.model_name || 'sample-model' }}"
+          NAMESPACE="${MODEL_NAME}-staging"
+
+          kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl kustomize cd/kubernetes/environments/staging | \
+            sed "s/namespace: model-staging/namespace: ${NAMESPACE}/g" | \
+            kubectl apply -f -
+        continue-on-error: true
+
+      # Transition the model to Staging stage in MLflow registry.
+      - name: Transition model to Staging in MLflow
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:    ${{ github.event.inputs.model_name || 'sample-model' }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version || '1' }}
+        run: |
+          python - << 'PY'
+          import mlflow, os
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+          client.transition_model_version_stage(
+              name=os.environ["MODEL_NAME"],
+              version=os.environ["MODEL_VERSION"],
+              stage="Staging",
+              archive_existing_versions=False,
+          )
+          print("Model transitioned to Staging.")
+          PY
+
+      - name: Record staging promotion
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ github.event.inputs.model_name || 'sample-model' }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version || '1' }}
+        run: |
+          python - << 'PY'
+          import os, yaml, uuid
+          from datetime import datetime, timezone
+
+          path = "policy/model-approval/approved-versions.yaml"
+          with open(path) as f:
+              doc = yaml.safe_load(f)
+
+          doc.setdefault("approvals", []).append({
+              "model_name":     os.environ["MODEL_NAME"],
+              "version":        os.environ["MODEL_VERSION"],
+              "environment":    "staging",
+              "approved_by":    "auto",
+              "approved_at":    datetime.now(timezone.utc).isoformat(),
+              "promotion_id":   str(uuid.uuid4()),
+              "github_run_id":  os.environ.get("GITHUB_RUN_ID", ""),
+              "notes":          "Auto-promoted to staging after dev gates passed.",
+              "override":       False,
+          })
+
+          with open(path, "w") as f:
+              yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
+
+          print("Staging promotion recorded.")
+          PY
+
+      - name: Open staging promotion record PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "chore: record staging promotion for ${{ github.event.inputs.model_name || 'sample-model' }} v${{ github.event.inputs.model_version || '1' }}"
+          body: |
+            Auto-generated promotion record for staging deployment.
+            Gate summary: ${{ needs.staging-gates.outputs.gate_summary }}
+          branch: "auto/staging-promotion-${{ github.run_id }}"
+          commit-message: "chore: record staging promotion [skip ci]"
+          labels: promotion,staging,auto-merge

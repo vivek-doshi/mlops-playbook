@@ -1,0 +1,15 @@
+# environments/production/pdb.yaml
+# PodDisruptionBudget for production serving.
+# Ensures at least 2 replicas are always available during voluntary disruptions.
+# Required for all production serving deployments (Phase 2 invariant rule).
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: model-serving-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: model-serving
+      environment: production

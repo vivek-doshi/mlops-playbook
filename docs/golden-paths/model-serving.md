@@ -196,7 +196,146 @@ See `serving/vllm/README.md` for full setup. Key files:
 
 ---
 
-## Rollback Procedure
+## Azure ML Managed Endpoints
+
+Azure ML Managed Online Endpoints provide a production-grade HTTPS scoring API
+with automatic TLS, load balancing, AAD authentication, and blue/green traffic
+splitting — all managed by Azure. This is the recommended serving path for
+Azure-first organisations.
+
+> **When to use managed endpoints vs AKS-hosted serving**
+>
+> | Scenario | Recommendation |
+> |---|---|
+> | SKLearn, XGBoost, PyTorch — standard frameworks | Managed endpoint (fully managed TLS, autoscale, auth) |
+> | Custom runtimes (Triton, vLLM, TorchServe) | AKS-hosted via `serving/<runtime>/` |
+> | LLMs requiring vLLM engine | AKS-hosted (managed endpoints have container size limits) |
+> | Fast prototyping with AAD auth | Managed endpoint |
+> | Multi-model serving with dynamic batching | Triton on AKS |
+
+### Prerequisites
+
+The endpoint and deployment resources are provisioned by `terraform/azure-ml/`.
+Run `terraform apply` before deploying a model version.
+
+```bash
+# Confirm the endpoint exists
+az ml online-endpoint show \
+  --name $(terraform -chdir=terraform/azure-ml output -raw endpoint_name) \
+  --resource-group $(terraform -chdir=terraform/azure-ml output -raw workspace_resource_group) \
+  --workspace-name $(terraform -chdir=terraform/azure-ml output -raw workspace_name)
+```
+
+### Step 1 — Create a deployment (blue)
+
+A deployment is a versioned model + scoring script + compute configuration bound to an endpoint.
+Blue/green is modelled as two deployments on the same endpoint with different traffic weights.
+
+```yaml
+# deployments/blue-deployment.yaml
+$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
+
+name: blue
+endpoint_name: ep-fraud-detection-prod-eus-abc123
+model: azureml:fraud-detection@Production    # MLflow registry reference
+instance_type: Standard_NC24ads_A100_v4
+instance_count: 2
+scale_settings:
+  scale_type: Default                         # scale-to-zero when no traffic
+environment_variables:
+  MLFLOW_TRACKING_URI: ${{secrets.MLFLOW_TRACKING_URI}}
+```
+
+```bash
+az ml online-deployment create \
+  --file deployments/blue-deployment.yaml \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}"
+```
+
+### Step 2 — Route traffic (90/10 blue/green split)
+
+```yaml
+# traffic-split.yaml — 90% to stable blue, 10% to new green deployment
+traffic:
+  blue: 90
+  green: 10
+```
+
+```bash
+az ml online-endpoint update \
+  --name ep-fraud-detection-prod-eus-abc123 \
+  --traffic "blue=90 green=10" \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}"
+```
+
+### Step 3 — Validate the new deployment
+
+```bash
+# Health probe — managed endpoint exposes GET /score for liveness
+SCORING_URI=$(az ml online-endpoint show \
+  --name ep-fraud-detection-prod-eus-abc123 \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}" \
+  --query "scoring_uri" -o tsv)
+
+# Send a test payload (AMLToken auth — token retrieved from az cli)
+TOKEN=$(az ml online-endpoint get-credentials \
+  --name ep-fraud-detection-prod-eus-abc123 \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}" \
+  --query "primaryKey" -o tsv)
+
+curl -X POST "${SCORING_URI}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"input_data": {"columns": ["feature1","feature2"], "data": [[1.0, 2.0]]}}'
+```
+
+### Authentication modes
+
+| Environment | `auth_mode` | Notes |
+|---|---|---|
+| `production` | `AMLToken` | Short-lived workspace tokens; no key rotation needed |
+| `dev` / `staging` | `Key` | Static key; simpler for quick SDK testing |
+
+The auth mode is set in `terraform/azure-ml/main.tf` and driven by `var.environment`.
+To use AMLToken from Python:
+
+```python
+from azure.ai.ml import MLClient
+from azure.identity import DefaultAzureCredential
+
+client = MLClient(
+    credential=DefaultAzureCredential(),
+    subscription_id="<sub-id>",
+    resource_group_name="<rg>",
+    workspace_name="<workspace>",
+)
+```
+
+### Rollback
+
+If a new green deployment shows errors, shift all traffic back to blue instantly:
+
+```bash
+az ml online-endpoint update \
+  --name ep-fraud-detection-prod-eus-abc123 \
+  --traffic "blue=100" \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}"
+
+# Then delete the bad green deployment
+az ml online-deployment delete \
+  --name green \
+  --endpoint-name ep-fraud-detection-prod-eus-abc123 \
+  --workspace-name "${AZURE_ML_WORKSPACE}" \
+  --resource-group "${AZURE_ML_RESOURCE_GROUP}" \
+  --yes
+```
+
+---
 
 ```bash
 # 1. Re-run the deployment workflow with the previous image tag.

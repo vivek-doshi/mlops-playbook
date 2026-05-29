@@ -1,0 +1,117 @@
+# ci/azure-ml/train-job.yaml
+#
+# Azure ML SDK v2 command job definition.
+# Submitted by ci/github-actions/model-training/train.yml when dvc_remote == 'azure'.
+#
+# BEGINNER NOTE:
+#   This YAML is an Azure ML Job definition (schema v2).
+#   It maps directly to the same pipeline stages defined in dvc.yaml:
+#     - Pull data via DVC
+#     - Run drift pre-check
+#     - Execute dvc repro train
+#     - Register MLflow run metadata
+#   The job runs on the gpu-training compute cluster provisioned by terraform/azure-ml/.
+#
+# CLUSTER NAME NOTE:
+#   The compute field references the cluster name from Terraform outputs.
+#   Run: terraform -chdir=terraform/azure-ml output -raw gpu_training_cluster_name
+
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+# ---------------------------------------------------------------------------
+# JOB METADATA
+# ---------------------------------------------------------------------------
+display_name: mlops-train-job
+description: "MLOps Playbook training pipeline — DVC data pull + dvc repro train + MLflow registration"
+experiment_name: model-training
+tags:
+  mlops-playbook: "azure-ml"
+  managed-by: "github-actions"
+
+# ---------------------------------------------------------------------------
+# COMPUTE
+# Name must match the compute cluster created by terraform/azure-ml/main.tf.
+# Use the cpu-cluster for sklearn/lightweight models; gpu-training for deep learning.
+# ---------------------------------------------------------------------------
+compute: azureml:gpu-training
+
+# ---------------------------------------------------------------------------
+# ENVIRONMENT
+# References an Azure ML curated environment or a custom environment registered
+# in the workspace. Replace <your-env-name> with your registered environment.
+# To register: az ml environment create --file ci/azure-ml/environment.yaml
+# ---------------------------------------------------------------------------
+environment: azureml:<your-env-name>@latest
+
+# ---------------------------------------------------------------------------
+# CODE
+# The path to the source code directory to upload to the compute.
+# Azure ML zips and stages this to the job's working directory.
+# ---------------------------------------------------------------------------
+code: ../..
+
+# ---------------------------------------------------------------------------
+# COMMAND
+# Executes the same logical stages as the local and GitHub Actions workflows.
+# Environment variables are injected at runtime — no secrets in YAML.
+# ---------------------------------------------------------------------------
+command: >-
+  set -e &&
+  dvc remote modify origin account_name "${{inputs.storage_account_name}}" &&
+  dvc pull --remote azure &&
+  python monitoring/evidently/drift_report.py
+    --reference data/reference/train_features.parquet
+    --current   data/raw/latest_features.parquet
+    --output    reports/pre_train_drift.html
+    --threshold 0.6 || echo "WARNING: pre-train drift detected" &&
+  dvc repro train &&
+  python -c "
+  import mlflow, os
+  mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+  experiment = mlflow.get_experiment_by_name('model-training')
+  runs = mlflow.search_runs(
+      experiment_ids=[experiment.experiment_id],
+      order_by=['start_time DESC'],
+      max_results=1,
+  )
+  print('MLflow run ID:', runs.iloc[0]['run_id'])
+  "
+
+# ---------------------------------------------------------------------------
+# INPUTS
+# Passed at job submission time by the GitHub Actions workflow.
+# ---------------------------------------------------------------------------
+inputs:
+  storage_account_name:
+    type: string
+    description: "Azure Storage account name for DVC remote (from Terraform output)"
+
+  environment:
+    type: string
+    description: "Target environment (dev | staging | production)"
+    default: dev
+
+# ---------------------------------------------------------------------------
+# ENVIRONMENT VARIABLES
+# MLFLOW_TRACKING_URI is injected by the GitHub Actions step (--set flag).
+# Additional variables can be added here as static values.
+# ---------------------------------------------------------------------------
+environment_variables:
+  MLFLOW_TRACKING_URI: ""           # Overridden by --set in GitHub Actions step
+  AZURE_ML_JOB: "true"             # Allows code to detect Azure ML execution context
+
+# ---------------------------------------------------------------------------
+# RESOURCES
+# Request GPU resources when running on gpu-training cluster.
+# instance_count = 1 for single-GPU jobs; increase for distributed training.
+# ---------------------------------------------------------------------------
+resources:
+  instance_count: 1
+
+# ---------------------------------------------------------------------------
+# LIMITS
+# wall_clock_duration: fail the job if it exceeds this duration.
+# Prevents runaway GPU spend from stuck or infinite-loop jobs.
+# ---------------------------------------------------------------------------
+limits:
+  timeout: PT4H   # 4 hours maximum; adjust for your model size

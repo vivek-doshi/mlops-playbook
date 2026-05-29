@@ -1,0 +1,125 @@
+---
+# Kubernetes Job — one-shot batch inference run.
+#
+# Usage:
+#   kubectl apply -f cd/kubernetes/batch/batch-job.yaml
+#
+# Customise MODEL_NAME, ENVIRONMENT, JOB_CONFIG_PATH, and OUTPUT_PATH
+# either via kustomize overlays or sed patches in CI.
+#
+# Labels required for cost attribution: cost-center, team, model-name, environment.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: batch-inference-job          # overridden by CI: <model-name>-batch-<run-id>
+  namespace: fraud-detection-production
+  labels:
+    cost-center:  cc-1234
+    team:         ml-platform
+    model-name:   fraud-detection    # overridden by CI
+    environment:  production         # overridden by CI
+    app:          batch-inference
+  annotations:
+    batch.mlops.io/triggered-by: "github-actions"
+spec:
+  # Retry up to 2 times on transient failures.
+  backoffLimit: 2
+
+  # Delete the Job (and its pods) 24 hours after completion.
+  ttlSecondsAfterFinished: 86400
+
+  # Timeout after 4 hours; prevents runaway jobs.
+  activeDeadlineSeconds: 14400
+
+  template:
+    metadata:
+      labels:
+        cost-center:  cc-1234
+        team:         ml-platform
+        model-name:   fraud-detection
+        environment:  production
+        app:          batch-inference
+    spec:
+      restartPolicy: Never
+
+      # ── Security context ──────────────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser:    1000
+        fsGroup:      1000
+
+      # ── Service account (for S3/GCS/ABS access via IRSA / Workload Identity)
+      serviceAccountName: batch-inference-sa
+
+      containers:
+        - name: batch-scorer
+          image: ghcr.io/my-org/batch-scorer:latest   # overridden by CI
+          imagePullPolicy: Always
+
+          # ── Security ────────────────────────────────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   false   # batch scorer writes /tmp
+            capabilities:
+              drop: ["ALL"]
+
+          # ── Resources ───────────────────────────────────────────────────────
+          resources:
+            requests:
+              cpu:    "2"
+              memory: "8Gi"
+            limits:
+              cpu:    "4"
+              memory: "16Gi"
+
+          # ── Command ─────────────────────────────────────────────────────────
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "==> Validating input data..."
+              python /app/batch/runner/input_validator.py \
+                --job-config /etc/batch-config/job.yaml
+
+              echo "==> Scoring..."
+              python /app/batch/runner/batch_scorer.py \
+                --job-config /etc/batch-config/job.yaml
+
+              echo "==> Checking output quality..."
+              python /app/batch/runner/output_quality_gate.py \
+                --job-config /etc/batch-config/job.yaml \
+                --predictions-path $(python -c "import yaml; c=yaml.safe_load(open('/etc/batch-config/job.yaml')); print(c['output']['path'])")
+
+              echo "==> Notifying downstream..."
+              python /app/batch/runner/downstream_notifier.py \
+                --job-config /etc/batch-config/job.yaml \
+                --status success \
+                --output-path $(python -c "import yaml; c=yaml.safe_load(open('/etc/batch-config/job.yaml')); print(c['output']['path'])")
+
+          # ── Environment ─────────────────────────────────────────────────────
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow.mlflow.svc.cluster.local:5000
+            - name: SLACK_BATCH_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: batch-secrets
+                  key:  slack-webhook-url
+                  optional: true
+
+          # ── Volume mounts ────────────────────────────────────────────────────
+          volumeMounts:
+            - name: batch-config
+              mountPath: /etc/batch-config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+
+      # ── Volumes ──────────────────────────────────────────────────────────────
+      volumes:
+        - name: batch-config
+          configMap:
+            name: batch-job-config   # created by CI with the job YAML
+        - name: tmp
+          emptyDir: {}

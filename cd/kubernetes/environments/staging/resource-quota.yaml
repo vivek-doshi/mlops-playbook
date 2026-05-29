@@ -1,0 +1,40 @@
+# environments/staging/resource-quota.yaml
+# Resource quota for the <model-name>-staging namespace.
+# Limits: 4 CPU, 16Gi memory, 2 GPU max (per Phase 2 spec).
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: staging-quota
+spec:
+  hard:
+    requests.cpu: "2"
+    limits.cpu: "4"
+    requests.memory: "8Gi"
+    limits.memory: "16Gi"
+    requests.nvidia.com/gpu: "2"
+    limits.nvidia.com/gpu: "2"
+    pods: "20"
+    services: "10"
+    persistentvolumeclaims: "10"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: staging-limit-range
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "1"
+        memory: "1Gi"
+      defaultRequest:
+        cpu: "500m"
+        memory: "512Mi"
+      max:
+        cpu: "4"
+        memory: "8Gi"
+    - type: Pod
+      max:
+        cpu: "4"
+        memory: "16Gi"

@@ -1,0 +1,46 @@
+# policy/fairness/_fairness-config-schema.yaml
+#
+# Schema documentation for per-model fairness configuration files.
+# Every file in policy/fairness/<model-name>-fairness.yaml must conform
+# to this schema.
+#
+# Required fields are marked with [REQUIRED].
+# Optional fields show their default value.
+
+# ─────────────────────────────────────────────
+# [REQUIRED] Registered MLflow model name.
+model_name: "<string>"
+
+# [REQUIRED] Column in the test dataset that holds the ground-truth label.
+label_column: "<string>"
+
+# [REQUIRED] One or more columns used as sensitive group attributes.
+# Each column listed here will be evaluated independently.
+sensitive_features:
+  - "<column_name>"
+
+# ─────────────────────────────────────────────
+# [OPTIONAL] Fairness thresholds.
+# Defaults shown below match the playbook policy.
+thresholds:
+  # Minimum acceptable disparate impact ratio.
+  # Formula: min(selection_rate_per_group) / max(selection_rate_per_group)
+  # Range:   0.0 – 1.0  (1.0 = perfectly equal; below 0.8 triggers gate failure)
+  disparate_impact_ratio: 0.80       # default: 0.80
+
+  # Maximum tolerated equalised odds difference across groups.
+  # Formula: max |TPR_g1 – TPR_g2| + max |FPR_g1 – FPR_g2|  (fairlearn)
+  equalised_odds_difference: 0.10   # default: 0.10
+
+  # Maximum tolerated FNR disparity (max_group_FNR – min_group_FNR).
+  fnr_disparity: 0.10               # default: 0.10
+
+# ─────────────────────────────────────────────
+# [OPTIONAL] Documentation / audit metadata.
+notes: "<free text notes for audit record>"
+
+# Last reviewed by (team or individual).
+reviewed_by: "<team or GitHub handle>"
+
+# Date last reviewed (YYYY-MM-DD).
+review_date: "<YYYY-MM-DD>"

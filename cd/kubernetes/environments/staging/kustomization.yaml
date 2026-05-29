@@ -1,0 +1,51 @@
+# environments/staging/kustomization.yaml
+# Kustomize overlay for the staging environment.
+# Applied automatically after dev gates pass — no human approval required.
+#
+# Namespace convention: <model-name>-staging
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../_base
+  - resource-quota.yaml
+  - network-policy.yaml
+
+namespace: model-staging  # replaced by CI with <model-name>-staging
+
+images:
+  - name: model-serving
+    newTag: staging-latest
+
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: model-serving
+      spec:
+        replicas: 2
+        template:
+          metadata:
+            labels:
+              environment: staging
+          spec:
+            containers:
+              - name: model-server
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "1Gi"
+                  limits:
+                    cpu: "2"
+                    memory: "4Gi"
+                env:
+                  - name: ENVIRONMENT
+                    value: staging
+                  - name: LOG_LEVEL
+                    value: INFO
+
+commonLabels:
+  environment: staging
+  tier: staging

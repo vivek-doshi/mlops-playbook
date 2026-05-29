@@ -1,0 +1,38 @@
+# environments/staging/network-policy.yaml
+# NetworkPolicy for the staging namespace.
+# Slightly more permissive than dev (allows load-test traffic).
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: staging-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: staging-allow-serving
+spec:
+  podSelector:
+    matchLabels:
+      app: model-serving
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow inbound HTTP from load-test runners and internal callers.
+    - ports:
+        - port: 8080
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - ports:
+        - port: 5000
+        - port: 443

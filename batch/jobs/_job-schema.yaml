@@ -1,0 +1,151 @@
+# Batch Job Schema
+#
+# Every batch job YAML must validate against this schema.
+# Required fields are marked with (REQUIRED).
+# Copy this file as a template and remove the _schema suffix.
+
+# (REQUIRED) Unique job identifier — used in logging, Kubernetes job names, and notification messages.
+job_name: my-model-batch-job
+
+# (REQUIRED) Kubernetes namespace to run the batch job in.
+namespace: my-model-production
+
+# Environment: dev | staging | production
+environment: production
+
+# ──────────────────────────────────────────────────────────
+# Model configuration
+# ──────────────────────────────────────────────────────────
+model:
+  # (REQUIRED) MLflow registered model name.
+  name: my-model
+
+  # Model stage to load. One of: Staging | Production | Archived
+  # Mutually exclusive with 'version'.
+  stage: Production
+
+  # Pin to a specific model version.  Takes precedence over 'stage'.
+  # version: "42"
+
+  # MLflow tracking server URI. If omitted, uses MLFLOW_TRACKING_URI env var.
+  tracking_uri: http://mlflow.mlflow.svc.cluster.local:5000
+
+# ──────────────────────────────────────────────────────────
+# Input configuration
+# ──────────────────────────────────────────────────────────
+input:
+  # (REQUIRED) Path to input data (local path, s3://, gs://, abfs://).
+  path: s3://my-bucket/input/batch-data.parquet
+
+  # Format: parquet | csv | json
+  format: parquet
+
+  # Extra kwargs forwarded to pandas read_<format>().
+  read_options: {}
+
+  # Column containing the ground-truth label (dropped before scoring).
+  # label_column: label
+
+  # ── Input expectations (for input_validator.py) ──
+  expectations:
+    # Minimum/maximum row counts.
+    min_rows: 1000
+    # max_rows: 10000000
+
+    # Columns that must be present.
+    required_columns:
+      - feature_1
+      - feature_2
+
+    # Expected dtype keywords per column.
+    dtypes:
+      feature_1: float
+      feature_2: int
+
+    # Per-column null rate limits (overrides max_null_rate).
+    max_null_rate: 0.05
+    column_null_limits:
+      feature_1: 0.02
+
+    # Min/max allowed values per column.
+    value_ranges:
+      feature_1:
+        min: 0.0
+        max: 1.0
+      feature_2:
+        min: 0
+        max: 999999
+
+# ──────────────────────────────────────────────────────────
+# Output configuration
+# ──────────────────────────────────────────────────────────
+output:
+  # (REQUIRED) Path to write predictions (local path, s3://, gs://, abfs://).
+  path: s3://my-bucket/output/predictions.parquet
+
+  # Format: parquet | csv | json
+  format: parquet
+
+  # Extra kwargs forwarded to pandas to_<format>().
+  write_options: {}
+
+  # ── Output quality checks (for output_quality_gate.py) ──
+  quality_checks:
+    # Column in predictions dataframe containing the predicted class.
+    prediction_column: prediction
+
+    # Column containing a numeric probability/score.
+    score_column: score
+
+    # Minimum fraction of non-null predictions required.
+    min_coverage: 0.999
+
+    # Per-class rate bounds: {class_label: {min: float, max: float}}
+    class_rate_bounds:
+      "0": {min: 0.80, max: 0.99}
+      "1": {min: 0.01, max: 0.20}
+
+    # Alert if any single class dominates at this rate.
+    max_dominant_class_rate: 0.99
+
+    # Expected score mean/std ranges.
+    score_mean_bounds: {min: 0.01, max: 0.50}
+    score_std_bounds:  {min: 0.01, max: 0.40}
+
+# ──────────────────────────────────────────────────────────
+# Runtime configuration
+# ──────────────────────────────────────────────────────────
+
+# Number of rows to score in a single pandas batch.
+chunk_size: 10000
+
+# Columns to copy from input to output (for joining predictions back).
+id_columns:
+  - transaction_id
+
+# ──────────────────────────────────────────────────────────
+# Pod labels (required for cost attribution)
+# ──────────────────────────────────────────────────────────
+labels:
+  cost-center: cc-1234
+  team: ml-platform
+  model-name: my-model
+  environment: production
+
+# ──────────────────────────────────────────────────────────
+# Notifications
+# ──────────────────────────────────────────────────────────
+notifications:
+  # Slack incoming webhook URL. Can also be set via SLACK_BATCH_WEBHOOK_URL env var.
+  # slack_webhook_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+
+  # HTTP callback endpoint called on completion.
+  # http_callback:
+  #   url: https://my-downstream-service/batch-complete
+  #   headers:
+  #     Authorization: Bearer ${DOWNSTREAM_TOKEN}
+
+  # Azure Event Grid endpoint.
+  # event_grid:
+  #   endpoint: https://my-topic.eventgrid.azure.net/api/events
+  #   key: ${EVENT_GRID_KEY}
