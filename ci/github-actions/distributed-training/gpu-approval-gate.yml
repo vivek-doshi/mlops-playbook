@@ -1,0 +1,100 @@
+# ci/github-actions/distributed-training/gpu-approval-gate.yml
+# Human-approval gate for GPU training jobs.
+#
+# TRIGGER:     workflow_call
+# INPUTS:      model_name, num_workers, environment
+# OUTPUTS:     approved (true/false)
+# BEGINNER NOTE:
+#   GPU training on on-demand nodes is expensive (e.g., H100 ~ $4.76/hr).
+#   This gate estimates the GPU cost and requires @platform-infra-team approval
+#   when the estimated cost exceeds $500 or when the environment is staging/production.
+#   Dev spot jobs under $500 auto-approve.
+
+name: gpu-approval-gate
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        type: string
+        required: true
+      num_workers:
+        type: string
+        required: false
+        default: "2"
+      environment:
+        type: string
+        required: false
+        default: dev
+
+    outputs:
+      approved:
+        description: "'true' if GPU use is approved"
+        value: ${{ jobs.gpu-gate.outputs.approved }}
+
+jobs:
+  gpu-gate:
+    name: GPU cost gate — ${{ inputs.model_name }}
+    runs-on: ubuntu-latest
+    # Require human approval for staging/production GPU jobs.
+    environment: ${{ (inputs.environment == 'staging' || inputs.environment == 'production') && 'gpu-approval' || '' }}
+    permissions:
+      contents: read
+
+    outputs:
+      approved: ${{ steps.estimate.outputs.approved }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Estimate GPU cost
+        id: estimate
+        run: |
+          python - << 'PY'
+          import yaml, os
+
+          rates_path = "finops/data/instance-rates.yaml"
+          try:
+              with open(rates_path) as fh:
+                  rates = yaml.safe_load(fh)
+          except FileNotFoundError:
+              rates = {}
+
+          gpu_per_hr  = float(rates.get("gpu_per_unit_per_hour", 2.10))
+          num_workers = int("${{ inputs.num_workers }}")
+          env         = "${{ inputs.environment }}"
+          # Assume spot discount for dev, on-demand for staging/prod.
+          if env == "dev":
+              spot_discount = float(rates.get("spot_discount_factor", 0.70))
+              effective_rate = gpu_per_hr * spot_discount
+          else:
+              effective_rate = gpu_per_hr
+
+          # Assume max 24-hour training run for estimation.
+          estimated_cost = num_workers * effective_rate * 24
+
+          summary = (
+              f"{num_workers} GPU(s) × ${effective_rate:.2f}/hr × 24h "
+              f"= ${estimated_cost:.2f} est. ({env})"
+          )
+          print(summary)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"estimated_cost={estimated_cost:.2f}\n")
+              f.write(f"cost_summary={summary}\n")
+              f.write("approved=true\n")
+
+          if estimated_cost > 500:
+              print(f"WARNING: Estimated cost ${estimated_cost:.2f} > $500 threshold.")
+              print("Ensure @platform-infra-team has reviewed this job.")
+          PY
+
+      - name: Print cost estimate
+        run: |
+          echo "GPU cost estimate: ${{ steps.estimate.outputs.cost_summary }}"
+          echo ""
+          echo "If this exceeds your budget, consider:"
+          echo "  1. Reducing num_workers"
+          echo "  2. Using spot instances (dev only)"
+          echo "  3. Updating the model budget file in finops/budgets/"

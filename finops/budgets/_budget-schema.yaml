@@ -1,0 +1,45 @@
+# finops/budgets/_budget-schema.yaml
+#
+# Schema reference for per-model budget files in finops/budgets/.
+# Every file named finops/budgets/<model-name>.yaml must conform to this schema.
+#
+# Required fields are marked [REQUIRED].
+# Optional fields show their default value or note.
+
+# ─────────────────────────────────────────────
+# [REQUIRED] Registered MLflow model name — must match the model_name label.
+model_name: "<string>"
+
+# [REQUIRED] Team responsible for the model's cost.
+team: "<string>"
+
+# [REQUIRED] Cost centre to charge compute costs to.
+cost_center: "<string>"
+
+# ─────────────────────────────────────────────
+# [OPTIONAL] Budget limits.  At least one of weekly_limit_usd or
+# monthly_limit_usd should be set to enable alerting.
+
+# Maximum estimated spend per week (Monday–Sunday) in USD.
+weekly_limit_usd: null     # e.g. 500.00
+
+# Maximum estimated spend per calendar month in USD.
+monthly_limit_usd: null    # e.g. 2000.00
+
+# ─────────────────────────────────────────────
+# [OPTIONAL] Alert thresholds — percentage of limit that triggers a warning.
+# Defaults shown below.
+alert_thresholds:
+  warning_pct:  80    # fire warning alert at 80% of limit
+  critical_pct: 100   # fire critical alert at 100% of limit
+
+# ─────────────────────────────────────────────
+# [OPTIONAL] Spot instance requirement override.
+# If not set, follows the environment-level policy (spot_required in env policy).
+spot_required: null   # true | false | null (inherit from env policy)
+
+# [OPTIONAL] Notes for audit purposes.
+notes: "<free text>"
+
+# Date last reviewed (YYYY-MM-DD).
+review_date: "<YYYY-MM-DD>"

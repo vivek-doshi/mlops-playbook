@@ -1,0 +1,98 @@
+---
+# Prometheus/Alertmanager alerts for batch inference jobs.
+#
+# Deploy:
+#   kubectl apply -f monitoring/batch/batch-alerts.yaml
+#
+# Requires kube-state-metrics and the Kubernetes Jobs Prometheus scrape config.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: batch-inference-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus
+    role:    alert-rules
+    team:    ml-platform
+spec:
+  groups:
+    # ──────────────────────────────────────────────────────────────────────────
+    # Job failure alerts
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: batch.failures
+      interval: 60s
+      rules:
+        - alert: BatchJobFailed
+          expr: |
+            kube_job_status_failed{namespace=~".+-production"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team:     ml-platform
+          annotations:
+            summary:     "Batch job failed in {{ $labels.namespace }}"
+            description: |
+              Job {{ $labels.job_name }} in namespace {{ $labels.namespace }}
+              has {{ $value }} failed pods.  Check logs:
+                kubectl logs -n {{ $labels.namespace }} -l batch.kubernetes.io/job-name={{ $labels.job_name }}
+
+        - alert: BatchJobStuck
+          expr: |
+            (
+              kube_job_status_active > 0
+              and on(namespace, job_name)
+              kube_job_status_start_time < (time() - 14400)
+            )
+          for: 10m
+          labels:
+            severity: warning
+            team:     ml-platform
+          annotations:
+            summary:     "Batch job has been running for > 4 hours in {{ $labels.namespace }}"
+            description: |
+              Job {{ $labels.job_name }} started more than 4 hours ago and is
+              still active.  Check for data skew or model loading issues.
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Scheduled job missed
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: batch.schedule
+      interval: 300s
+      rules:
+        - alert: BatchCronJobMissedSchedule
+          expr: |
+            kube_cronjob_status_last_schedule_time{namespace=~".+-production"}
+            < (time() - 90000)
+          for: 15m
+          labels:
+            severity: warning
+            team:     ml-platform
+          annotations:
+            summary:     "CronJob {{ $labels.cronjob }} missed its schedule"
+            description: |
+              CronJob {{ $labels.cronjob }} in {{ $labels.namespace }} has not
+              run in the last 25 hours.  Check the CronJob spec and the cluster
+              controller-manager logs.
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # High failure rate
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: batch.quality
+      interval: 300s
+      rules:
+        - alert: BatchHighFailureRate
+          expr: |
+            (
+              sum by(namespace) (kube_job_status_failed) /
+              (sum by(namespace) (kube_job_status_failed) + sum by(namespace) (kube_job_status_succeeded))
+            ) > 0.2
+          for: 30m
+          labels:
+            severity: warning
+            team:     ml-platform
+          annotations:
+            summary:     "High batch job failure rate in {{ $labels.namespace }}"
+            description: |
+              More than 20% of batch jobs in {{ $labels.namespace }} have failed
+              in the last 30 minutes.  Check input data quality and model health.

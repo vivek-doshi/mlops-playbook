@@ -1,0 +1,213 @@
+# ci/github-actions/fairness/fairness-gate.yml
+# Reusable fairness evaluation gate workflow.
+#
+# TRIGGER:     workflow_call (called by promotion-gates.yml or evaluate.yml)
+# INPUTS:      model_name, model_version, test_data_path, fairness_config_path,
+#              gate_mode (warn | fail)
+# OUTPUTS:     fairness_passed (true/false), fairness_summary (human-readable)
+# BEGINNER NOTE:
+#   This workflow downloads the model, runs fairness/evaluate.py, and checks
+#   whether all fairness metrics are within the thresholds defined in the
+#   model's policy/fairness/<model-name>-fairness.yaml config.
+#   In dev mode (gate_mode=warn) it never blocks; in staging/production it fails
+#   the calling workflow if any threshold is violated.
+
+name: fairness-gate
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        type: string
+        required: true
+      model_version:
+        description: MLflow model version to evaluate
+        type: string
+        required: true
+      test_data_path:
+        description: Relative path to test Parquet file in the repo
+        type: string
+        default: data/test_features.parquet
+      fairness_config_path:
+        description: Relative path to fairness config YAML
+        type: string
+        default: ""   # empty = auto-detect policy/fairness/<model_name>-fairness.yaml
+      gate_mode:
+        description: "warn (log only) or fail (block on violation)"
+        type: string
+        default: fail
+      explainability:
+        description: "Also run SHAP explainability report (true/false)"
+        type: string
+        default: "true"
+
+    outputs:
+      fairness_passed:
+        description: "'true' if all fairness thresholds passed"
+        value: ${{ jobs.fairness.outputs.fairness_passed }}
+      fairness_summary:
+        description: Human-readable summary of fairness results
+        value: ${{ jobs.fairness.outputs.fairness_summary }}
+
+    secrets:
+      MLFLOW_TRACKING_URI:
+        required: true
+      DVC_AWS_ACCESS_KEY_ID:
+        required: false
+      DVC_AWS_SECRET_ACCESS_KEY:
+        required: false
+
+jobs:
+  fairness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      fairness_passed: ${{ steps.gate.outputs.fairness_passed }}
+      fairness_summary: ${{ steps.gate.outputs.fairness_summary }}
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. CHECKOUT + SETUP
+      # ------------------------------------------------------------------ #
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install fairness dependencies
+        run: |
+          pip install --quiet --upgrade pip
+          pip install --quiet \
+            "fairlearn>=0.10" \
+            "shap>=0.44" \
+            "mlflow>=2.11" \
+            "pandas>=2.0" \
+            "scikit-learn>=1.4" \
+            "numpy>=1.26" \
+            "matplotlib>=3.8" \
+            "pyyaml>=6.0" \
+            "dvc[s3]>=3.0"
+
+      # ------------------------------------------------------------------ #
+      # 2. PULL TEST DATA VIA DVC
+      # ------------------------------------------------------------------ #
+      - name: Pull test data
+        env:
+          MLFLOW_TRACKING_URI:   ${{ secrets.MLFLOW_TRACKING_URI }}
+          AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+        run: dvc pull ${{ inputs.test_data_path }}
+
+      # ------------------------------------------------------------------ #
+      # 3. RESOLVE FAIRNESS CONFIG PATH
+      # ------------------------------------------------------------------ #
+      - name: Resolve fairness config path
+        id: config
+        run: |
+          CONFIG="${{ inputs.fairness_config_path }}"
+          if [ -z "$CONFIG" ]; then
+            CONFIG="policy/fairness/${{ inputs.model_name }}-fairness.yaml"
+          fi
+          if [ ! -f "$CONFIG" ]; then
+            echo "WARNING: Fairness config not found at $CONFIG — using default thresholds."
+            # Write a minimal default config so the gate can proceed.
+            cat > /tmp/default-fairness.yaml << 'EOF'
+          model_name: ${{ inputs.model_name }}
+          label_column: label
+          sensitive_features: []
+          thresholds:
+            disparate_impact_ratio: 0.80
+            equalised_odds_difference: 0.10
+            fnr_disparity: 0.10
+          EOF
+            CONFIG="/tmp/default-fairness.yaml"
+            echo "used_default=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "config_path=$CONFIG" >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------------ #
+      # 4. RUN FAIRNESS GATE
+      # ------------------------------------------------------------------ #
+      - name: Run fairness evaluation
+        id: gate
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python fairness/evaluate.py \
+            --model-uri   "models:/${{ inputs.model_name }}/${{ inputs.model_version }}" \
+            --test-data   "${{ inputs.test_data_path }}" \
+            --config      "${{ steps.config.outputs.config_path }}" \
+            --report-path "reports/fairness/${{ inputs.model_name }}-v${{ inputs.model_version }}.json"
+
+          EXIT_CODE=$?
+
+          # Parse report for summary
+          SUMMARY=$(python - << 'PY'
+          import json, sys
+          try:
+              with open("reports/fairness/${{ inputs.model_name }}-v${{ inputs.model_version }}.json") as f:
+                  r = json.load(f)
+              passed = r.get("passed", False)
+              violations = r.get("violations", [])
+              results = r.get("results", {})
+              lines = [f"Fairness gate: {'PASS' if passed else 'FAIL'}"]
+              for feat, metrics in results.items():
+                  lines.append(
+                      f"  {feat}: DI={metrics['disparate_impact_ratio']} "
+                      f"EOD={metrics['equalised_odds_difference']} "
+                      f"FNR_disp={metrics['fnr_disparity']}"
+                  )
+              if violations:
+                  lines.append("Violations:")
+                  for v in violations:
+                      lines.append(f"  {v}")
+              print(" | ".join(lines))
+          except Exception as e:
+              print(f"Could not parse report: {e}")
+          PY
+          )
+
+          echo "fairness_summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "fairness_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fairness_passed=false" >> "$GITHUB_OUTPUT"
+            if [ "${{ inputs.gate_mode }}" = "fail" ]; then
+              echo "Fairness gate FAILED (gate_mode=fail). Blocking promotion." >&2
+              exit 1
+            else
+              echo "Fairness gate FAILED but gate_mode=warn — continuing."
+            fi
+          fi
+
+      # ------------------------------------------------------------------ #
+      # 5. SHAP EXPLAINABILITY REPORT (optional)
+      # ------------------------------------------------------------------ #
+      - name: Run SHAP explainability
+        if: ${{ inputs.explainability == 'true' }}
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python fairness/explainability.py \
+            --model-uri   "models:/${{ inputs.model_name }}/${{ inputs.model_version }}" \
+            --test-data   "${{ inputs.test_data_path }}" \
+            --output-dir  "reports/explainability/${{ inputs.model_name }}-v${{ inputs.model_version }}/"
+
+      # ------------------------------------------------------------------ #
+      # 6. UPLOAD REPORTS AS ARTIFACTS
+      # ------------------------------------------------------------------ #
+      - name: Upload fairness + explainability reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fairness-reports-${{ inputs.model_name }}-v${{ inputs.model_version }}
+          path: reports/
+          retention-days: 90

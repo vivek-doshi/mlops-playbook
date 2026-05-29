@@ -1,0 +1,103 @@
+# monitoring/fairness/fairness-alerts.yaml
+#
+# Prometheus alerting rules for model fairness metric drift in production.
+# These rules fire when fairness metrics logged to the metrics endpoint
+# (e.g. vllm /metrics or a custom prometheus exporter) cross policy thresholds.
+#
+# BEGINNER NOTE:
+#   These alerts assume your serving layer exports the following gauge metrics:
+#   - model_disparate_impact_ratio{model_name, feature}
+#   - model_equalised_odds_difference{model_name, feature}
+#   - model_fnr_disparity{model_name, feature}
+#   Wire these in your serving container via the prometheus_client library.
+
+groups:
+  - name: fairness_alerts
+    interval: 5m
+    rules:
+
+      # -------------------------------------------------------------------
+      # Disparate impact ratio below 0.80 in a 1h window
+      # -------------------------------------------------------------------
+      - alert: DisparateImpactRatioBelowThreshold
+        expr: |
+          avg_over_time(
+            model_disparate_impact_ratio[1h]
+          ) < 0.80
+        for: 15m
+        labels:
+          severity: critical
+          team: ml-platform
+          playbook: "docs/golden-paths/fairness-and-explainability.md"
+        annotations:
+          summary: >-
+            Disparate impact ratio for {{ $labels.model_name }} /
+            {{ $labels.feature }} is {{ $value | humanize }} (< 0.80).
+          description: >-
+            The 1-hour average disparate impact ratio has dropped below the
+            0.80 policy threshold for {{ $labels.model_name }}.
+            This indicates a potential bias against a protected group.
+            Immediate investigation required before the next production promotion.
+
+      # -------------------------------------------------------------------
+      # Equalised odds difference above 0.10 for 30 minutes
+      # -------------------------------------------------------------------
+      - alert: EqualisedOddsDifferenceExceedsThreshold
+        expr: |
+          avg_over_time(
+            model_equalised_odds_difference[30m]
+          ) > 0.10
+        for: 30m
+        labels:
+          severity: warning
+          team: ml-platform
+          playbook: "docs/golden-paths/fairness-and-explainability.md"
+        annotations:
+          summary: >-
+            Equalised odds difference for {{ $labels.model_name }} /
+            {{ $labels.feature }} is {{ $value | humanize }} (> 0.10).
+          description: >-
+            The 30-minute average equalised odds difference exceeds 0.10 for
+            {{ $labels.model_name }}. Review recent data distribution shifts
+            or model version changes.
+
+      # -------------------------------------------------------------------
+      # FNR disparity above 0.10 for 30 minutes
+      # -------------------------------------------------------------------
+      - alert: FNRDisparityExceedsThreshold
+        expr: |
+          avg_over_time(
+            model_fnr_disparity[30m]
+          ) > 0.10
+        for: 30m
+        labels:
+          severity: warning
+          team: ml-platform
+          playbook: "docs/golden-paths/fairness-and-explainability.md"
+        annotations:
+          summary: >-
+            FNR disparity for {{ $labels.model_name }} /
+            {{ $labels.feature }} is {{ $value | humanize }} (> 0.10).
+          description: >-
+            A false-negative rate disparity above 0.10 was observed for
+            {{ $labels.model_name }}. This means at least one demographic
+            group is experiencing systematically higher missed-detection rates.
+
+      # -------------------------------------------------------------------
+      # Fairness evaluation last ran > 7 days ago (staleness guard)
+      # -------------------------------------------------------------------
+      - alert: FairnessEvaluationStale
+        expr: |
+          (time() - model_fairness_last_evaluated_timestamp) > 604800
+        for: 1h
+        labels:
+          severity: warning
+          team: ml-platform
+        annotations:
+          summary: >-
+            Fairness evaluation for {{ $labels.model_name }} has not run
+            in the past 7 days.
+          description: >-
+            model_fairness_last_evaluated_timestamp is more than 7 days old.
+            Trigger a manual fairness gate run or check the CI pipeline for
+            failures.

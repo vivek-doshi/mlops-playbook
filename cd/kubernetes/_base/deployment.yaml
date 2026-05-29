@@ -1,0 +1,99 @@
+# _base/deployment.yaml
+# Base Kubernetes Deployment manifest for ML model serving.
+# Overlaid by environment-specific kustomization.yaml files.
+# Do not apply this file directly — use kustomize build on an overlay.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-serving
+  labels:
+    app: model-serving
+    component: serving
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-serving
+  template:
+    metadata:
+      labels:
+        app: model-serving
+        component: serving
+        # Phase 2 cost attribution labels — required on every pod.
+        # Override values in environment overlay patches.
+        cost-center: ml-platform
+        team: ml-team
+        model-name: placeholder
+        environment: dev
+    spec:
+      # Security baseline — non-root, read-only root filesystem.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+        - name: model-server
+          image: model-serving:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # Resource requests and limits are patched per environment.
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # Liveness and readiness probes are required for all serving workloads.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+          # Writable tmp dir for inference cache — root FS is read-only.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: model-cache
+              mountPath: /model-cache
+          env:
+            - name: ENVIRONMENT
+              value: dev
+            - name: MLFLOW_TRACKING_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-credentials
+                  key: tracking-uri
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: model-cache
+          emptyDir: {}
+      # Prefer scheduling on GPU nodes when available.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: nvidia.com/gpu
+                    operator: Exists

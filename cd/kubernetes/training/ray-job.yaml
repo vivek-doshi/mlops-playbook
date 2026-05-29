@@ -1,0 +1,139 @@
+# cd/kubernetes/training/ray-job.yaml
+# Ray distributed training job manifest.
+#
+# USAGE:
+#   Submitted via KubeRay RayJob CRD or by the distributed-train.yml CI workflow.
+#   Parameterise IMAGE, MODEL_NAME, and EXPERIMENT_NAME at apply time using
+#   kustomize patches or sed replacement in CI.
+#
+# COST LABELS: Required on every pod (enforced by Kyverno policy).
+# SECURITY: Non-root, read-only root FS, no privilege escalation.
+
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ml-training-ray-job
+  labels:
+    cost-center: "ml-platform"
+    team: "ml-platform"
+    model-name: "model-placeholder"
+    environment: "dev"
+spec:
+  # Entrypoint — override in CI via patch.
+  entrypoint: "python training/ray/train_distributed.py"
+
+  # Delete completed/failed jobs after 24 hours to reduce namespace clutter.
+  ttlSecondsAfterFinished: 86400
+
+  # RayCluster template embedded in the RayJob.
+  rayClusterSpec:
+    rayVersion: "2.9.0"
+    enableInTreeAutoscaling: false
+
+    # ── Head node ────────────────────────────────────────────────────────── #
+    headGroupSpec:
+      serviceType: ClusterIP
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: ray-head
+              image: "rayproject/ray:2.9.0-py311"
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false   # Ray requires write access to /tmp
+                runAsNonRoot: true
+              volumeMounts:
+                - name: ray-tmp
+                  mountPath: /tmp
+                - name: checkpoint-storage
+                  mountPath: /checkpoints
+          volumes:
+            - name: ray-tmp
+              emptyDir: {}
+            - name: checkpoint-storage
+              persistentVolumeClaim:
+                claimName: ml-training-checkpoints
+
+    # ── Worker nodes ──────────────────────────────────────────────────────── #
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 2
+        minReplicas: 1
+        maxReplicas: 8
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              cost-center: "ml-platform"
+              team: "ml-platform"
+              model-name: "model-placeholder"
+              environment: "dev"
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              fsGroup: 1000
+            # Prefer spot nodes to reduce cost; fall back to on-demand.
+            tolerations:
+              - key: "nvidia.com/gpu"
+                operator: "Exists"
+                effect: "NoSchedule"
+              - key: "spot"
+                operator: "Equal"
+                value: "true"
+                effect: "NoSchedule"
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 70
+                    preference:
+                      matchExpressions:
+                        - key: "node.kubernetes.io/lifecycle"
+                          operator: In
+                          values: ["spot", "preemptible"]
+            containers:
+              - name: ray-worker
+                image: "rayproject/ray:2.9.0-py311-gpu"
+                resources:
+                  requests:
+                    cpu: "4"
+                    memory: "16Gi"
+                    nvidia.com/gpu: "1"
+                  limits:
+                    cpu: "8"
+                    memory: "32Gi"
+                    nvidia.com/gpu: "1"
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: false
+                  runAsNonRoot: true
+                volumeMounts:
+                  - name: ray-tmp
+                    mountPath: /tmp
+                  - name: checkpoint-storage
+                    mountPath: /checkpoints
+            volumes:
+              - name: ray-tmp
+                emptyDir: {}
+              - name: checkpoint-storage
+                persistentVolumeClaim:
+                  claimName: ml-training-checkpoints

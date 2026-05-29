@@ -1,0 +1,200 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Trigger: workflow_dispatch (manual) or workflow_call (reusable)
+#
+# Inputs:
+#   model_name    - MLflow registered model name          (required)
+#   config_path   - Path to pipelines/config/<model>.yaml (required)
+#   environment   - Target environment: staging | production (default: staging)
+#   dry_run       - Skip actual pipeline submission        (default: false)
+#
+# Outputs:
+#   run_id        - MLflow run ID from the training run
+#   model_version - Registered model version transitioned to Staging
+#
+# Beginner note:
+#   This workflow submits an Argo Workflow to run the end-to-end training
+#   pipeline on the cluster.  The KUBECONFIG secret must be set at the repo
+#   or environment level before running.
+# ──────────────────────────────────────────────────────────────────────────────
+name: Trigger Training Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: "MLflow model name"
+        required: true
+      config_path:
+        description: "Path to pipeline config YAML"
+        required: true
+        default: "pipelines/config/my-model.yaml"
+      environment:
+        description: "Target environment"
+        required: false
+        default: "staging"
+        type: choice
+        options: [staging, production]
+      dry_run:
+        description: "Dry run — skip submission"
+        required: false
+        default: "false"
+        type: boolean
+
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      config_path:
+        required: true
+        type: string
+      environment:
+        required: false
+        type: string
+        default: staging
+      dry_run:
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      run_id:
+        description: "MLflow run ID"
+        value: ${{ jobs.submit-pipeline.outputs.run_id }}
+      model_version:
+        description: "Registered model version"
+        value: ${{ jobs.submit-pipeline.outputs.model_version }}
+
+env:
+  ARGO_NAMESPACE: mlops
+  WORKFLOW_TEMPLATE: cd/argo/pipelines/training-workflow.yaml
+
+jobs:
+
+  validate-config:
+    name: Validate pipeline config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check config file exists
+        run: |
+          if [ ! -f "${{ inputs.config_path }}" ]; then
+            echo "::error::Config file not found: ${{ inputs.config_path }}"
+            exit 1
+          fi
+          echo "Config file found: ${{ inputs.config_path }}"
+
+      - name: Lint config YAML
+        run: python -c "import yaml, sys; yaml.safe_load(open('${{ inputs.config_path }}'))"
+
+  submit-pipeline:
+    name: Submit Argo training workflow
+    runs-on: ubuntu-latest
+    needs: validate-config
+    outputs:
+      run_id:       ${{ steps.wait.outputs.run_id }}
+      model_version: ${{ steps.wait.outputs.model_version }}
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Argo CLI
+        run: |
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-amd64.gz
+          gunzip argo-linux-amd64.gz
+          chmod +x argo-linux-amd64
+          sudo mv argo-linux-amd64 /usr/local/bin/argo
+
+      - name: Configure kubectl
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Submit workflow (dry-run)
+        if: ${{ inputs.dry_run == 'true' || inputs.dry_run == true }}
+        run: |
+          echo "Dry run — would submit Argo workflow with:"
+          echo "  model_name  = ${{ inputs.model_name }}"
+          echo "  config_path = ${{ inputs.config_path }}"
+          echo "  environment = ${{ inputs.environment }}"
+
+      - name: Submit workflow
+        id: submit
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          WORKFLOW_NAME=$(argo submit ${{ env.WORKFLOW_TEMPLATE }} \
+            -n ${{ env.ARGO_NAMESPACE }} \
+            -p model_name="${{ inputs.model_name }}" \
+            -p config_path="${{ inputs.config_path }}" \
+            -p environment="${{ inputs.environment }}" \
+            --output name)
+          echo "workflow_name=${WORKFLOW_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Submitted Argo workflow: ${WORKFLOW_NAME}"
+
+      - name: Wait for workflow completion
+        id: wait
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          WORKFLOW_NAME="${{ steps.submit.outputs.workflow_name }}"
+          echo "Watching workflow: ${WORKFLOW_NAME}"
+
+          TIMEOUT=14400  # 4 hours
+          ELAPSED=0
+          while true; do
+            STATUS=$(argo get "${WORKFLOW_NAME}" -n ${{ env.ARGO_NAMESPACE }} -o json \
+              | python -c "import sys,json; print(json.load(sys.stdin)['status']['phase'])")
+
+            echo "[${ELAPSED}s] Status: ${STATUS}"
+
+            if [ "${STATUS}" = "Succeeded" ]; then
+              echo "Workflow succeeded."
+              break
+            elif [ "${STATUS}" = "Failed" ] || [ "${STATUS}" = "Error" ]; then
+              echo "::error::Workflow ${STATUS}"
+              argo logs "${WORKFLOW_NAME}" -n ${{ env.ARGO_NAMESPACE }}
+              exit 1
+            fi
+
+            sleep 30
+            ELAPSED=$((ELAPSED + 30))
+            if [ ${ELAPSED} -ge ${TIMEOUT} ]; then
+              echo "::error::Workflow timed out after ${TIMEOUT}s"
+              exit 1
+            fi
+          done
+
+          # Extract MLflow outputs from workflow node outputs (if annotated).
+          RUN_ID=$(argo get "${WORKFLOW_NAME}" -n ${{ env.ARGO_NAMESPACE }} -o json \
+            | python -c "
+          import sys, json
+          w = json.load(sys.stdin)
+          nodes = w.get('status', {}).get('nodes', {})
+          for n in nodes.values():
+              outputs = n.get('outputs', {}).get('parameters', [])
+              for p in outputs:
+                  if p['name'] == 'run_id':
+                      print(p['value'])
+                      sys.exit(0)
+          print('')
+          " 2>/dev/null || echo "")
+
+          echo "run_id=${RUN_ID}"     >> "$GITHUB_OUTPUT"
+          echo "model_version=latest" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow logs
+        if: always()
+        run: |
+          if [ -n "${{ steps.submit.outputs.workflow_name }}" ]; then
+            argo logs "${{ steps.submit.outputs.workflow_name }}" \
+              -n ${{ env.ARGO_NAMESPACE }} > argo-logs.txt 2>&1 || true
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: argo-training-logs-${{ github.run_id }}
+          path: argo-logs.txt
+          retention-days: 7

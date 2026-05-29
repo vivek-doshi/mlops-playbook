@@ -1,0 +1,54 @@
+# policy/environments/dev-policy.yaml
+# Allowed runtimes, resource caps, and governance rules for the dev environment.
+# Enforced by Kyverno policies in the platform repo (devops-playbook/policy/kyverno/).
+
+environment: dev
+
+# Namespace naming convention: <model-name>-dev
+namespace_pattern: "{model_name}-dev"
+
+# Resource caps (must match cd/kubernetes/environments/dev/resource-quota.yaml)
+resource_caps:
+  cpu_limit:    "2"
+  memory_limit: "8Gi"
+  gpu_limit:    1
+
+# Allowed serving runtimes in dev.
+allowed_runtimes:
+  - vllm
+  - torchserve
+  - triton
+
+# Deployment gate requirements.
+gates:
+  smoke_test:   required
+  unit_metrics: required
+  schema_check: required
+  drift_check:  optional   # drift data may not exist yet in dev
+  load_test:    disabled
+  fairness:     optional   # fairness config may not exist in early dev
+
+# Approval requirements — dev is fully automated.
+approvals:
+  required_reviewers: 0
+  auto_approve:       true
+
+# MLflow experiment naming convention.
+mlflow_experiment_suffix: "-dev"
+
+# Deployment strategy — fast iteration in dev.
+deployment_strategy:
+  type:    RollingUpdate
+  max_unavailable: 1
+  max_surge: 1
+
+# Cost attribution requirements.
+required_labels:
+  - cost-center
+  - team
+  - model-name
+  - environment
+
+# Spot instances are the default in dev.
+spot_required: true
+spot_override_approval: none  # no approval needed to disable spot in dev

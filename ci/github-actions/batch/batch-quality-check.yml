@@ -1,0 +1,111 @@
+---
+# Post-batch output quality gate.
+#
+# Trigger:  workflow_call (called by trigger-batch-job.yml after scoring)
+# Inputs:   job_name, model_name, environment, predictions_path, job_config
+# Outputs:  quality_passed (true/false), quality_summary (text)
+#
+# Beginner tip: This gate is automatically called by trigger-batch-job.yml.
+# You should not need to call it manually. It fails the CI step if the batch
+# output quality checks don't pass.
+
+name: Batch Quality Check
+
+on:
+  workflow_call:
+    inputs:
+      job_name:
+        type: string
+        required: true
+      model_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      predictions_path:
+        type: string
+        required: true
+      job_config:
+        type: string
+        required: true
+    outputs:
+      quality_passed:
+        description: "true if output quality checks passed"
+        value: ${{ jobs.quality-gate.outputs.quality_passed }}
+      quality_summary:
+        description: "Human-readable quality summary"
+        value: ${{ jobs.quality-gate.outputs.quality_summary }}
+
+jobs:
+  quality-gate:
+    name: Output quality gate (${{ inputs.model_name }})
+    runs-on: ubuntu-latest
+    outputs:
+      quality_passed: ${{ steps.check.outputs.quality_passed }}
+      quality_summary: ${{ steps.check.outputs.quality_summary }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pandas pyarrow pyyaml --quiet
+
+      - name: Download predictions artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: predictions-${{ inputs.job_name }}
+          path: /tmp/predictions/
+        continue-on-error: true
+
+      - name: Run output quality gate
+        id: check
+        run: |
+          set +e  # Don't exit immediately — capture exit code
+
+          python batch/runner/output_quality_gate.py \
+            --job-config "${{ inputs.job_config }}" \
+            --predictions-path "${{ inputs.predictions_path }}" \
+            2>&1 | tee /tmp/quality-gate-output.txt
+
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "quality_passed=true" >> "$GITHUB_OUTPUT"
+            echo "quality_summary=Output quality checks passed for ${{ inputs.model_name }}" >> "$GITHUB_OUTPUT"
+          else
+            ERRORS=$(grep "ERROR" /tmp/quality-gate-output.txt | head -10 | tr '\n' ';')
+            echo "quality_passed=false" >> "$GITHUB_OUTPUT"
+            echo "quality_summary=Quality gate FAILED: ${ERRORS}" >> "$GITHUB_OUTPUT"
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Upload quality gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-${{ inputs.job_name }}
+          path: /tmp/quality-gate-output.txt
+          retention-days: 30
+
+      - name: Post quality summary to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const passed = '${{ steps.check.outputs.quality_passed }}' === 'true';
+            const summary = `${{ steps.check.outputs.quality_summary }}`;
+            const icon = passed ? '✅' : '❌';
+            const body = `### ${icon} Batch Quality Gate: ${{ inputs.model_name }}\n\n${summary}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              body,
+            });

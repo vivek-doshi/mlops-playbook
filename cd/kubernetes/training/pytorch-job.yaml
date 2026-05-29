@@ -1,0 +1,145 @@
+# cd/kubernetes/training/pytorch-job.yaml
+# Kubeflow PyTorchJob manifest for distributed PyTorch training.
+#
+# USAGE:
+#   Apply via kustomize patch in CI to override IMAGE and replica counts.
+#   The replicaSpecs follow the Kubeflow Training Operator v1 API:
+#     - Master: coordinator — runs only once
+#     - Worker: each runs an independent worker process
+#
+# COST LABELS: Required on every pod (enforced by Kyverno policy).
+# SECURITY: Non-root containers, no privilege escalation.
+
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: ml-pytorch-training-job
+  labels:
+    cost-center: "ml-platform"
+    team: "ml-platform"
+    model-name: "model-placeholder"
+    environment: "dev"
+spec:
+  pytorchReplicaSpecs:
+    # ── Master ──────────────────────────────────────────────────────────── #
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: pytorch
+              image: "pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime"
+              command:
+                - python
+                - training/kubeflow/train_pytorch.py
+                - --config
+                - training/config/model-placeholder.yaml
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "16Gi"
+                  nvidia.com/gpu: "1"
+                limits:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                runAsNonRoot: true
+              volumeMounts:
+                - name: checkpoint-storage
+                  mountPath: /checkpoints
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: checkpoint-storage
+              persistentVolumeClaim:
+                claimName: ml-training-checkpoints
+            - name: tmp
+              emptyDir: {}
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "spot"
+              operator: "Equal"
+              value: "true"
+              effect: "NoSchedule"
+
+    # ── Workers ─────────────────────────────────────────────────────────── #
+    Worker:
+      replicas: 3
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: pytorch
+              image: "pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime"
+              command:
+                - python
+                - training/kubeflow/train_pytorch.py
+                - --config
+                - training/config/model-placeholder.yaml
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "16Gi"
+                  nvidia.com/gpu: "1"
+                limits:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                runAsNonRoot: true
+              volumeMounts:
+                - name: checkpoint-storage
+                  mountPath: /checkpoints
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: checkpoint-storage
+              persistentVolumeClaim:
+                claimName: ml-training-checkpoints
+            - name: tmp
+              emptyDir: {}
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "spot"
+              operator: "Equal"
+              value: "true"
+              effect: "NoSchedule"
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 70
+                  preference:
+                    matchExpressions:
+                      - key: "node.kubernetes.io/lifecycle"
+                        operator: In
+                        values: ["spot", "preemptible"]

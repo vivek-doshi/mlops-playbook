@@ -1,0 +1,160 @@
+# cd/kubernetes/training/tf-job.yaml
+# Kubeflow TFJob manifest for distributed TensorFlow training.
+#
+# USAGE:
+#   Apply via kustomize patch in CI to override IMAGE and replica counts.
+#   Follows the Kubeflow Training Operator v1 TFJob API:
+#     - Chief: single coordinator process
+#     - Worker: data-parallel worker processes
+#     - PS (Parameter Server): optional; set replicas: 0 for all-reduce mode
+#
+# COST LABELS: Required on every pod (enforced by Kyverno policy).
+# SECURITY: Non-root, no privilege escalation.
+
+apiVersion: kubeflow.org/v1
+kind: TFJob
+metadata:
+  name: ml-tf-training-job
+  labels:
+    cost-center: "ml-platform"
+    team: "ml-platform"
+    model-name: "model-placeholder"
+    environment: "dev"
+spec:
+  cleanPodPolicy: Running   # clean up pods once job is complete
+
+  tfReplicaSpecs:
+    # ── Chief ───────────────────────────────────────────────────────────── #
+    Chief:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: tensorflow
+              image: "tensorflow/tensorflow:2.15.0-gpu"
+              command:
+                - python
+                - training/kubeflow/train_tf.py
+                - --config
+                - training/config/model-placeholder.yaml
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "16Gi"
+                  nvidia.com/gpu: "1"
+                limits:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                runAsNonRoot: true
+              volumeMounts:
+                - name: checkpoint-storage
+                  mountPath: /checkpoints
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: checkpoint-storage
+              persistentVolumeClaim:
+                claimName: ml-training-checkpoints
+            - name: tmp
+              emptyDir: {}
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
+
+    # ── Workers ─────────────────────────────────────────────────────────── #
+    Worker:
+      replicas: 3
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: tensorflow
+              image: "tensorflow/tensorflow:2.15.0-gpu"
+              command:
+                - python
+                - training/kubeflow/train_tf.py
+                - --config
+                - training/config/model-placeholder.yaml
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "16Gi"
+                  nvidia.com/gpu: "1"
+                limits:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                runAsNonRoot: true
+              volumeMounts:
+                - name: checkpoint-storage
+                  mountPath: /checkpoints
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: checkpoint-storage
+              persistentVolumeClaim:
+                claimName: ml-training-checkpoints
+            - name: tmp
+              emptyDir: {}
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "spot"
+              operator: "Equal"
+              value: "true"
+              effect: "NoSchedule"
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 70
+                  preference:
+                    matchExpressions:
+                      - key: "node.kubernetes.io/lifecycle"
+                        operator: In
+                        values: ["spot", "preemptible"]
+
+    # ── Parameter Server (disabled — using all-reduce strategy) ─────────── #
+    PS:
+      replicas: 0
+      restartPolicy: Never
+      template:
+        metadata:
+          labels:
+            cost-center: "ml-platform"
+            team: "ml-platform"
+            model-name: "model-placeholder"
+            environment: "dev"
+        spec:
+          containers:
+            - name: tensorflow
+              image: "tensorflow/tensorflow:2.15.0"

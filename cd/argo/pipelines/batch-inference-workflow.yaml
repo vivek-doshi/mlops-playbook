@@ -1,0 +1,175 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: batch-inference-pipeline
+  namespace: mlops
+  labels:
+    cost-center: ml-platform
+    team: mlops
+    model-name: "{{workflow.parameters.model_name}}"
+    environment: "{{workflow.parameters.environment}}"
+spec:
+  entrypoint: batch-inference-pipeline
+  arguments:
+    parameters:
+      - name: model_name
+        value: my-model
+      - name: environment
+        value: production
+      - name: job_config_path
+        value: batch/jobs/my-model-production-batch-job.yaml
+      - name: mlflow_tracking_uri
+        value: http://mlflow.mlops.svc.cluster.local:5000
+
+  volumeClaimTemplates:
+    - metadata:
+        name: batch-workspace
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 50Gi
+
+  templates:
+
+    - name: batch-inference-pipeline
+      dag:
+        tasks:
+          - name: validate-input
+            template: validate-input
+
+          - name: score-batch
+            template: score-batch
+            dependencies: [validate-input]
+
+          - name: quality-gate
+            template: quality-gate
+            dependencies: [score-batch]
+
+          - name: notify-downstream
+            template: notify-downstream
+            dependencies: [quality-gate]
+
+    # ------------------------------------------------------------------ #
+    # Step: validate-input                                                 #
+    # ------------------------------------------------------------------ #
+    - name: validate-input
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, batch/runner/input_validator.py]
+        args:
+          - --job-config
+          - /config/job.yaml
+        volumeMounts:
+          - name: batch-workspace
+            mountPath: /workspace
+          - name: job-config
+            mountPath: /config
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: score-batch                                                    #
+    # ------------------------------------------------------------------ #
+    - name: score-batch
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, batch/runner/batch_scorer.py]
+        args:
+          - --job-config
+          - /config/job.yaml
+        volumeMounts:
+          - name: batch-workspace
+            mountPath: /workspace
+          - name: job-config
+            mountPath: /config
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "{{workflow.parameters.mlflow_tracking_uri}}"
+        resources:
+          requests:
+            cpu: "4"
+            memory: 8Gi
+          limits:
+            cpu: "8"
+            memory: 16Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+
+    # ------------------------------------------------------------------ #
+    # Step: quality-gate                                                   #
+    # ------------------------------------------------------------------ #
+    - name: quality-gate
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, batch/runner/output_quality_gate.py]
+        args:
+          - --job-config
+          - /config/job.yaml
+        volumeMounts:
+          - name: batch-workspace
+            mountPath: /workspace
+          - name: job-config
+            mountPath: /config
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+    # ------------------------------------------------------------------ #
+    # Step: notify-downstream                                              #
+    # ------------------------------------------------------------------ #
+    - name: notify-downstream
+      container:
+        image: my-registry/mlops-pipeline:latest
+        command: [python, batch/runner/downstream_notifier.py]
+        args:
+          - --job-config
+          - /config/job.yaml
+          - --status
+          - success
+        volumeMounts:
+          - name: job-config
+            mountPath: /config
+        env:
+          - name: SLACK_BATCH_WEBHOOK_URL
+            valueFrom:
+              secretKeyRef:
+                name: mlops-notifications
+                key: slack-webhook-url
+        resources:
+          requests:
+            cpu: "100m"
+            memory: 256Mi
+          limits:
+            cpu: "500m"
+            memory: 512Mi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+
+  # Job config ConfigMap volume (must be created before submitting workflow).
+  volumes:
+    - name: job-config
+      configMap:
+        name: "{{workflow.parameters.model_name}}-batch-job-config"

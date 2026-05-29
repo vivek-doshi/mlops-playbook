@@ -1,0 +1,36 @@
+# cd/kubernetes/training/checkpointing-pvc.yaml
+# PersistentVolumeClaim for distributed training checkpoint storage.
+#
+# USAGE:
+#   Apply once per namespace (per model).  All training pods mount this PVC
+#   at /checkpoints.  Use a kustomize patch to override storage class or size.
+#
+# STORAGE CLASS GUIDANCE:
+#   - ReadWriteMany (RWX) is required for multi-node training jobs so that
+#     all worker pods can write checkpoints concurrently.
+#   - On AWS use EFS CSI driver (storageClassName: efs-sc).
+#   - On GCP use Filestore CSI (storageClassName: standard-rwx).
+#   - On Azure use Azure Files (storageClassName: azurefile-csi-premium).
+#
+# NOTE: Override storageClassName via kustomize patch per cluster.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ml-training-checkpoints
+  labels:
+    cost-center: "ml-platform"
+    team: "ml-platform"
+    model-name: "model-placeholder"
+    environment: "dev"
+  annotations:
+    # Auto-delete after the training job is confirmed complete and artefacts
+    # have been uploaded to the model registry.
+    lifecycle.mlops.io/retain: "72h"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: "efs-sc"   # override via kustomize patch
+  resources:
+    requests:
+      storage: 50Gi

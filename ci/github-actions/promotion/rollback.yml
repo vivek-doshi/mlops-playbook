@@ -1,0 +1,208 @@
+# rollback.yml
+# Reusable rollback workflow — reverts a serving deployment to a previous model version.
+#
+# TRIGGER: workflow_dispatch (manual) or called by monitoring alerts via API
+# INPUTS:
+#   model_name       : MLflow registered model name
+#   rollback_version : Target model version to roll back to (or 'previous')
+#   environment      : Target environment (dev | staging | production)
+#   reason           : Human-readable reason for the rollback
+# OUTPUTS: Rollback status
+#
+# BEGINNER NOTE:
+#   Rollback does NOT delete the bad version from MLflow — it transitions the
+#   bad version to Staging and promotes the rollback target to Production.
+#   This preserves full history and allows post-mortem investigation.
+
+name: rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        default: sample-model
+      rollback_version:
+        description: >
+          Model version to roll back to. Use 'previous' to automatically
+          select the version that was in Production before the current one.
+        required: true
+        default: previous
+      environment:
+        description: Target environment to roll back
+        required: true
+        default: production
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      reason:
+        description: Reason for the rollback (required for audit trail)
+        required: true
+        default: "SLO breach detected"
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    # Production rollbacks also require the production environment (2 approvers).
+    # Dev and staging rollbacks are immediate.
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install mlflow
+        run: pip install mlflow
+
+      # Resolve 'previous' to an actual version number.
+      - name: Resolve rollback target version
+        id: resolve
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:       ${{ inputs.model_name }}
+          ROLLBACK_VERSION: ${{ inputs.rollback_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          model_name = os.environ["MODEL_NAME"]
+          target     = os.environ["ROLLBACK_VERSION"]
+
+          if target != "previous":
+              print(f"rollback_target={target}")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write(f"rollback_target={target}\n")
+              sys.exit(0)
+
+          # Find the most recently archived version (the one that was
+          # bumped out when the current production version was promoted).
+          versions = client.search_model_versions(f"name='{model_name}'")
+          archived = [v for v in versions if v.current_stage == "Archived"]
+          archived.sort(key=lambda v: int(v.version), reverse=True)
+
+          if not archived:
+              print("ERROR: No archived versions found to roll back to.", file=sys.stderr)
+              sys.exit(1)
+
+          rollback_target = archived[0].version
+          print(f"Resolved 'previous' to version {rollback_target}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"rollback_target={rollback_target}\n")
+          PY
+
+      # Re-deploy the rollback target version via Kubernetes.
+      - name: Authenticate to Kubernetes cluster
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets[format('KUBECONFIG_{0}', toUpper(inputs.environment))] }}
+        continue-on-error: true
+
+      - name: Roll back Kubernetes deployment
+        run: |
+          MODEL_NAME="${{ inputs.model_name }}"
+          ENV="${{ inputs.environment }}"
+          NAMESPACE="${MODEL_NAME}-$([ "${ENV}" = "production" ] && echo "prod" || echo "${ENV}")"
+
+          echo "Rolling back deployment in namespace: ${NAMESPACE}"
+          # Apply the same overlay but with the rollback image tag.
+          kubectl kustomize "cd/kubernetes/environments/${ENV}" | \
+            sed "s/namespace: model-.*/namespace: ${NAMESPACE}/g" | \
+            kubectl apply -f -
+          kubectl rollout status deployment/model-serving -n "${NAMESPACE}" --timeout=5m
+        continue-on-error: true
+
+      # Update MLflow registry to reflect the rollback.
+      - name: Update MLflow registry
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME:       ${{ inputs.model_name }}
+          ROLLBACK_TARGET:  ${{ steps.resolve.outputs.rollback_target }}
+          ENVIRONMENT:      ${{ inputs.environment }}
+        run: |
+          python - << 'PY'
+          import mlflow, os
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          model_name      = os.environ["MODEL_NAME"]
+          rollback_target = os.environ["ROLLBACK_TARGET"]
+          environment     = os.environ["ENVIRONMENT"]
+
+          if environment == "production":
+              # Archive current production, restore rollback target.
+              for mv in client.get_latest_versions(model_name, stages=["Production"]):
+                  client.transition_model_version_stage(
+                      name=mv.name, version=mv.version, stage="Staging"
+                  )
+                  print(f"Demoted {mv.version} from Production → Staging.")
+
+              client.transition_model_version_stage(
+                  name=model_name, version=rollback_target, stage="Production"
+              )
+              print(f"Promoted rollback target {rollback_target} → Production.")
+          PY
+
+      # Record the rollback in the approved-versions audit trail.
+      - name: Record rollback in audit trail
+        env:
+          MODEL_NAME:      ${{ inputs.model_name }}
+          ROLLBACK_TARGET: ${{ steps.resolve.outputs.rollback_target }}
+          ENVIRONMENT:     ${{ inputs.environment }}
+          REASON:          ${{ inputs.reason }}
+        run: |
+          python - << 'PY'
+          import os, yaml, uuid
+          from datetime import datetime, timezone
+
+          path = "policy/model-approval/approved-versions.yaml"
+          with open(path) as f:
+              doc = yaml.safe_load(f)
+
+          doc.setdefault("approvals", []).append({
+              "model_name":     os.environ["MODEL_NAME"],
+              "version":        os.environ["ROLLBACK_TARGET"],
+              "environment":    os.environ["ENVIRONMENT"],
+              "approved_by":    os.environ.get("GITHUB_ACTOR", "unknown"),
+              "approved_at":    datetime.now(timezone.utc).isoformat(),
+              "promotion_id":   str(uuid.uuid4()),
+              "github_run_id":  os.environ.get("GITHUB_RUN_ID", ""),
+              "notes":          f"ROLLBACK: {os.environ['REASON']}",
+              "override":       True,
+          })
+
+          with open(path, "w") as f:
+              yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
+
+          print("Rollback recorded in audit trail.")
+          PY
+
+      - name: Open rollback audit PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "incident: rollback ${{ inputs.model_name }} to v${{ steps.resolve.outputs.rollback_target }} in ${{ inputs.environment }}"
+          body: |
+            **Rollback audit record**
+            - Model: ${{ inputs.model_name }}
+            - Rolled back to version: ${{ steps.resolve.outputs.rollback_target }}
+            - Environment: ${{ inputs.environment }}
+            - Reason: ${{ inputs.reason }}
+            - Actor: ${{ github.actor }}
+          branch: "incident/rollback-${{ github.run_id }}"
+          commit-message: "incident: rollback ${{ inputs.model_name }} [skip ci]"
+          labels: rollback,incident

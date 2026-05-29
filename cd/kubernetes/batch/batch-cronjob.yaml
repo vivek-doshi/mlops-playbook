@@ -1,0 +1,128 @@
+---
+# Kubernetes CronJob — scheduled batch inference.
+#
+# Usage:
+#   kubectl apply -f cd/kubernetes/batch/batch-cronjob.yaml
+#
+# Customise MODEL_NAME, ENVIRONMENT, SCHEDULE, and JOB_CONFIG via
+# kustomize overlays or CI sed patches.
+#
+# Labels required for cost attribution: cost-center, team, model-name, environment.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: batch-inference-scheduled       # overridden by CI
+  namespace: fraud-detection-production
+  labels:
+    cost-center:  cc-1234
+    team:         ml-platform
+    model-name:   fraud-detection        # overridden by CI
+    environment:  production             # overridden by CI
+    app:          batch-inference
+  annotations:
+    batch.mlops.io/golden-path: "docs/golden-paths/batch-inference.md"
+spec:
+  # Run daily at 02:00 UTC. Override via kustomize or CI.
+  schedule: "0 2 * * *"
+
+  # Prevent concurrent runs.
+  concurrencyPolicy: Forbid
+
+  # Keep 3 successful and 3 failed job records.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  # Start the job within 300 seconds of scheduled time; skip if missed.
+  startingDeadlineSeconds: 300
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      activeDeadlineSeconds: 14400
+
+      template:
+        metadata:
+          labels:
+            cost-center:  cc-1234
+            team:         ml-platform
+            model-name:   fraud-detection
+            environment:  production
+            app:          batch-inference
+        spec:
+          restartPolicy: Never
+
+          # ── Security context ────────────────────────────────────────────────
+          securityContext:
+            runAsNonRoot: true
+            runAsUser:    1000
+            fsGroup:      1000
+
+          serviceAccountName: batch-inference-sa
+
+          containers:
+            - name: batch-scorer
+              image: ghcr.io/my-org/batch-scorer:latest
+              imagePullPolicy: Always
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem:   false
+                capabilities:
+                  drop: ["ALL"]
+
+              resources:
+                requests:
+                  cpu:    "2"
+                  memory: "8Gi"
+                limits:
+                  cpu:    "4"
+                  memory: "16Gi"
+
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  echo "==> Validating input data..."
+                  python /app/batch/runner/input_validator.py \
+                    --job-config /etc/batch-config/job.yaml
+
+                  echo "==> Scoring..."
+                  python /app/batch/runner/batch_scorer.py \
+                    --job-config /etc/batch-config/job.yaml
+
+                  echo "==> Checking output quality..."
+                  python /app/batch/runner/output_quality_gate.py \
+                    --job-config /etc/batch-config/job.yaml \
+                    --predictions-path $(python -c "import yaml; c=yaml.safe_load(open('/etc/batch-config/job.yaml')); print(c['output']['path'])")
+
+                  echo "==> Notifying downstream..."
+                  python /app/batch/runner/downstream_notifier.py \
+                    --job-config /etc/batch-config/job.yaml \
+                    --status success \
+                    --output-path $(python -c "import yaml; c=yaml.safe_load(open('/etc/batch-config/job.yaml')); print(c['output']['path'])")
+
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: http://mlflow.mlflow.svc.cluster.local:5000
+                - name: SLACK_BATCH_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: batch-secrets
+                      key:  slack-webhook-url
+                      optional: true
+
+              volumeMounts:
+                - name: batch-config
+                  mountPath: /etc/batch-config
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+
+          volumes:
+            - name: batch-config
+              configMap:
+                name: batch-job-config
+            - name: tmp
+              emptyDir: {}

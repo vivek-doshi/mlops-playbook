@@ -1,0 +1,128 @@
+# ci/github-actions/finops/weekly-cost-report.yml
+# Weekly ML cost report + daily cost-attribution job.
+#
+# TRIGGER:     Cron (daily 01:00 UTC + Monday 06:00 UTC) or workflow_dispatch.
+# INPUTS:      None (uses repo default paths).
+# OUTPUTS:     Uploads reports as GitHub Actions artifacts (90-day retention).
+# BEGINNER NOTE:
+#   The daily step runs ml-cost-attribution.py every night to capture pod
+#   resource usage. The weekly step (Monday only) aggregates the last 7 days
+#   and checks each model against its finops/budgets/<model>.yaml limit.
+#   If a model is over budget, the job exits non-zero — creating a visible
+#   failure that the team must acknowledge.
+
+name: ml-cost-weekly-report
+
+on:
+  schedule:
+    # Daily cost attribution: every night at 01:00 UTC
+    - cron: "0 1 * * *"
+    # Weekly report: Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      run_weekly:
+        description: "Force weekly report generation (true/false)"
+        default: "false"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────── #
+  # DAILY: cost attribution snapshot
+  # ──────────────────────────────────────────────────────────────────────── #
+  daily-attribution:
+    name: Daily cost attribution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet \
+            "kubernetes>=29.0" \
+            "pandas>=2.0" \
+            "pyyaml>=6.0" \
+            "prometheus-api-client>=0.5"
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Run daily cost attribution
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          python finops/scripts/ml-cost-attribution.py \
+            --rates-file  finops/data/instance-rates.yaml \
+            --output-path "finops/reports/daily/${TODAY}.json"
+
+      - name: Upload daily report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-daily-${{ github.run_id }}
+          path: finops/reports/daily/
+          retention-days: 90
+
+  # ──────────────────────────────────────────────────────────────────────── #
+  # WEEKLY: aggregated report + budget check
+  # ──────────────────────────────────────────────────────────────────────── #
+  weekly-report:
+    name: Weekly cost report
+    runs-on: ubuntu-latest
+    needs: daily-attribution
+    # Run only on Monday or when forced via workflow_dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' && inputs.run_weekly == 'true'
+      || (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 6 * * 1'))
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --quiet "pandas>=2.0" "pyyaml>=6.0"
+
+      - name: Download daily reports
+        uses: actions/download-artifact@v4
+        with:
+          name: cost-daily-${{ github.run_id }}
+          path: finops/reports/daily/
+
+      - name: Generate weekly report
+        id: weekly
+        run: |
+          python finops/scripts/weekly-cost-report.py \
+            --reports-dir finops/reports/daily/ \
+            --output-dir  finops/reports/weekly/ \
+            --budget-dir  finops/budgets/
+          EXIT=$?
+          echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
+          exit $EXIT
+
+      - name: Upload weekly report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-weekly-${{ github.run_id }}
+          path: finops/reports/weekly/
+          retention-days: 90

@@ -1,0 +1,212 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Trigger: workflow_dispatch (manual) or workflow_call (reusable) or schedule
+#
+# Inputs:
+#   model_name    - MLflow registered model name          (required)
+#   job_config    - Path to batch/jobs/<model>-batch-job.yaml (required)
+#   environment   - Target environment                    (default: production)
+#   dry_run       - Skip actual pipeline submission        (default: false)
+#
+# Outputs:
+#   rows_scored   - Number of rows scored
+#   output_path   - Path to prediction output
+#
+# Beginner note:
+#   This workflow submits an Argo Workflow for batch inference on the cluster.
+#   The KUBECONFIG secret must be configured at the repo or environment level.
+# ──────────────────────────────────────────────────────────────────────────────
+name: Trigger Batch Inference Pipeline
+
+on:
+  schedule:
+    - cron: "0 2 * * *"    # Daily at 02:00 UTC
+
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: "MLflow model name"
+        required: true
+      job_config:
+        description: "Path to batch job config YAML"
+        required: true
+        default: "batch/jobs/my-model-production-batch-job.yaml"
+      environment:
+        description: "Target environment"
+        required: false
+        default: "production"
+        type: choice
+        options: [staging, production]
+      dry_run:
+        description: "Dry run — skip submission"
+        required: false
+        default: "false"
+        type: boolean
+
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      job_config:
+        required: true
+        type: string
+      environment:
+        required: false
+        type: string
+        default: production
+      dry_run:
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      rows_scored:
+        description: "Number of rows scored"
+        value: ${{ jobs.submit-batch.outputs.rows_scored }}
+      output_path:
+        description: "Output predictions path"
+        value: ${{ jobs.submit-batch.outputs.output_path }}
+
+env:
+  ARGO_NAMESPACE: mlops
+  WORKFLOW_TEMPLATE: cd/argo/pipelines/batch-inference-workflow.yaml
+
+jobs:
+
+  validate-config:
+    name: Validate batch job config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check config file exists
+        run: |
+          CONFIG="${{ inputs.job_config || 'batch/jobs/my-model-production-batch-job.yaml' }}"
+          if [ ! -f "${CONFIG}" ]; then
+            echo "::error::Batch config not found: ${CONFIG}"
+            exit 1
+          fi
+
+      - name: Lint config YAML
+        run: |
+          python -c "
+          import yaml, sys
+          cfg = yaml.safe_load(open('${{ inputs.job_config || ''batch/jobs/my-model-production-batch-job.yaml'' }}'))
+          required = ['job_name', 'model', 'input', 'output', 'labels']
+          missing = [k for k in required if k not in cfg]
+          if missing:
+              print(f'Missing required keys: {missing}')
+              sys.exit(1)
+          print('Config is valid.')
+          "
+
+  submit-batch:
+    name: Submit Argo batch inference workflow
+    runs-on: ubuntu-latest
+    needs: validate-config
+    outputs:
+      rows_scored: ${{ steps.wait.outputs.rows_scored }}
+      output_path: ${{ steps.wait.outputs.output_path }}
+    environment: ${{ inputs.environment || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Argo CLI
+        run: |
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-amd64.gz
+          gunzip argo-linux-amd64.gz
+          chmod +x argo-linux-amd64
+          sudo mv argo-linux-amd64 /usr/local/bin/argo
+
+      - name: Configure kubectl
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Dry run
+        if: ${{ inputs.dry_run == 'true' || inputs.dry_run == true }}
+        run: |
+          echo "Dry run — would submit batch inference workflow:"
+          echo "  model_name = ${{ inputs.model_name }}"
+          echo "  job_config = ${{ inputs.job_config }}"
+          echo "  environment = ${{ inputs.environment }}"
+
+      - name: Create job config ConfigMap
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          MODEL_NAME="${{ inputs.model_name }}"
+          kubectl create configmap "${MODEL_NAME}-batch-job-config" \
+            --from-file=job.yaml="${{ inputs.job_config }}" \
+            -n ${{ env.ARGO_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Submit workflow
+        id: submit
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          WORKFLOW_NAME=$(argo submit ${{ env.WORKFLOW_TEMPLATE }} \
+            -n ${{ env.ARGO_NAMESPACE }} \
+            -p model_name="${{ inputs.model_name }}" \
+            -p job_config_path="${{ inputs.job_config }}" \
+            -p environment="${{ inputs.environment || 'production' }}" \
+            --output name)
+          echo "workflow_name=${WORKFLOW_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Submitted: ${WORKFLOW_NAME}"
+
+      - name: Wait for completion
+        id: wait
+        if: ${{ inputs.dry_run != 'true' && inputs.dry_run != true }}
+        run: |
+          WORKFLOW_NAME="${{ steps.submit.outputs.workflow_name }}"
+          TIMEOUT=14400
+          ELAPSED=0
+          while true; do
+            STATUS=$(argo get "${WORKFLOW_NAME}" -n ${{ env.ARGO_NAMESPACE }} -o json \
+              | python -c "import sys,json; print(json.load(sys.stdin)['status']['phase'])")
+            echo "[${ELAPSED}s] Status: ${STATUS}"
+            if [ "${STATUS}" = "Succeeded" ]; then break; fi
+            if [ "${STATUS}" = "Failed" ] || [ "${STATUS}" = "Error" ]; then
+              echo "::error::Workflow ${STATUS}"
+              exit 1
+            fi
+            sleep 30
+            ELAPSED=$((ELAPSED + 30))
+            if [ ${ELAPSED} -ge ${TIMEOUT} ]; then
+              echo "::error::Timed out"
+              exit 1
+            fi
+          done
+          echo "rows_scored=unknown" >> "$GITHUB_OUTPUT"
+          echo "output_path=unknown"  >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow logs
+        if: always()
+        run: |
+          if [ -n "${{ steps.submit.outputs.workflow_name }}" ]; then
+            argo logs "${{ steps.submit.outputs.workflow_name }}" \
+              -n ${{ env.ARGO_NAMESPACE }} > argo-batch-logs.txt 2>&1 || true
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: argo-batch-logs-${{ github.run_id }}
+          path: argo-batch-logs.txt
+          retention-days: 7
+
+  notify-failure:
+    name: Notify on failure
+    runs-on: ubuntu-latest
+    needs: submit-batch
+    if: failure()
+    steps:
+      - name: Post Slack alert
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          curl -sS -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \":x: Batch inference pipeline failed\\nModel: ${{ inputs.model_name }}\\nRun: ${{ github.run_id }}\\nLink: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_BATCH_WEBHOOK_URL }}

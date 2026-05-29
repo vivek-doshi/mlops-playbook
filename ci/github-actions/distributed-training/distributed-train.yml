@@ -1,0 +1,225 @@
+# ci/github-actions/distributed-training/distributed-train.yml
+# Main distributed training workflow — supports Ray, PyTorch (Kubeflow), and TFJob.
+#
+# TRIGGER:     workflow_dispatch, or called from a model-specific training workflow.
+# INPUTS:      model_name, framework (ray|pytorch|tensorflow), num_workers, use_gpu,
+#              config_path, environment
+# OUTPUTS:     run_id (MLflow run ID), model_version (registered version)
+# BEGINNER NOTE:
+#   This workflow submits a distributed training job to Kubernetes.
+#   GPU workloads must pass the gpu-approval-gate.yml gate first (enforced below).
+#   On-demand GPU clusters require @platform-infra-team approval.
+
+name: distributed-training
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      framework:
+        description: "Distributed training framework"
+        required: true
+        type: choice
+        options: [ray, pytorch, tensorflow]
+        default: ray
+      num_workers:
+        description: "Number of worker replicas"
+        required: false
+        default: "2"
+        type: string
+      use_gpu:
+        description: "Request GPU nodes"
+        required: false
+        default: "true"
+        type: string
+      config_path:
+        description: "Path to training config YAML"
+        required: false
+        default: ""
+        type: string
+      environment:
+        description: "Target Kubernetes environment"
+        required: false
+        default: "dev"
+        type: choice
+        options: [dev, staging, production]
+
+  workflow_call:
+    inputs:
+      model_name:
+        type: string
+        required: true
+      framework:
+        type: string
+        required: false
+        default: ray
+      num_workers:
+        type: string
+        required: false
+        default: "2"
+      use_gpu:
+        type: string
+        required: false
+        default: "true"
+      config_path:
+        type: string
+        required: false
+        default: ""
+      environment:
+        type: string
+        required: false
+        default: dev
+
+    outputs:
+      run_id:
+        description: MLflow run ID
+        value: ${{ jobs.submit-training.outputs.run_id }}
+      model_version:
+        description: MLflow registered model version
+        value: ${{ jobs.submit-training.outputs.model_version }}
+
+    secrets:
+      KUBECONFIG_B64:
+        required: true
+      MLFLOW_TRACKING_URI:
+        required: false
+
+jobs:
+  # ── GPU approval gate ───────────────────────────────────────────────────── #
+  gpu-approval:
+    name: GPU cost approval gate
+    if: inputs.use_gpu == 'true'
+    uses: ./.github/workflows/gpu-approval-gate.yml
+    with:
+      model_name:  ${{ inputs.model_name }}
+      num_workers: ${{ inputs.num_workers }}
+      environment: ${{ inputs.environment }}
+
+  # ── Submit distributed training job ─────────────────────────────────────── #
+  submit-training:
+    name: Submit ${{ inputs.framework }} training job
+    runs-on: ubuntu-latest
+    needs: [gpu-approval]
+    if: |
+      always() &&
+      (needs.gpu-approval.result == 'success' || needs.gpu-approval.result == 'skipped')
+    permissions:
+      contents: read
+
+    outputs:
+      run_id:       ${{ steps.wait.outputs.run_id }}
+      model_version: ${{ steps.wait.outputs.model_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install kubectl + kustomize
+        run: |
+          curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          curl -sLO "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.1/kustomize_v5.4.1_linux_amd64.tar.gz"
+          tar -xzf kustomize_*.tar.gz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Determine config path
+        id: config
+        run: |
+          CONFIG="${{ inputs.config_path }}"
+          if [ -z "$CONFIG" ]; then
+            CONFIG="training/config/${{ inputs.model_name }}.yaml"
+          fi
+          echo "path=$CONFIG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate namespace
+        id: ns
+        run: |
+          NS="${{ inputs.model_name }}-${{ inputs.environment }}"
+          # Kubernetes namespace names must be lowercase alphanumeric and hyphens.
+          NS=$(echo "$NS" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+          echo "namespace=$NS" >> "$GITHUB_OUTPUT"
+
+      - name: Submit Ray training job
+        if: inputs.framework == 'ray'
+        run: |
+          NS="${{ steps.ns.outputs.namespace }}"
+          kubectl get namespace "$NS" 2>/dev/null || kubectl create namespace "$NS"
+
+          # Patch the RayJob with current image and replica count.
+          cat cd/kubernetes/training/ray-job.yaml | \
+            sed "s/model-placeholder/${{ inputs.model_name }}/g" | \
+            sed "s/replicas: 2/replicas: ${{ inputs.num_workers }}/g" | \
+            kubectl apply -n "$NS" -f -
+
+      - name: Submit PyTorch training job
+        if: inputs.framework == 'pytorch'
+        run: |
+          NS="${{ steps.ns.outputs.namespace }}"
+          kubectl get namespace "$NS" 2>/dev/null || kubectl create namespace "$NS"
+
+          cat cd/kubernetes/training/pytorch-job.yaml | \
+            sed "s/model-placeholder/${{ inputs.model_name }}/g" | \
+            sed "s/replicas: 3/replicas: ${{ inputs.num_workers }}/g" | \
+            kubectl apply -n "$NS" -f -
+
+      - name: Submit TF training job
+        if: inputs.framework == 'tensorflow'
+        run: |
+          NS="${{ steps.ns.outputs.namespace }}"
+          kubectl get namespace "$NS" 2>/dev/null || kubectl create namespace "$NS"
+
+          cat cd/kubernetes/training/tf-job.yaml | \
+            sed "s/model-placeholder/${{ inputs.model_name }}/g" | \
+            sed "s/replicas: 3/replicas: ${{ inputs.num_workers }}/g" | \
+            kubectl apply -n "$NS" -f -
+
+      - name: Wait for training completion
+        id: wait
+        timeout-minutes: 360
+        run: |
+          NS="${{ steps.ns.outputs.namespace }}"
+
+          echo "Waiting for training job to complete in namespace $NS ..."
+          # Poll every 60s for up to 6 hours.
+          for i in $(seq 1 360); do
+            STATUS=$(kubectl get pods -n "$NS" \
+              -l model-name=${{ inputs.model_name }} \
+              --no-headers -o custom-columns="STATUS:.status.phase" \
+              | sort | uniq)
+            echo "Status at iteration $i: $STATUS"
+
+            if echo "$STATUS" | grep -q "Failed"; then
+              echo "Training job FAILED"
+              exit 1
+            fi
+
+            if [ "$(echo "$STATUS" | grep -c "^Succeeded$")" -gt 0 ] && \
+               [ "$(echo "$STATUS" | grep -v "Succeeded" | grep -v "^$" | wc -l)" -eq 0 ]; then
+              echo "Training job SUCCEEDED"
+              # Output placeholders — in practice, read from MLflow via API or artifact.
+              echo "run_id=pending" >> "$GITHUB_OUTPUT"
+              echo "model_version=pending" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            sleep 60
+          done
+
+          echo "Training job timed out"
+          exit 1

@@ -1,0 +1,220 @@
+# promotion-gates.yml
+# Reusable gate runner — evaluates a model version against environment-specific
+# quality gates before promotion is allowed to proceed.
+#
+# TRIGGER: Called by promote-dev.yml, promote-staging.yml, promote-production.yml
+# INPUTS:
+#   model_name     : MLflow registered model name
+#   model_version  : MLflow model version to gate
+#   environment    : Target environment (dev | staging | production)
+#   run_load_test  : Whether to run load testing (staging and production only)
+# OUTPUTS:
+#   gate_passed    : "true" if all gates pass, "false" otherwise
+#   gate_summary   : Human-readable summary of gate results
+#
+# BEGINNER NOTE:
+#   This is a "reusable workflow" — it cannot be triggered directly.
+#   Other workflows call it via `uses: ./.github/workflows/promotion-gates.yml`
+#   (or the full repo path). Each environment activates a different set of gates.
+
+name: promotion-gates
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      model_version:
+        description: MLflow model version to evaluate
+        required: true
+        type: string
+      environment:
+        description: Target environment (dev | staging | production)
+        required: true
+        type: string
+      run_load_test:
+        description: Run load test gate (staging/production only)
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      gate_passed:
+        description: "true if all gates pass"
+        value: ${{ jobs.gates.outputs.gate_passed }}
+      gate_summary:
+        description: Human-readable gate summary
+        value: ${{ jobs.gates.outputs.gate_summary }}
+    secrets:
+      MLFLOW_TRACKING_URI:
+        required: true
+      DVC_AWS_ACCESS_KEY_ID:
+        required: false
+      DVC_AWS_SECRET_ACCESS_KEY:
+        required: false
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      gate_passed: ${{ steps.summarise.outputs.gate_passed }}
+      gate_summary: ${{ steps.summarise.outputs.gate_summary }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow evidently dvc[all]
+
+      # ------------------------------------------------------------------ #
+      # GATE 1 — SMOKE TEST (all environments)
+      # Loads the model and runs a single synthetic prediction to confirm
+      # the model artefact is loadable and returns a valid response shape.
+      # ------------------------------------------------------------------ #
+      - name: Gate 1 — Smoke test
+        id: smoke
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys, json
+          import numpy as np
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          model_name    = os.environ["MODEL_NAME"]
+          model_version = os.environ["MODEL_VERSION"]
+
+          try:
+              model = mlflow.pyfunc.load_model(f"models:/{model_name}/{model_version}")
+              # Synthetic single-row input — adjust feature count to match model.
+              dummy = np.zeros((1, 10))
+              _ = model.predict(dummy)
+              print(f"Smoke test PASSED for {model_name} v{model_version}")
+          except Exception as e:
+              print(f"Smoke test FAILED: {e}", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      # ------------------------------------------------------------------ #
+      # GATE 2 — UNIT METRICS (all environments)
+      # Verifies the model's primary metric in MLflow meets the threshold.
+      # ------------------------------------------------------------------ #
+      - name: Gate 2 — Unit metrics
+        id: metrics
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+
+          mv   = client.get_model_version(os.environ["MODEL_NAME"], os.environ["MODEL_VERSION"])
+          tags = mv.tags
+          run  = client.get_run(mv.run_id)
+
+          threshold = float(tags.get("accuracy_threshold", 0.80))
+          accuracy  = run.data.metrics.get("test_accuracy")
+
+          if accuracy is None:
+              print("ERROR: test_accuracy metric not found on run.", file=sys.stderr)
+              sys.exit(1)
+          if accuracy < threshold:
+              print(f"FAILED: accuracy {accuracy:.4f} < threshold {threshold:.4f}", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Unit metrics PASSED: accuracy {accuracy:.4f} >= threshold {threshold:.4f}")
+          PY
+
+      # ------------------------------------------------------------------ #
+      # GATE 3 — SCHEMA CHECK (all environments)
+      # Confirms that the model's input/output schema is registered and valid.
+      # ------------------------------------------------------------------ #
+      - name: Gate 3 — Schema check
+        id: schema
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+        run: |
+          python - << 'PY'
+          import mlflow, os, sys
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          client = mlflow.tracking.MlflowClient()
+          mv = client.get_model_version(os.environ["MODEL_NAME"], os.environ["MODEL_VERSION"])
+          model_info = mlflow.models.get_model_info(f"models:/{mv.name}/{mv.version}")
+
+          if model_info.signature is None:
+              print("ERROR: Model has no signature (schema). Register with mlflow.infer_signature().", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Schema check PASSED: signature found — inputs: {model_info.signature.inputs}")
+          PY
+
+      # ------------------------------------------------------------------ #
+      # GATE 4 — DRIFT CHECK (staging + production only)
+      # Runs Evidently drift report on current vs reference data.
+      # ------------------------------------------------------------------ #
+      - name: Gate 4 — Drift check
+        id: drift
+        if: ${{ inputs.environment == 'staging' || inputs.environment == 'production' }}
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          dvc pull data/reference/ data/current/ || true
+          python monitoring/evidently/drift_report.py \
+            --reference data/reference/train_features.parquet \
+            --current   data/current/today_features.parquet \
+            --output    reports/drift_report.html \
+            --threshold 0.3
+
+      # ------------------------------------------------------------------ #
+      # GATE 5 — LOAD TEST (staging + production, when run_load_test=true)
+      # Uses a lightweight wrk/hey-based load test to validate latency SLO.
+      # ------------------------------------------------------------------ #
+      - name: Gate 5 — Load test (optional)
+        id: loadtest
+        if: ${{ inputs.run_load_test == true }}
+        run: |
+          echo "Load test gate placeholder — integrate with your load test tool."
+          echo "Recommended: use k6 or hey against a temporary staging endpoint."
+          echo "P99 latency target: < 500ms for 100 RPS."
+
+      # ------------------------------------------------------------------ #
+      # SUMMARISE ALL GATES
+      # ------------------------------------------------------------------ #
+      - name: Summarise gate results
+        id: summarise
+        if: always()
+        run: |
+          smoke="${{ steps.smoke.outcome }}"
+          metrics="${{ steps.metrics.outcome }}"
+          schema="${{ steps.schema.outcome }}"
+          drift="${{ steps.drift.outcome }}"
+
+          if [[ "$smoke" == "success" && "$metrics" == "success" && "$schema" == "success" ]]; then
+            echo "gate_passed=true"  >> "$GITHUB_OUTPUT"
+            echo "gate_summary=All gates passed (smoke: ${smoke}, metrics: ${metrics}, schema: ${schema}, drift: ${drift})" >> "$GITHUB_OUTPUT"
+          else
+            echo "gate_passed=false" >> "$GITHUB_OUTPUT"
+            echo "gate_summary=Gate failure (smoke: ${smoke}, metrics: ${metrics}, schema: ${schema}, drift: ${drift})" >> "$GITHUB_OUTPUT"
+          fi

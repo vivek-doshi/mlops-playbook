@@ -1,0 +1,140 @@
+# promote-dev.yml
+# Dev auto-deploy — triggers on every merge to main.
+# Deploys to the <model-name>-dev namespace without human approval.
+#
+# TRIGGER: Push to main (after PR merge)
+# INPUTS:  (workflow_dispatch only) model_name, model_version, image_tag
+# OUTPUTS: Deployment status + promotion record in approved-versions.yaml
+#
+# BEGINNER NOTE:
+#   Dev is the first stop for every merged change. It runs smoke + metrics +
+#   schema gates automatically. If any gate fails, the deploy is blocked and
+#   the PR author is notified via a failed check on the commit.
+
+name: promote-dev
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        default: sample-model
+      model_version:
+        description: MLflow model version to promote
+        required: true
+        default: "1"
+      image_tag:
+        description: Container image tag
+        required: true
+        default: dev-latest
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Run dev gates via the reusable gate workflow.
+  # -------------------------------------------------------------------------
+  dev-gates:
+    uses: ./.github/workflows/promotion-gates.yml
+    with:
+      model_name:    ${{ github.event.inputs.model_name || 'sample-model' }}
+      model_version: ${{ github.event.inputs.model_version || '1' }}
+      environment:   dev
+      run_load_test: false
+    secrets:
+      MLFLOW_TRACKING_URI:       ${{ secrets.MLFLOW_TRACKING_URI }}
+      DVC_AWS_ACCESS_KEY_ID:     ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+      DVC_AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+
+  # -------------------------------------------------------------------------
+  # Deploy to dev namespace after gates pass.
+  # -------------------------------------------------------------------------
+  deploy-dev:
+    needs: dev-gates
+    if: ${{ needs.dev-gates.outputs.gate_passed == 'true' }}
+    runs-on: ubuntu-latest
+    # Dev environment — no required reviewers (auto-deploy).
+    environment: dev
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install mlflow
+        run: pip install mlflow
+
+      # Authenticate to the cluster via OIDC (secrets provided by platform team).
+      - name: Authenticate to Kubernetes cluster
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
+        continue-on-error: true  # non-fatal if cluster is not configured yet
+
+      # Apply Kustomize overlay for dev environment.
+      - name: Apply dev overlay
+        run: |
+          MODEL_NAME="${{ github.event.inputs.model_name || 'sample-model' }}"
+          NAMESPACE="${MODEL_NAME}-dev"
+
+          kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl kustomize cd/kubernetes/environments/dev | \
+            sed "s/namespace: model-dev/namespace: ${NAMESPACE}/g" | \
+            kubectl apply -f -
+        continue-on-error: true
+
+      # Record promotion in approved-versions.yaml.
+      - name: Record dev promotion
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ github.event.inputs.model_name || 'sample-model' }}
+          MODEL_VERSION: ${{ github.event.inputs.model_version || '1' }}
+          PROMOTION_ID: ${{ github.run_id }}
+        run: |
+          python - << 'PY'
+          import os, yaml, uuid
+          from datetime import datetime, timezone
+
+          path = "policy/model-approval/approved-versions.yaml"
+          with open(path) as f:
+              doc = yaml.safe_load(f)
+
+          doc.setdefault("approvals", []).append({
+              "model_name":     os.environ["MODEL_NAME"],
+              "version":        os.environ["MODEL_VERSION"],
+              "environment":    "dev",
+              "approved_by":    "auto",
+              "approved_at":    datetime.now(timezone.utc).isoformat(),
+              "promotion_id":   str(uuid.uuid4()),
+              "github_run_id":  os.environ.get("GITHUB_RUN_ID", ""),
+              "notes":          "Auto-promoted to dev on merge to main.",
+              "override":       False,
+          })
+
+          with open(path, "w") as f:
+              yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
+
+          print("Promotion recorded.")
+          PY
+
+      # Open a PR to record the promotion in approved-versions.yaml.
+      - name: Open promotion record PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "chore: record dev promotion for ${{ github.event.inputs.model_name || 'sample-model' }} v${{ github.event.inputs.model_version || '1' }}"
+          body: |
+            Auto-generated promotion record for dev deployment.
+            Gate summary: ${{ needs.dev-gates.outputs.gate_summary }}
+          branch: "auto/dev-promotion-${{ github.run_id }}"
+          commit-message: "chore: record dev promotion [skip ci]"
+          labels: promotion,dev,auto-merge

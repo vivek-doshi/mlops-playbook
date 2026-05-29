@@ -1,0 +1,49 @@
+# policy/environments/staging-policy.yaml
+# Allowed runtimes, resource caps, and governance rules for the staging environment.
+
+environment: staging
+
+namespace_pattern: "{model_name}-staging"
+
+resource_caps:
+  cpu_limit:    "4"
+  memory_limit: "16Gi"
+  gpu_limit:    2
+
+allowed_runtimes:
+  - vllm
+  - torchserve
+  - triton
+
+gates:
+  smoke_test:    required
+  unit_metrics:  required
+  schema_check:  required
+  drift_check:   required   # drift check is mandatory for staging
+  load_test:     required   # load test validates staging readiness
+  integration:   required
+  fairness:      required   # fairness gate mandatory before staging
+
+approvals:
+  required_reviewers: 0
+  auto_approve:       true  # staging is still auto after dev gates pass
+
+mlflow_experiment_suffix: "-staging"
+
+deployment_strategy:
+  type:            RollingUpdate
+  max_unavailable: 0    # zero-downtime staging deploys
+  max_surge: 1
+
+required_labels:
+  - cost-center
+  - team
+  - model-name
+  - environment
+
+spot_required: true
+spot_override_approval: platform-infra-team  # need sign-off to use on-demand in staging
+
+# Staging also requires a budget entry before deployment.
+budget_required: true
+budget_path: "finops/budgets/{model_name}.yaml"
