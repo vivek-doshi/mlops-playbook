@@ -1,0 +1,162 @@
+# Triton shadow deployment manifest (Phase 1).
+# Purpose: mirror a fraction of production traffic to a shadow model version
+# for safe validation before promotion.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: triton-shadow-config
+  namespace: serving
+data:
+  MODEL_URI: "models:/fraud-detection/Shadow"
+  SHADOW_TRAFFIC_PERCENT: "10"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-shadow
+  namespace: serving
+  labels:
+    app: triton-shadow
+    mode: shadow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: triton-shadow
+  template:
+    metadata:
+      labels:
+        app: triton-shadow
+        mode: shadow
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: triton
+          image: nvcr.io/nvidia/tritonserver:24.01-py3
+          args:
+            - tritonserver
+            - --model-repository=/models
+            - --strict-model-config=true
+            - --allow-metrics=true
+          envFrom:
+            - configMapRef:
+                name: triton-shadow-config
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8001
+              name: grpc
+            - containerPort: 8002
+              name: metrics
+          readinessProbe:
+            httpGet:
+              path: /v2/health/ready
+              port: 8000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v2/health/live
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+              nvidia.com/gpu: "1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: model-repo
+              mountPath: /models
+      volumes:
+        - name: model-repo
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: triton-shadow-service
+  namespace: serving
+  labels:
+    app: triton-shadow
+spec:
+  selector:
+    app: triton-shadow
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+    - name: grpc
+      port: 8001
+      targetPort: 8001
+    - name: metrics
+      port: 8002
+      targetPort: 8002
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: triton-shadow-pdb
+  namespace: serving
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: triton-shadow
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: triton-inference-shadow
+  namespace: serving
+spec:
+  hosts:
+    - triton-service
+  http:
+    - route:
+        - destination:
+            host: triton-service
+            subset: primary
+          weight: 100
+      mirror:
+        host: triton-shadow-service
+        subset: shadow
+      mirrorPercentage:
+        value: 10.0
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: triton-primary-dr
+  namespace: serving
+spec:
+  host: triton-service
+  subsets:
+    - name: primary
+      labels:
+        app: triton-server
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: triton-shadow-dr
+  namespace: serving
+spec:
+  host: triton-shadow-service
+  subsets:
+    - name: shadow
+      labels:
+        app: triton-shadow

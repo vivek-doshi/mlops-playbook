@@ -231,5 +231,6 @@ with mlflow.start_run():
 
 - `terraform/gcp-vertex-ai/main.tf` — Feature Store provisioning
 - `dvc/remote-storage/README.md` — DVC remote for feature snapshots
+- `feature-store/feast/` — Feast feature definitions and repo config for Phase 1 integration
 - `docs/golden-paths/experiment-tracking.md` — logging feature tags in MLflow
 - `docs/golden-paths/model-monitoring.md` — detecting training-serving skew in production
