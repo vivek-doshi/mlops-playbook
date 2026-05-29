@@ -1,0 +1,129 @@
+# continuous-training.yml
+# Phase 1 Continuous Training (CT) pipeline.
+#
+# CT trigger policy:
+#   - Scheduled retrain (daily) to keep fraud model fresh.
+#   - Manual dispatch for controlled retrains.
+#   - Event-triggered retrain via repository_dispatch when drift/quality alerts fire.
+#
+# CT lineage policy:
+#   - Capture feature snapshot hash from DVC.
+#   - Tag MLflow runs with trigger source and data hash.
+#   - Emit metadata artifact for downstream lineage ingestion.
+
+name: continuous-training
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: Registered MLflow model name
+        required: true
+        default: fraud-detection
+      dvc_remote:
+        description: DVC remote name
+        required: true
+        default: s3
+      trigger_reason:
+        description: Why this CT run is being initiated
+        required: false
+        default: manual
+  repository_dispatch:
+    types: [ct-retrain-request]
+
+concurrency:
+  group: ct-fraud-detection
+  cancel-in-progress: false
+
+jobs:
+  continuous-train:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      DEFAULT_MODEL_NAME: fraud-detection
+      DVC_REMOTE: ${{ github.event.inputs.dvc_remote || 's3' }}
+      TRIGGER_REASON: ${{ github.event.inputs.trigger_reason || github.event.action || 'schedule' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dvc[all]" mlflow pandas scikit-learn pyarrow
+
+      - name: Resolve model target
+        id: model_target
+        run: |
+          MODEL_NAME="${{ github.event.inputs.model_name }}"
+          if [ -z "${MODEL_NAME}" ]; then
+            MODEL_NAME="${DEFAULT_MODEL_NAME}"
+          fi
+          echo "model_name=${MODEL_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Pull versioned data + feature snapshots
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DVC_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DVC_AWS_SECRET_ACCESS_KEY }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          dvc pull --remote "${DVC_REMOTE}"
+
+      - name: Capture DVC lineage hash
+        id: lineage
+        run: |
+          HASH="$(sha256sum dvc.lock | awk '{print $1}')"
+          echo "feature_snapshot_hash=${HASH}" >> "${GITHUB_OUTPUT}"
+
+      - name: Run CT training pipeline
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MODEL_NAME: ${{ steps.model_target.outputs.model_name }}
+          FEATURE_SNAPSHOT_HASH: ${{ steps.lineage.outputs.feature_snapshot_hash }}
+        run: |
+          dvc repro train
+          python - << 'PY'
+          import os
+          import mlflow
+
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+          experiment_name = f"{os.environ['MODEL_NAME']}-continuous-training"
+          mlflow.set_experiment(experiment_name)
+
+          with mlflow.start_run(run_name="ct-phase1"):
+            mlflow.set_tag("ct_enabled", "true")
+            mlflow.set_tag("ct_trigger_reason", os.environ.get("TRIGGER_REASON", "unknown"))
+            mlflow.set_tag("feature_snapshot_hash", os.environ["FEATURE_SNAPSHOT_HASH"])
+            mlflow.set_tag("lineage_contract", "phase1")
+          PY
+
+      - name: Export CT lineage artifact
+        run: |
+          mkdir -p reports
+          cat > reports/ct-lineage.json <<EOF
+          {
+            "model_name": "${{ steps.model_target.outputs.model_name }}",
+            "trigger_reason": "${TRIGGER_REASON}",
+            "feature_snapshot_hash": "${{ steps.lineage.outputs.feature_snapshot_hash }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "git_sha": "${{ github.sha }}"
+          }
+          EOF
+
+      - name: Upload CT lineage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ct-lineage
+          path: reports/ct-lineage.json
+          retention-days: 30

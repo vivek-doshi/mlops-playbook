@@ -1,0 +1,52 @@
+# vLLM serving SLOs (Phase 1)
+# Tracks availability and latency SLOs with error-budget burn alerts.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vllm-serving-slo-rules
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: vllm-serving-slo
+spec:
+  groups:
+    - name: vllm-serving-sli
+      interval: 30s
+      rules:
+        - record: vllm:request_availability:ratio5m
+          expr: |
+            sum(rate(http_requests_total{app="vllm-server",code!~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{app="vllm-server"}[5m]))
+
+        - record: vllm:request_latency_p95_seconds:5m
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (rate(http_request_duration_seconds_bucket{app="vllm-server"}[5m]))
+            )
+
+    - name: vllm-serving-slo-alerts
+      interval: 30s
+      rules:
+        - alert: VLLMAvailabilitySLOFastBurn
+          expr: vllm:request_availability:ratio5m < 0.995
+          for: 10m
+          labels:
+            severity: critical
+            slo: availability
+            service: vllm
+          annotations:
+            summary: "vLLM availability SLO burn is critical"
+            description: "Availability dropped below 99.5% for 10m."
+
+        - alert: VLLMLatencySLOBreach
+          expr: vllm:request_latency_p95_seconds:5m > 1.5
+          for: 15m
+          labels:
+            severity: warning
+            slo: latency
+            service: vllm
+          annotations:
+            summary: "vLLM latency SLO breach"
+            description: "P95 latency exceeded 1.5s for 15m."
