@@ -84,6 +84,11 @@
       "version": "latest"
     },
 
+    // Azure CLI — for Azure ML Terraform and azure-ml CI jobs.
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "latest"
+    },
+
     // Node.js (LTS) — required by some pre-commit hooks and markdownlint.
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
@@ -98,7 +103,7 @@
     "install-task": "sh -c \"$(curl --location https://taskfile.dev/install.sh)\" -- -d -b /usr/local/bin",
 
     // Install core ML + dev Python dependencies.
-    "pip-install": "pip install --upgrade pip && pip install mlflow==2.14.2 'dvc[s3,gcs,azure]>=3.0' 'evidently>=0.4' pandas scikit-learn pyarrow pre-commit black isort ruff bandit detect-secrets pip-audit pytest pytest-cov",
+    "pip-install": "pip install --upgrade pip && pip install mlflow==2.14.2 'dvc[s3,gcs,azure]>=3.0' 'evidently>=0.4' pandas scikit-learn pyarrow 'fairlearn>=0.10' 'shap>=0.44' 'matplotlib>=3.8' feast 'pyyaml>=6.0' 'requests>=2.31' pre-commit black isort ruff bandit detect-secrets pip-audit pytest pytest-cov",
 
     // Install pre-commit hooks so they run on every commit inside the container.
     "pre-commit-install": "pre-commit install && pre-commit install --hook-type commit-msg",

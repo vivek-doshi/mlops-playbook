@@ -20,8 +20,13 @@
         mlflow-up mlflow-down mlflow-logs mlflow-ps \
         dvc-pull dvc-push dvc-status dvc-repro \
         train evaluate drift-check \
+        fairness-eval fairness-explain \
+        batch-score finops-report \
         lint format security-scan pre-commit \
-        tf-fmt tf-validate tf-plan-sagemaker tf-plan-vertex \
+        tf-fmt \
+        tf-validate-sagemaker tf-validate-vertex tf-validate-azure-ml \
+        tf-validate-ray-cluster tf-validate-vertex-pipelines \
+        tf-plan-sagemaker tf-plan-vertex tf-plan-azure-ml \
         docker-build-mlflow \
         ci-scan
 
@@ -53,7 +58,13 @@ setup: ## Install core Python dependencies (mlflow, dvc, evidently)
 		evidently>=0.4 \
 		pandas \
 		scikit-learn \
-		pyarrow
+		pyarrow \
+		fairlearn>=0.10 \
+		shap>=0.44 \
+		matplotlib>=3.8 \
+		feast \
+		"pyyaml>=6.0" \
+		"requests>=2.31"
 
 setup-dev: setup ## Install dev + pre-commit hooks on top of core deps
 	pip install \
@@ -141,19 +152,48 @@ drift-check: ## Run Evidently drift report against current production data
 		--threshold $(DRIFT_THRESHOLD)
 	@echo "✓ Drift report written to $(DRIFT_REPORT)"
 
+fairness-eval: ## Run fairlearn fairness evaluation (requires MLFLOW_RUN_ID and TEST_DATA env vars)
+	@test -n "$(MLFLOW_RUN_ID)" || (echo "ERROR: Set MLFLOW_RUN_ID before running fairness-eval." && exit 1)
+	@mkdir -p reports/fairness
+	python -m fairness.evaluate \
+		--model-uri models:/$(MODEL_NAME)/$(MODEL_VERSION) \
+		--test-data $(TEST_DATA) \
+		--config    policy/fairness/fraud-detection-fairness.yaml \
+		--report-path reports/fairness/fairness_report.json
+	@echo "✓ Fairness report written to reports/fairness/fairness_report.json"
+
+fairness-explain: ## Generate SHAP explainability report (requires TEST_DATA env var)
+	@mkdir -p reports/explainability
+	python -m fairness.explainability \
+		--model-uri models:/$(MODEL_NAME)/$(MODEL_VERSION) \
+		--test-data $(TEST_DATA) \
+		--output-dir reports/explainability/
+	@echo "✓ Explainability report written to reports/explainability/"
+
+batch-score: ## Run batch inference scorer (requires BATCH_JOB_CONFIG env var)
+	@test -n "$(BATCH_JOB_CONFIG)" || (echo "ERROR: Set BATCH_JOB_CONFIG (e.g. batch/jobs/fraud-detection-batch-job.yaml)." && exit 1)
+	python batch/runner/batch_scorer.py --job-config $(BATCH_JOB_CONFIG)
+	@echo "✓ Batch scoring complete."
+
+finops-report: ## Generate weekly ML cost report
+	@mkdir -p reports/finops
+	python finops/scripts/weekly-cost-report.py \
+		--output reports/finops/weekly-cost-report.json
+	@echo "✓ FinOps report written to reports/finops/weekly-cost-report.json"
+
 ## ─────────────────────────────────────────────────────────────────────────────
 ## Code Quality — Lint, Format, Security
 ## ─────────────────────────────────────────────────────────────────────────────
 
 format: ## Auto-format Python code with Black + isort
-	black monitoring/ scripts/
-	isort --profile black monitoring/ scripts/
+	black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
+	isort --profile black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
 lint: ## Lint Python code with Ruff (fast flake8 replacement)
-	ruff check monitoring/ scripts/
+	ruff check batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
 security-scan: ## Run Bandit security scan on Python source files
-	bandit -r monitoring/ scripts/ --severity-level medium
+	bandit -r batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/ --severity-level medium
 
 pre-commit: ## Run all pre-commit hooks against all files
 	pre-commit run --all-files
@@ -176,11 +216,23 @@ tf-validate-sagemaker: ## Validate AWS SageMaker Terraform module
 tf-validate-vertex: ## Validate GCP Vertex AI Terraform module
 	cd terraform/gcp-vertex-ai && terraform init -backend=false && terraform validate
 
+tf-validate-azure-ml: ## Validate Azure ML Terraform module
+	cd terraform/azure-ml && terraform init -backend=false && terraform validate
+
+tf-validate-ray-cluster: ## Validate Ray cluster Terraform module
+	cd terraform/ray-cluster && terraform init -backend=false && terraform validate
+
+tf-validate-vertex-pipelines: ## Validate Vertex Pipelines Terraform module
+	cd terraform/vertex-pipelines && terraform init -backend=false && terraform validate
+
 tf-plan-sagemaker: ## Plan AWS SageMaker Terraform changes (requires AWS creds)
 	cd terraform/aws-sagemaker && terraform plan
 
 tf-plan-vertex: ## Plan GCP Vertex AI Terraform changes (requires GCP creds)
 	cd terraform/gcp-vertex-ai && terraform plan
+
+tf-plan-azure-ml: ## Plan Azure ML Terraform changes (requires Azure creds)
+	cd terraform/azure-ml && terraform plan
 
 ## ─────────────────────────────────────────────────────────────────────────────
 ## Cleanup

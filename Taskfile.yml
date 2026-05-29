@@ -46,7 +46,7 @@ tasks:
       - task --list
 
   setup:
-    desc: Install core Python dependencies (mlflow, dvc, evidently, pandas)
+    desc: Install core Python dependencies (mlflow, dvc, evidently, fairlearn, shap, feast)
     cmds:
       - pip install --upgrade pip
       - pip install
@@ -56,6 +56,12 @@ tasks:
           pandas
           scikit-learn
           pyarrow
+          "fairlearn>=0.10"
+          "shap>=0.44"
+          "matplotlib>=3.8"
+          feast
+          "pyyaml>=6.0"
+          "requests>=2.31"
 
   setup:dev:
     desc: Install dev tooling + pre-commit hooks on top of core deps
@@ -167,24 +173,64 @@ tasks:
           --threshold {{.DRIFT_THRESHOLD}}"
       - echo "✓ Drift report written to {{.DRIFT_REPORT}}"
 
+  fairness:eval:
+    desc: Run fairlearn fairness evaluation (requires MLFLOW_RUN_ID, MODEL_NAME, MODEL_VERSION, TEST_DATA)
+    preconditions:
+      - sh: test -n "$MLFLOW_RUN_ID"
+        msg: "Set the MLFLOW_RUN_ID environment variable before running fairness:eval."
+    cmds:
+      - mkdir -p reports/fairness
+      - "{{.PYTHON}} -m fairness.evaluate
+          --model-uri models:/$MODEL_NAME/$MODEL_VERSION
+          --test-data $TEST_DATA
+          --config    policy/fairness/fraud-detection-fairness.yaml
+          --report-path reports/fairness/fairness_report.json"
+      - echo "✓ Fairness report written to reports/fairness/fairness_report.json"
+
+  fairness:explain:
+    desc: Generate SHAP explainability report (requires MODEL_NAME, MODEL_VERSION, TEST_DATA)
+    cmds:
+      - mkdir -p reports/explainability
+      - "{{.PYTHON}} -m fairness.explainability
+          --model-uri models:/$MODEL_NAME/$MODEL_VERSION
+          --test-data $TEST_DATA
+          --output-dir reports/explainability/"
+      - echo "✓ Explainability report written to reports/explainability/"
+
+  batch:score:
+    desc: Run batch inference scorer (requires BATCH_JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$BATCH_JOB_CONFIG"
+        msg: "Set BATCH_JOB_CONFIG (e.g. batch/jobs/fraud-detection-batch-job.yaml)."
+    cmds:
+      - "{{.PYTHON}} batch/runner/batch_scorer.py --job-config $BATCH_JOB_CONFIG"
+      - echo "✓ Batch scoring complete."
+
+  finops:report:
+    desc: Generate weekly ML cost report
+    cmds:
+      - mkdir -p reports/finops
+      - "{{.PYTHON}} finops/scripts/weekly-cost-report.py --output reports/finops/weekly-cost-report.json"
+      - echo "✓ FinOps report written to reports/finops/weekly-cost-report.json"
+
   # ──────────────────────────────────────────────────────────────────────────
   # Code Quality
   # ──────────────────────────────────────────────────────────────────────────
   format:
     desc: Auto-format Python source files with Black + isort
     cmds:
-      - black monitoring/ scripts/
-      - isort --profile black monitoring/ scripts/
+      - black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
+      - isort --profile black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
   lint:
     desc: Lint Python source files with Ruff (fast flake8 replacement)
     cmds:
-      - ruff check monitoring/ scripts/
+      - ruff check batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
   security:bandit:
     desc: Run Bandit security scan on Python source files
     cmds:
-      - bandit -r monitoring/ scripts/ --severity-level medium
+      - bandit -r batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/ --severity-level medium
 
   security:pip-audit:
     desc: Audit Python dependencies for known CVEs
@@ -229,9 +275,42 @@ tasks:
       - terraform init -backend=false
       - terraform validate
 
+  tf:validate:azure-ml:
+    desc: Validate Azure ML Terraform module syntax
+    dir: terraform/azure-ml
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:ray-cluster:
+    desc: Validate Ray cluster Terraform module syntax
+    dir: terraform/ray-cluster
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:vertex-pipelines:
+    desc: Validate Vertex Pipelines Terraform module syntax
+    dir: terraform/vertex-pipelines
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
   tf:validate:
     desc: Validate all Terraform modules
-    deps: [tf:fmt, tf:validate:sagemaker, tf:validate:vertex]
+    deps:
+      - tf:fmt
+      - tf:validate:sagemaker
+      - tf:validate:vertex
+      - tf:validate:azure-ml
+      - tf:validate:ray-cluster
+      - tf:validate:vertex-pipelines
+
+  tf:plan:azure-ml:
+    desc: Plan Azure ML Terraform changes (requires Azure creds)
+    dir: terraform/azure-ml
+    cmds:
+      - terraform plan
 
   # ──────────────────────────────────────────────────────────────────────────
   # Repo Maintenance
