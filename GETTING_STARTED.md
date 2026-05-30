@@ -93,6 +93,7 @@ Use the table below to jump to the golden path guide for your current task.
 | Track ML cost attribution | [ML Cost Attribution](docs/golden-paths/ml-cost-attribution.md) | `finops/scripts/` |
 | Orchestrate ML pipelines | [Pipeline Orchestration](docs/golden-paths/pipeline-orchestration.md) | `pipelines/training_pipeline.py` |
 | Deploy on Azure ML | [Model Serving](docs/golden-paths/model-serving.md) | `terraform/azure-ml/` |
+| Understand repo concepts and lifecycle | [MLOps Concepts](docs/guides/concepts.md) | `docs/guides/concepts.md` |
 | End-to-end overview | [MLOps Workflow](docs/golden-paths/mlops-workflow.md) | All of the above |
 
 ---

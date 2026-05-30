@@ -24,6 +24,7 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Model approval policy** — three-gate CI evaluation + approval registry in `policy/model-approval/`.
 - **Data governance policy** — classification levels, PII handling rules, retention, and PII checklist in `policy/data-governance/`.
 - **Architecture Decision Records** — MLflow (ADR-001), DVC (ADR-002), three-runtime serving (ADR-003), Evidently drift monitoring (ADR-004), GitHub Actions CI (ADR-005), Terraform IaC (ADR-006), Dev Containers (ADR-007), three-gate model approval (ADR-008), pre-commit toolchain (ADR-009) in `docs/decisions/`.
+- **MLOps Concepts Guide** — lifecycle-first concept reference with repository-linked examples in `docs/guides/concepts.md`.
 - **Security hardening** — reusable CI security scan (pip-audit + gitleaks + model size check) in `ci/github-actions/_shared/`.
 - **Local setup guide** — RTX 5070 GPU passthrough, Dev Container setup, vLLM/Triton local testing in `docs/local-setup.md`.
 - `GETTING_STARTED.md` — Dev Container quickstart + 5-step first experiment walkthrough and ML lifecycle quick links.
@@ -33,6 +34,8 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Distributed Training** — KubeRay (primary) and Kubeflow PyTorchJob/TFJob (secondary), spot node pools, checkpoint callback in `training/`, `cd/kubernetes/training/`, `terraform/ray-cluster/`. ADR-ML-016.
 - **Batch Inference** — MLflow pyfunc scorer, input validation, output quality gate, downstream notifier, K8s Job + CronJob manifests in `batch/`, `cd/kubernetes/batch/`. ADR-ML-018.
 - **Pipeline Orchestration** — Argo Workflows DAGs, reusable Python components, drift-triggered retraining pipeline, Vertex AI optional backend in `pipelines/`, `cd/argo/`, `ci/github-actions/pipelines/`, `terraform/vertex-pipelines/`. ADR-ML-017.
+- **Website Markdown Browser Navigation** — in-app markdown link navigation with URL-based state (`?file=<path>`) and browser back/forward support in `website/src/App.tsx` and `website/src/components/CodeViewer.tsx`.
+- **Website SEO and Branding Assets** — favicon, Open Graph image, robots/sitemap, and metadata for GitHub Pages discoverability in `website/index.html` and `website/public/`.
 
 ## How Teams Use It
 

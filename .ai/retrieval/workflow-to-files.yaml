@@ -35,6 +35,12 @@ workflow_to_files:
     entrypoints:
       - docs/golden-paths/frontend-spa.md
       - docs/ARCHITECTURE_DECISION_GUIDE.md
+      - website/src/App.tsx
+      - website/src/components/CodeViewer.tsx
+      - docs/guides/concepts.md
+      - website/index.html
+      - website/public/robots.txt
+      - website/public/sitemap.xml
     implementation:
       - docker/react/
       - docker/angular/
