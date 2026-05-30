@@ -28,12 +28,14 @@ interface Props {
   file: FileEntry | null
   theme: Theme
   onOpenInternalLink: (currentFilePath: string, href: string) => boolean
+  isMobileLayout: boolean
+  onOpenSidebar: () => void
 }
 
 // Configure marked once
 marked.setOptions({ gfm: true, breaks: false })
 
-export function CodeViewer({ file, theme: _theme, onOpenInternalLink }: Props) {
+export function CodeViewer({ file, theme: _theme, onOpenInternalLink, isMobileLayout, onOpenSidebar }: Props) {
   const preRef  = useRef<HTMLPreElement>(null)
   const [copied,  setCopied]  = useState(false)
   const [viewKey, setViewKey] = useState(0)
@@ -127,6 +129,15 @@ export function CodeViewer({ file, theme: _theme, onOpenInternalLink }: Props) {
     <main className="code-viewer-panel">
       {/* Toolbar */}
       <div className="cv-toolbar">
+        {isMobileLayout && (
+          <button
+            className="cv-btn cv-sidebar-btn"
+            onClick={onOpenSidebar}
+            title="Browse templates"
+          >
+            ☰ Browse
+          </button>
+        )}
         <div className="cv-breadcrumb" key={viewKey}>
           {segments.map((seg, i) => (
             <span key={i}>

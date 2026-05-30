@@ -116,6 +116,7 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 /* ── Loading screen ─────────────────────────────────────────────────────── */
@@ -297,3 +298,9 @@ body {
 * { transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease; }
 /* But NOT layout properties — that would cause lag */
 .app-body, .sidebar, .code-viewer-panel { transition: none; }
+
+@media (max-width: 900px) {
+  .app-body.mobile-layout {
+    min-height: 0;
+  }
+}

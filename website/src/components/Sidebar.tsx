@@ -93,9 +93,12 @@ interface Props {
   onSelectFile: (f: FileEntry) => void
   searchQuery: string
   onSearchChange: (q: string) => void
+  isMobileLayout: boolean
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSearchChange }: Props) {
+export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSearchChange, isMobileLayout, isOpen, onClose }: Props) {
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set())
   const [openFolders,    setOpenFolders]    = useState<Set<string>>(new Set())
 
@@ -219,9 +222,15 @@ export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSear
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isMobileLayout ? ' mobile-sidebar' : ''}${isOpen ? ' mobile-open' : ''}`}>
       {/* Search */}
       <div className="sidebar-search-wrap">
+        {isMobileLayout && (
+          <div className="sidebar-mobile-bar">
+            <span className="sidebar-mobile-title">Browse templates</span>
+            <button className="sidebar-mobile-close" onClick={onClose} aria-label="Close template browser">✕</button>
+          </div>
+        )}
         <div className="search-input-row">
           <span className="search-icon">🔍</span>
           <input

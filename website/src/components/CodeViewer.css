@@ -116,6 +116,10 @@
   color: var(--accent);
 }
 
+.cv-sidebar-btn {
+  display: none;
+}
+
 /* ── Scroll area ─────────────────────────────────────────────────────────── */
 .cv-scroll {
   flex: 1;
@@ -433,3 +437,45 @@
 
 .cv-markdown strong { font-weight: 600; }
 .cv-markdown em     { color: var(--text-secondary); }
+
+@media (max-width: 900px) {
+  .cv-toolbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+
+  .cv-sidebar-btn {
+    display: inline-flex;
+  }
+
+  .cv-breadcrumb {
+    order: 2;
+    width: 100%;
+  }
+
+  .cv-meta {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .cv-markdown {
+    padding: 24px 18px 36px;
+    font-size: 14px;
+  }
+
+  .cv-pre {
+    padding: 18px 18px 24px;
+    font-size: 12px;
+  }
+
+  .cv-pre-with-lines {
+    padding-left: 54px;
+  }
+
+  .cv-empty {
+    padding: 24px 18px;
+  }
+}

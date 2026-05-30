@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-05-28
+updated: 2026-05-30
 workflow_to_files:
   kubernetes_microservice:
     entrypoints:
@@ -36,6 +36,8 @@ workflow_to_files:
       - docs/golden-paths/frontend-spa.md
       - docs/ARCHITECTURE_DECISION_GUIDE.md
       - website/src/App.tsx
+      - website/src/components/Header.tsx
+      - website/src/components/Sidebar.tsx
       - website/src/components/CodeViewer.tsx
       - docs/guides/concepts.md
       - website/index.html

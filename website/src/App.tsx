@@ -7,6 +7,7 @@ import { MLOpsIcon } from './components/MLOpsIcon'
 import type { FileEntry, FileIndex, Theme } from './types'
 
 const FILE_QUERY_PARAM = 'file'
+const MOBILE_MEDIA_QUERY = '(max-width: 900px)'
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\//, '')
@@ -22,6 +23,10 @@ function getQueryFilePath(): string | null {
   const value = url.searchParams.get(FILE_QUERY_PARAM)
   if (!value) return null
   return normalizePath(value)
+}
+
+function getIsMobileLayout(): boolean {
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches
 }
 
 function resolveInternalLinkTarget(currentFilePath: string, href: string): string | null {
@@ -83,12 +88,27 @@ function pickExistingFilePath(candidate: string, filesByPath: Map<string, FileEn
   return null
 }
 
+function resolveIndexedFilePath(currentFilePath: string, href: string, filesByPath: Map<string, FileEntry>): string | null {
+  const raw = href.trim()
+  if (!raw || raw.startsWith('#')) return null
+
+  const directMatch = pickExistingFilePath(raw, filesByPath)
+  if (directMatch) return directMatch
+
+  const relativeCandidate = resolveInternalLinkTarget(currentFilePath, href)
+  if (!relativeCandidate) return null
+
+  return pickExistingFilePath(relativeCandidate, filesByPath)
+}
+
 export default function App() {
   const [index, setIndex] = useState<FileIndex | null>(null)
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null)
   const [theme, setTheme] = useState<Theme>('dusk')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isMobileLayout, setIsMobileLayout] = useState(() => getIsMobileLayout())
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getIsMobileLayout())
 
   // Restore theme from localStorage
   useEffect(() => {
@@ -108,11 +128,26 @@ export default function App() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
+        if (getIsMobileLayout()) setIsSidebarOpen(true)
         document.getElementById('sidebar-search')?.focus()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY)
+    const syncLayout = (matches: boolean) => {
+      setIsMobileLayout(matches)
+      setIsSidebarOpen(prev => (matches ? prev : true))
+    }
+
+    syncLayout(mediaQuery.matches)
+
+    const onChange = (event: MediaQueryListEvent) => syncLayout(event.matches)
+    mediaQuery.addEventListener('change', onChange)
+    return () => mediaQuery.removeEventListener('change', onChange)
   }, [])
 
   // Load index.json
@@ -151,12 +186,13 @@ export default function App() {
 
   const selectFile = useCallback((file: FileEntry | null, pushHistory = true, replaceHistory = false) => {
     setSelectedFile(file)
+    if (file && isMobileLayout) setIsSidebarOpen(false)
     if (!pushHistory) return
     const currentPath = selectedFile ? normalizePath(selectedFile.path) : null
     const nextPath = file ? normalizePath(file.path) : null
     if (currentPath === nextPath) return
     updateUrlForFile(file, replaceHistory)
-  }, [selectedFile, updateUrlForFile])
+  }, [isMobileLayout, selectedFile, updateUrlForFile])
 
   useEffect(() => {
     if (!index) return
@@ -164,12 +200,13 @@ export default function App() {
     const fromUrl = getQueryFilePath()
     if (fromUrl && map.has(fromUrl)) {
       setSelectedFile(map.get(fromUrl) ?? null)
+      if (isMobileLayout) setIsSidebarOpen(false)
       return
     }
 
     // Keep URL and app state in sync when query points to an unknown file.
     updateUrlForFile(selectedFile, true)
-  }, [index, filesByPath, selectedFile, updateUrlForFile])
+  }, [index, filesByPath, isMobileLayout, selectedFile, updateUrlForFile])
 
   useEffect(() => {
     const onPopState = () => {
@@ -190,9 +227,7 @@ export default function App() {
   const openLinkTarget = useCallback((currentFilePath: string, href: string): boolean => {
     if (!index) return false
     const map = filesByPath()
-    const candidate = resolveInternalLinkTarget(currentFilePath, href)
-    if (!candidate) return false
-    const matchedPath = pickExistingFilePath(candidate, map)
+    const matchedPath = resolveIndexedFilePath(currentFilePath, href, map)
     if (!matchedPath) return false
     const next = map.get(matchedPath)
     if (!next) return false
@@ -202,6 +237,14 @@ export default function App() {
 
   const toggleTheme = useCallback(() => {
     setTheme(t => (t === 'dawn' ? 'dusk' : 'dawn'))
+  }, [])
+
+  const openSidebar = useCallback(() => {
+    setIsSidebarOpen(true)
+  }, [])
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev)
   }, [])
 
   const pickRandom = useCallback(() => {
@@ -247,16 +290,28 @@ export default function App() {
           onToggleTheme={toggleTheme}
           onPickRandom={pickRandom}
           index={index}
+          isMobileLayout={isMobileLayout}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={toggleSidebar}
         />
-        <div className="app-body">
+        <div className={`app-body${isMobileLayout ? ' mobile-layout' : ''}`}>
           <Sidebar
             index={index}
             selectedFile={selectedFile}
             onSelectFile={selectFile}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            isMobileLayout={isMobileLayout}
+            isOpen={isSidebarOpen}
+            onClose={setIsSidebarOpen.bind(null, false)}
           />
-          <CodeViewer file={selectedFile} theme={theme} onOpenInternalLink={openLinkTarget} />
+          <CodeViewer
+            file={selectedFile}
+            theme={theme}
+            onOpenInternalLink={openLinkTarget}
+            isMobileLayout={isMobileLayout}
+            onOpenSidebar={openSidebar}
+          />
         </div>
       </div>
     </div>

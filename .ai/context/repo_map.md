@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: d:/projects/mlops-playbook
-- Generated: 2026-05-30 14:16:40
+- Generated: 2026-05-30 17:13:20
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text

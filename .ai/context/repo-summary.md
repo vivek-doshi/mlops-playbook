@@ -34,7 +34,8 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Distributed Training** — KubeRay (primary) and Kubeflow PyTorchJob/TFJob (secondary), spot node pools, checkpoint callback in `training/`, `cd/kubernetes/training/`, `terraform/ray-cluster/`. ADR-ML-016.
 - **Batch Inference** — MLflow pyfunc scorer, input validation, output quality gate, downstream notifier, K8s Job + CronJob manifests in `batch/`, `cd/kubernetes/batch/`. ADR-ML-018.
 - **Pipeline Orchestration** — Argo Workflows DAGs, reusable Python components, drift-triggered retraining pipeline, Vertex AI optional backend in `pipelines/`, `cd/argo/`, `ci/github-actions/pipelines/`, `terraform/vertex-pipelines/`. ADR-ML-017.
-- **Website Markdown Browser Navigation** — in-app markdown link navigation with URL-based state (`?file=<path>`) and browser back/forward support in `website/src/App.tsx` and `website/src/components/CodeViewer.tsx`.
+- **Website Markdown Browser Navigation** — in-app markdown link navigation with URL-based state (`?file=<path>`), repo-root fallback for markdown links, and browser back/forward support in `website/src/App.tsx` and `website/src/components/CodeViewer.tsx`.
+- **Website Mobile Template Browser** — full-width mobile sidebar drawer with header/viewer reopen controls and auto-close on file selection in `website/src/App.tsx`, `website/src/components/Header.tsx`, and `website/src/components/Sidebar.tsx`.
 - **Website SEO and Branding Assets** — favicon, Open Graph image, robots/sitemap, and metadata for GitHub Pages discoverability in `website/index.html` and `website/public/`.
 
 ## How Teams Use It

@@ -7,9 +7,12 @@ interface Props {
   onToggleTheme: () => void
   onPickRandom: () => void
   index: FileIndex | null
+  isMobileLayout: boolean
+  isSidebarOpen: boolean
+  onToggleSidebar: () => void
 }
 
-export function Header({ theme, onToggleTheme, onPickRandom, index }: Props) {
+export function Header({ theme, onToggleTheme, onPickRandom, index, isMobileLayout, isSidebarOpen, onToggleSidebar }: Props) {
   const categories = index
     ? [...new Set(index.files.map(f => f.category))].length
     : 0
@@ -29,6 +32,17 @@ export function Header({ theme, onToggleTheme, onPickRandom, index }: Props) {
           <div className="logo-sub">Template Lab</div>
         </div>
       </a>
+
+      {isMobileLayout && (
+        <button
+          className="btn-sidebar-toggle"
+          onClick={onToggleSidebar}
+          aria-label={isSidebarOpen ? 'Hide template browser' : 'Show template browser'}
+          title={isSidebarOpen ? 'Hide template browser' : 'Browse templates'}
+        >
+          {isSidebarOpen ? '✕ Close' : '☰ Browse'}
+        </button>
+      )}
 
       <div className="header-stats">
         <div className="stat-pill">
