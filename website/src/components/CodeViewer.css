@@ -1,0 +1,252 @@
+/* ── Code viewer panel ───────────────────────────────────────────────────── */
+.code-viewer-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-code);
+  position: relative;
+}
+
+/* ── Toolbar bar ─────────────────────────────────────────────────────────── */
+.cv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+.cv-breadcrumb {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.cv-breadcrumb-seg {
+  color: var(--text-secondary);
+  transition: color 0.15s;
+}
+
+.cv-breadcrumb-seg.last {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.cv-breadcrumb-sep { color: var(--text-muted); opacity: 0.5; }
+
+.cv-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cv-lines-badge,
+.cv-size-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cv-lang-chip {
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  border: 1px solid var(--border-mid);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.10);
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+.cv-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: all 0.18s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cv-btn:hover {
+  border-color: var(--border-bright);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cv-btn.copied {
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* ── Scroll area ─────────────────────────────────────────────────────────── */
+.cv-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* ── Code block ──────────────────────────────────────────────────────────── */
+.cv-pre {
+  margin: 0;
+  padding: 24px 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 2;
+  background: transparent;
+  min-width: max-content;
+  animation: slideInRight 0.25s ease;
+}
+
+.cv-pre code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ── Line numbers ────────────────────────────────────────────────────────── */
+.cv-line-numbers {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  padding: 24px 0;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  user-select: none;
+  background: var(--bg-code);
+  border-right: 1px solid var(--border);
+}
+
+.cv-line-numbers span { display: block; padding-right: 10px; }
+
+.cv-pre-with-lines { padding-left: 62px; }
+
+/* ── Empty / welcome state ───────────────────────────────────────────────── */
+.cv-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px;
+  background: var(--bg-code);
+  animation: fadeIn 0.5s ease;
+}
+
+.cv-empty-icon { font-size: 56px; opacity: 0.35; animation: float 4s ease-in-out infinite; }
+
+.cv-empty h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cv-empty p {
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 380px;
+  font-size: 13px;
+}
+
+.terminal-demo {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-mid);
+  border-radius: 10px;
+  padding: 16px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  color: var(--accent);
+  max-width: 420px;
+  text-align: left;
+  width: 100%;
+}
+
+.terminal-header {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.terminal-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+.td1 { background: #ef4444; }
+.td2 { background: #f59e0b; }
+.td3 { background: #10b981; }
+
+.terminal-line {
+  display: block;
+  opacity: 0;
+  animation: fadeIn 0.4s ease forwards;
+  line-height: 1.9;
+}
+.terminal-line:nth-child(1) { animation-delay: 0.3s;  }
+.terminal-line:nth-child(2) { animation-delay: 0.7s; color: var(--text-muted); }
+.terminal-line:nth-child(3) { animation-delay: 1.1s; color: var(--success); }
+.terminal-line:nth-child(4) { animation-delay: 1.5s; }
+.terminal-line:nth-child(5) { animation-delay: 1.9s; color: var(--text-muted); }
+.terminal-line:nth-child(6) { animation-delay: 2.3s; color: var(--accent2); }
+
+/* ── Prism custom theme ──────────────────────────────────────────────────── */
+/* Dark (Synthetic Midnight) */
+[data-theme="dusk"] .cv-pre { color: #c4d7f0; }
+[data-theme="dusk"] .token.comment    { color: #3d5a8a; font-style: italic; }
+[data-theme="dusk"] .token.string     { color: #86efac; }
+[data-theme="dusk"] .token.number     { color: #fca5a5; }
+[data-theme="dusk"] .token.boolean    { color: #c4b5fd; }
+[data-theme="dusk"] .token.keyword    { color: #93c5fd; font-weight: 600; }
+[data-theme="dusk"] .token.function   { color: #00d4ff; }
+[data-theme="dusk"] .token.class-name { color: #a5f3fc; }
+[data-theme="dusk"] .token.operator   { color: #f9a8d4; }
+[data-theme="dusk"] .token.punctuation { color: #7a90b8; }
+[data-theme="dusk"] .token.property   { color: #fde68a; }
+[data-theme="dusk"] .token.tag        { color: #00d4ff; }
+[data-theme="dusk"] .token.attr-name  { color: #93c5fd; }
+[data-theme="dusk"] .token.attr-value { color: #86efac; }
+[data-theme="dusk"] .token.important  { color: #fca5a5; font-weight: 700; }
+[data-theme="dusk"] .token.builtin    { color: #a5b4fc; }
+[data-theme="dusk"] .token.selector   { color: #c4b5fd; }
+
+/* Light (Neural Daybreak) */
+[data-theme="dawn"] .cv-pre { color: #1e293b; }
+[data-theme="dawn"] .token.comment    { color: #94a3b8; font-style: italic; }
+[data-theme="dawn"] .token.string     { color: #166534; }
+[data-theme="dawn"] .token.number     { color: #b91c1c; }
+[data-theme="dawn"] .token.boolean    { color: #7c3aed; }
+[data-theme="dawn"] .token.keyword    { color: #1d4ed8; font-weight: 600; }
+[data-theme="dawn"] .token.function   { color: #0369a1; }
+[data-theme="dawn"] .token.class-name { color: #0e7490; }
+[data-theme="dawn"] .token.operator   { color: #9d174d; }
+[data-theme="dawn"] .token.punctuation { color: #475569; }
+[data-theme="dawn"] .token.property   { color: #854d0e; }
+[data-theme="dawn"] .token.tag        { color: #1d4ed8; }
+[data-theme="dawn"] .token.attr-name  { color: #0369a1; }
+[data-theme="dawn"] .token.attr-value { color: #166534; }
+[data-theme="dawn"] .token.builtin    { color: #4338ca; }
+[data-theme="dawn"] .token.selector   { color: #7c3aed; }

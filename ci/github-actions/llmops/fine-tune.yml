@@ -1,0 +1,80 @@
+# ci/github-actions/llmops/fine-tune.yml
+#
+# Trigger:  workflow_dispatch (manual), or push to branches matching 'llmops/**'
+#           when files in llmops/fine_tuning/ change.
+# Inputs:   model_name     — MLflow registered model name
+#           base_model     — HuggingFace model ID for the base model
+#           config_path    — Path to trainer config YAML
+#           trainer        — lora | qlora | full (default: lora)
+# Outputs:  mlflow_run_id  — MLflow run ID of the completed fine-tuning run
+# Beginner note:
+#   This workflow fine-tunes an LLM using LoRA, QLoRA, or full fine-tuning.
+#   Adapters are stored in MLflow.  Requires GPU runner (self-hosted or Actions GPU).
+---
+name: LLMOps — Fine-tune
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      base_model:
+        description: HuggingFace model ID or local path
+        required: true
+        type: string
+        default: gpt2
+      config_path:
+        description: Path to YAML trainer config file
+        required: true
+        type: string
+      trainer:
+        description: Fine-tuning strategy
+        required: false
+        type: choice
+        default: lora
+        options: [lora, qlora, full]
+  push:
+    branches:
+      - "llmops/**"
+    paths:
+      - "llmops/fine_tuning/**"
+
+jobs:
+  fine-tune:
+    name: Fine-tune ${{ inputs.model_name || 'default' }} (${{ inputs.trainer || 'lora' }})
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install transformers peft bitsandbytes torch datasets mlflow accelerate trl pyyaml
+
+      - name: Run fine-tuning
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          TRAINER="${{ inputs.trainer || 'lora' }}"
+          CONFIG="${{ inputs.config_path }}"
+
+          case "$TRAINER" in
+            lora)   SCRIPT="llmops/fine_tuning/lora_trainer.py" ;;
+            qlora)  SCRIPT="llmops/fine_tuning/qlora_trainer.py" ;;
+            full)   SCRIPT="llmops/fine_tuning/full_fine_tune.py" ;;
+            *)      echo "Unknown trainer: $TRAINER"; exit 1 ;;
+          esac
+
+          python "$SCRIPT" --config "$CONFIG"

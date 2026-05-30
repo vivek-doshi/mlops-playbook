@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mlops-portal
+  namespace: mlops-portal
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /mlops-portal(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: mlops-portal
+                port:
+                  number: 80

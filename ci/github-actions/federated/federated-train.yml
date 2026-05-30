@@ -1,0 +1,145 @@
+##
+# Trigger:  workflow_dispatch (manual) or workflow_call (from orchestration workflows)
+# Inputs:
+#   model_name      - registered model name in MLflow (e.g. "fraud-detector")
+#   rounds          - number of federated training rounds to run (default: 10)
+#   algorithm       - aggregation algorithm: "fedavg" (default) or "fedprox"
+#   party_endpoints - JSON array of HTTPS party endpoints (e.g. '["https://party-a:8443"]')
+# Outputs:
+#   global_model_version - MLflow model version registered after the final round
+# Beginner note:
+#   This workflow runs the federated coordinator as a Kubernetes Job.
+#   Each round is a separate MLflow run tagged `federated_round: <N>`.
+#   Raw training data NEVER leaves the party environments.
+#   Only model weights travel between coordinator and parties over TLS 1.3.
+##
+
+name: Federated Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: "Registered model name in MLflow"
+        required: true
+        type: string
+      rounds:
+        description: "Number of federated training rounds"
+        required: false
+        default: "10"
+        type: string
+      algorithm:
+        description: "Aggregation algorithm (fedavg | fedprox)"
+        required: false
+        default: "fedavg"
+        type: choice
+        options:
+          - fedavg
+          - fedprox
+      party_endpoints:
+        description: "JSON array of HTTPS party endpoint URLs"
+        required: true
+        type: string
+
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      rounds:
+        required: false
+        default: "10"
+        type: string
+      algorithm:
+        required: false
+        default: "fedavg"
+        type: string
+      party_endpoints:
+        required: true
+        type: string
+    outputs:
+      global_model_version:
+        description: "MLflow model version registered after the final federated round"
+        value: ${{ jobs.coordinate.outputs.global_model_version }}
+
+jobs:
+  coordinate:
+    name: Run Federated Coordinator
+    runs-on: ubuntu-latest
+    outputs:
+      global_model_version: ${{ steps.run-coordinator.outputs.global_model_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir \
+            mlflow==2.14.2 \
+            torch>=2.3.0 \
+            numpy>=1.26 \
+            httpx>=0.27 \
+            fastapi>=0.111 \
+            uvicorn>=0.30
+
+      - name: Configure MLflow
+        run: |
+          echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> $GITHUB_ENV
+
+      - name: Run federated coordinator
+        id: run-coordinator
+        env:
+          MODEL_NAME: ${{ inputs.model_name }}
+          ROUNDS: ${{ inputs.rounds }}
+          ALGORITHM: ${{ inputs.algorithm }}
+          PARTY_ENDPOINTS: ${{ inputs.party_endpoints }}
+          FEDERATED_TLS_VERIFY: "true"
+        run: |
+          python -c "
+          import json, os
+          from federated_learning.coordinator import FederatedCoordinator
+          import torch.nn as nn
+
+          # Placeholder: in production the model architecture is loaded from MLflow
+          model = nn.Linear(10, 2)
+          endpoints = json.loads(os.environ['PARTY_ENDPOINTS'])
+          coordinator = FederatedCoordinator(
+              model_name=os.environ['MODEL_NAME'],
+              global_model=model,
+              party_endpoints=endpoints,
+              rounds=int(os.environ['ROUNDS']),
+              algorithm=os.environ['ALGORITHM'],
+          )
+          coordinator.run()
+          print('Federated training complete')
+          "
+
+      - name: Retrieve latest model version
+        id: get-version
+        env:
+          MODEL_NAME: ${{ inputs.model_name }}
+        run: |
+          VERSION=$(python -c "
+          import mlflow
+          client = mlflow.tracking.MlflowClient()
+          versions = client.search_model_versions(f\"name='$MODEL_NAME'\")
+          latest = max(versions, key=lambda v: int(v.version))
+          print(latest.version)
+          ")
+          echo "global_model_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  trigger-eval:
+    name: Trigger Federated Evaluation
+    needs: coordinate
+    uses: ./.github/workflows/federated-eval.yml
+    with:
+      model_name: ${{ inputs.model_name }}
+      model_version: ${{ needs.coordinate.outputs.global_model_version }}
+    secrets: inherit

@@ -1,0 +1,18 @@
+# NVIDIA A100 GPU benchmark target
+target: cuda-a100
+description: NVIDIA A100 80GB GPU inference (TensorRT or ONNX Runtime CUDA EP)
+
+batch_size: 32
+input_shape: [32, 128]
+dtype: float16
+
+warmup_requests: 1000
+measurement_requests: 5000
+concurrency: 8
+
+latency_p99_threshold_ms: 20
+latency_p50_threshold_ms: 8
+
+default_precision: fp16
+quantisation_backend: tensorrt
+trt_workspace_gb: 4

@@ -1,0 +1,97 @@
+# ci/github-actions/model-optimization/benchmark.yml
+#
+# Trigger:  workflow_call (used as a reusable step inside optimize.yml or manually)
+#           or workflow_dispatch for standalone benchmarking.
+# Inputs:   model_dir      — Path to model artefact directory on runner
+#           target         — Hardware target platform
+# Outputs:  latency_p50_ms — p50 latency (milliseconds)
+#           latency_p99_ms — p99 latency (milliseconds)
+#           throughput_rps — Throughput (requests per second)
+# Beginner note:
+#   This workflow benchmarks an already-exported model.  It does NOT download
+#   from MLflow — the model directory must exist on the runner (use upload-artifact
+#   / download-artifact to transfer between jobs if needed).
+---
+name: Model Optimization — Benchmark
+
+on:
+  workflow_call:
+    inputs:
+      model_dir:
+        required: true
+        type: string
+        description: Path to the model directory on the runner
+      target:
+        required: false
+        type: string
+        default: cpu
+    outputs:
+      latency_p50_ms:
+        description: p50 latency in milliseconds
+        value: ${{ jobs.benchmark.outputs.latency_p50_ms }}
+      latency_p99_ms:
+        description: p99 latency in milliseconds
+        value: ${{ jobs.benchmark.outputs.latency_p99_ms }}
+      throughput_rps:
+        description: Requests per second
+        value: ${{ jobs.benchmark.outputs.throughput_rps }}
+  workflow_dispatch:
+    inputs:
+      model_dir:
+        description: Path to model directory
+        required: true
+        type: string
+      target:
+        description: Hardware target
+        required: false
+        type: choice
+        default: cpu
+        options: [cpu, cuda-a100, cuda-h100, triton-onnx, triton-trt]
+
+jobs:
+  benchmark:
+    name: Benchmark (${{ inputs.target || 'cpu' }})
+    runs-on: ${{ (inputs.target == 'cpu' || inputs.target == 'triton-onnx') && 'ubuntu-latest' || fromJSON('["self-hosted","gpu"]') }}
+    timeout-minutes: 60
+
+    outputs:
+      latency_p50_ms: ${{ steps.bench.outputs.latency_p50_ms }}
+      latency_p99_ms: ${{ steps.bench.outputs.latency_p99_ms }}
+      throughput_rps: ${{ steps.bench.outputs.throughput_rps }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --upgrade pip onnxruntime numpy pyyaml
+
+      - name: Run benchmark
+        id: bench
+        run: |
+          python model_optimization/benchmark.py \
+            --model-dir     "${{ inputs.model_dir }}" \
+            --target-config "model_optimization/targets/${{ inputs.target || 'cpu' }}.yaml" \
+            | tee bench_output.txt
+
+          P50=$(grep -oP 'latency_p50_ms: \K[\d.]+' bench_output.txt)
+          P99=$(grep -oP 'latency_p99_ms: \K[\d.]+' bench_output.txt)
+          RPS=$(grep -oP 'throughput_rps: \K[\d.]+' bench_output.txt)
+          echo "latency_p50_ms=${P50}" >> "$GITHUB_OUTPUT"
+          echo "latency_p99_ms=${P99}" >> "$GITHUB_OUTPUT"
+          echo "throughput_rps=${RPS}" >> "$GITHUB_OUTPUT"
+
+      - name: Print summary
+        run: |
+          echo "### Benchmark Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| p50 latency | ${{ steps.bench.outputs.latency_p50_ms }} ms |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| p99 latency | ${{ steps.bench.outputs.latency_p99_ms }} ms |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Throughput  | ${{ steps.bench.outputs.throughput_rps }} rps |" >> "$GITHUB_STEP_SUMMARY"

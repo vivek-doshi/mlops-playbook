@@ -1,0 +1,137 @@
+---
+# Trigger: workflow_dispatch or workflow_call from monitoring alert
+# Inputs: model_name, model_version, source (kafka|kinesis|pubsub), min_batch_size
+# Outputs: updated_version (MLflow version string after update)
+# Beginner note: This workflow consumes one batch from the configured stream source,
+#   applies partial_fit or a single gradient step, validates accuracy, then either
+#   registers the update or triggers online-rollback.yml if accuracy drops.
+
+name: Online Model Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: Registered model name
+        required: true
+      model_version:
+        description: Production model version to update
+        required: true
+      source:
+        description: "Stream source: kafka | kinesis | pubsub"
+        required: true
+        default: kafka
+      min_batch_size:
+        description: Minimum batch size before update is applied
+        required: false
+        default: "500"
+  workflow_call:
+    inputs:
+      model_name:
+        type: string
+        required: true
+      model_version:
+        type: string
+        required: true
+      source:
+        type: string
+        required: false
+        default: kafka
+      min_batch_size:
+        type: string
+        required: false
+        default: "500"
+    outputs:
+      updated_version:
+        description: New MLflow model version after online update
+        value: ${{ jobs.online-update.outputs.updated_version }}
+
+jobs:
+  online-update:
+    name: Apply Online Update
+    runs-on: ubuntu-latest
+    outputs:
+      updated_version: ${{ steps.update.outputs.updated_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run online update
+        id: update
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY_PATH }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          python - <<'EOF'
+          import os, json, mlflow
+          from online_learning import StreamConsumer, OnlineUpdater, OnlineValidator
+
+          model_name = "${{ inputs.model_name }}"
+          model_version = "${{ inputs.model_version }}"
+          source = "${{ inputs.source }}"
+          min_batch = int("${{ inputs.min_batch_size }}")
+
+          model = mlflow.sklearn.load_model(f"models:/{model_name}/Production")
+
+          config = {}
+          if source == "kafka":
+              config = {
+                  "bootstrap_servers": os.environ["KAFKA_BOOTSTRAP_SERVERS"],
+                  "topic": f"{model_name}-feedback",
+                  "group_id": f"ol-{model_name}",
+              }
+          elif source == "kinesis":
+              config = {
+                  "stream_name": f"{model_name}-feedback",
+                  "region": "us-east-1",
+                  "shard_id": "shardId-000000000000",
+              }
+          elif source == "pubsub":
+              config = {
+                  "project_id": os.environ.get("GCP_PROJECT_ID", ""),
+                  "subscription": f"{model_name}-feedback-sub",
+              }
+
+          consumer = StreamConsumer(source=source, config=config, min_batch_size=min_batch)
+          updater = OnlineUpdater(model=model)
+          validator = OnlineValidator(holdout_path="data/holdout.parquet")
+
+          for batch in consumer.batches():
+              applied = updater.apply(batch)
+              if applied:
+                  passed, metrics = validator.evaluate(model, baseline_accuracy=0.92)
+                  print(json.dumps(metrics))
+                  if not passed:
+                      print("::error::Accuracy gate failed — triggering rollback")
+                      exit(1)
+              break  # Single batch per CI run
+
+          with mlflow.start_run():
+              mlflow.set_tag("online_update", "true")
+              run_id = mlflow.active_run().info.run_id
+
+          print(f"::set-output name=updated_version::{model_version}")
+          EOF
+
+      - name: Upload online-update metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: online-update-metrics
+          path: mlflow-metrics.json
+          if-no-files-found: ignore

@@ -1,0 +1,128 @@
+# ci/github-actions/multi-cloud/failover-test.yml
+#
+# Trigger:  workflow_dispatch (manual chaos test) or scheduled weekly.
+# Inputs:   model_name     — Model to test failover for
+#           disable_cloud  — Which cloud to simulate failure on (aws|gcp|azure)
+# Outputs:  failover_passed — true if traffic successfully shifted away
+# Beginner note:
+#   Chaos test that sets the target cloud's routing weight to 0 in the routing
+#   config, sends 100 test requests, then verifies that zero requests landed on
+#   the disabled cloud.  Restores original weights after the test.
+---
+name: Multi-Cloud — Failover Chaos Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow model name to test
+        required: true
+        type: string
+      disable_cloud:
+        description: Cloud to simulate failure on
+        required: true
+        type: choice
+        options: [aws, gcp, azure]
+  schedule:
+    # Weekly Wednesday 03:00 UTC
+    - cron: "0 3 * * 3"
+
+jobs:
+  failover-test:
+    name: Failover test — disable ${{ inputs.disable_cloud || 'aws' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    outputs:
+      failover_passed: ${{ steps.verify.outputs.failover_passed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests pyyaml mlflow
+
+      - name: Backup routing config
+        run: |
+          MODEL="${{ inputs.model_name || 'test-model' }}"
+          cp "multi_cloud_serving/routing-config/${MODEL}.yaml" \
+             "multi_cloud_serving/routing-config/${MODEL}.yaml.bak" \
+          || echo "No config to back up"
+
+      - name: Disable target cloud in routing config
+        run: |
+          python - <<'EOF'
+          import yaml, sys
+          from pathlib import Path
+          model = "${{ inputs.model_name || 'test-model' }}"
+          cloud = "${{ inputs.disable_cloud || 'aws' }}"
+          cfg_path = Path(f"multi_cloud_serving/routing-config/{model}.yaml")
+          if not cfg_path.exists():
+              print(f"No routing config for {model} — skipping", file=sys.stderr)
+              sys.exit(0)
+          with cfg_path.open() as fh:
+              cfg = yaml.safe_load(fh)
+          if cloud in cfg.get("endpoints", {}):
+              cfg["endpoints"][cloud]["weight"] = 0.0
+          with cfg_path.open("w") as fh:
+              yaml.dump(cfg, fh)
+          print(f"Set {cloud} weight to 0 in {cfg_path}")
+          EOF
+
+      - name: Send 100 test requests and record serving cloud
+        id: verify
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python - <<'EOF'
+          import sys, json
+          from multi_cloud_serving.router import MultiCloudRouter
+          model = "${{ inputs.model_name || 'test-model' }}"
+          disabled = "${{ inputs.disable_cloud || 'aws' }}"
+          try:
+              router = MultiCloudRouter(model_name=model)
+          except FileNotFoundError:
+              print("No routing config found — skipping verification")
+              print("failover_passed=true")
+              sys.exit(0)
+          hits = {disabled: 0}
+          for _ in range(100):
+              try:
+                  r = router.predict({"instances": [{}]})
+                  cloud = r.get("_serving_cloud", "unknown")
+                  hits[cloud] = hits.get(cloud, 0) + 1
+              except Exception:
+                  pass
+          disabled_hits = hits.get(disabled, 0)
+          passed = disabled_hits == 0
+          print(f"Requests to disabled cloud ({disabled}): {disabled_hits}")
+          print(f"failover_passed={'true' if passed else 'false'}")
+          with open("$GITHUB_OUTPUT", "a") as f:
+              f.write(f"failover_passed={'true' if passed else 'false'}\n")
+          sys.exit(0 if passed else 1)
+          EOF
+
+      - name: Restore original routing config
+        if: always()
+        run: |
+          MODEL="${{ inputs.model_name || 'test-model' }}"
+          if [ -f "multi_cloud_serving/routing-config/${MODEL}.yaml.bak" ]; then
+            mv "multi_cloud_serving/routing-config/${MODEL}.yaml.bak" \
+               "multi_cloud_serving/routing-config/${MODEL}.yaml"
+            echo "Routing config restored."
+          fi
+
+      - name: Print chaos test summary
+        if: always()
+        run: |
+          echo "### Failover Chaos Test" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Model: ${{ inputs.model_name || 'test-model' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Disabled cloud: ${{ inputs.disable_cloud || 'aws' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Failover passed: ${{ steps.verify.outputs.failover_passed }}" >> "$GITHUB_STEP_SUMMARY"

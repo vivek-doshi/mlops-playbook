@@ -1,0 +1,122 @@
+# ci/github-actions/llmops/rlhf-train.yml
+#
+# Trigger:  workflow_dispatch (manual).
+# Inputs:   model_name         — MLflow registered model name
+#           base_model         — HuggingFace model ID for reward model and policy
+#           preference_dataset — Path or HuggingFace dataset ID
+#           num_steps          — PPO training steps (default: 1000)
+# Outputs:  reward_run_id      — MLflow run ID of the reward model training
+#           ppo_run_id         — MLflow run ID of the PPO training
+# Beginner note:
+#   Runs the two-stage RLHF pipeline: (1) train reward model, (2) PPO fine-tune.
+#   Both stages log to MLflow.  Requires GPU runner.
+---
+name: LLMOps — RLHF Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      base_model:
+        description: HuggingFace base model ID
+        required: true
+        type: string
+        default: gpt2
+      preference_dataset:
+        description: Path to preference dataset (JSONL) or HuggingFace dataset ID
+        required: true
+        type: string
+      num_steps:
+        description: Number of PPO training steps
+        required: false
+        type: string
+        default: "1000"
+
+jobs:
+  reward-model:
+    name: Train reward model for ${{ inputs.model_name }}
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 240
+    outputs:
+      reward_run_id: ${{ steps.train.outputs.reward_run_id }}
+      reward_model_path: ${{ steps.train.outputs.reward_model_path }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install transformers trl torch datasets mlflow accelerate pyyaml
+
+      - name: Build preference dataset
+        run: |
+          python llmops/rlhf/preference_dataset.py \
+            --input-path  "${{ inputs.preference_dataset }}" \
+            --output-path outputs/pref_dataset/
+
+      - name: Train reward model
+        id: train
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python llmops/rlhf/reward_model.py \
+            --model-name   "${{ inputs.model_name }}" \
+            --base-model   "${{ inputs.base_model }}" \
+            --dataset-path outputs/pref_dataset/ \
+            | tee reward_output.txt
+
+          RUN_ID=$(grep -oP 'Run ID: \K\S+' reward_output.txt)
+          echo "reward_run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "reward_model_path=outputs/reward_model/${RUN_ID}/reward_model" >> "$GITHUB_OUTPUT"
+
+  ppo-training:
+    name: PPO fine-tuning for ${{ inputs.model_name }}
+    needs: reward-model
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 360
+    outputs:
+      ppo_run_id: ${{ steps.ppo.outputs.ppo_run_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install transformers trl torch datasets mlflow accelerate pyyaml
+
+      - name: Run PPO training
+        id: ppo
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python llmops/rlhf/ppo_trainer.py \
+            --model-name       "${{ inputs.model_name }}" \
+            --policy-model     "${{ inputs.base_model }}" \
+            --reward-model-uri "${{ needs.reward-model.outputs.reward_model_path }}" \
+            --dataset-path     outputs/pref_dataset/ \
+            --num-steps        "${{ inputs.num_steps || '1000' }}" \
+            | tee ppo_output.txt
+
+          PPO_RUN_ID=$(grep -oP 'Run ID: \K\S+' ppo_output.txt)
+          echo "ppo_run_id=${PPO_RUN_ID}" >> "$GITHUB_OUTPUT"

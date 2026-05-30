@@ -1,0 +1,75 @@
+name: Deploy Website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'ci/**'
+      - 'cd/**'
+      - 'training/**'
+      - 'serving/**'
+      - 'monitoring/**'
+      - 'batch/**'
+      - 'pipelines/**'
+      - 'fairness/**'
+      - 'terraform/**'
+      - 'finops/**'
+      - 'mlflow/**'
+      - 'dvc/**'
+      - 'feature-store/**'
+      - 'policy/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: website/package.json
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm install
+
+      - name: Generate template index
+        working-directory: website
+        run: node scripts/generate-index.js
+
+      - name: Build
+        working-directory: website
+        run: npm run build -- --base /mlops-playbook/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

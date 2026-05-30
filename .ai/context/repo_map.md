@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: d:/projects/mlops-playbook
-- Generated: 2026-05-30 00:33:53
+- Generated: 2026-05-30 11:05:29
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -16,9 +16,11 @@ Generated from current workspace structure.
 │   │   ├── config.yml
 │   │   ├── feature_request.yml
 │   │   └── model_quality_issue.yml
-│   ├── Azure -gap-copilot-instructions.md
+│   ├── workflows
+│   │   └── deploy-website.yml
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
+│   ├── copilot-instructions-phase3.md
 │   ├── dependabot.yml
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── batch
@@ -57,6 +59,11 @@ Generated from current workspace structure.
 │       │       ├── kustomization.yaml
 │       │       ├── network-policy.yaml
 │       │       └── resource-quota.yaml
+│       ├── portal
+│       │   ├── deployment.yaml
+│       │   ├── ingress.yaml
+│       │   ├── network-policy.yaml
+│       │   └── service.yaml
 │       └── training
 │           ├── checkpointing-pvc.yaml
 │           ├── pytorch-job.yaml
@@ -79,19 +86,38 @@ Generated from current workspace structure.
 │       │   └── gpu-approval-gate.yml
 │       ├── fairness
 │       │   └── fairness-gate.yml
+│       ├── federated
+│       │   ├── federated-eval.yml
+│       │   └── federated-train.yml
 │       ├── finops
 │       │   ├── cost-budget-check.yml
 │       │   ├── monthly-cost-report.yml
 │       │   └── weekly-cost-report.yml
+│       ├── llmops
+│       │   ├── evaluate-llm.yml
+│       │   ├── fine-tune.yml
+│       │   ├── prompt-validate.yml
+│       │   └── rlhf-train.yml
+│       ├── model-cards
+│       │   └── generate-card.yml
 │       ├── model-deployment
 │       │   └── deploy.yml
 │       ├── model-evaluation
 │       │   └── evaluate.yml
 │       ├── model-monitoring
 │       │   └── drift-check.yml
+│       ├── model-optimization
+│       │   ├── benchmark.yml
+│       │   └── optimize.yml
 │       ├── model-training
 │       │   ├── continuous-training.yml
 │       │   └── train.yml
+│       ├── multi-cloud
+│       │   ├── deploy-multicloud.yml
+│       │   └── failover-test.yml
+│       ├── online-learning
+│       │   ├── online-rollback.yml
+│       │   └── online-update.yml
 │       ├── pipelines
 │       │   ├── trigger-batch-inference.yml
 │       │   └── trigger-training-pipeline.yml
@@ -116,21 +142,34 @@ Generated from current workspace structure.
 │   │   ├── ADR-ML-015-fairness-framework.md
 │   │   ├── ADR-ML-016-distributed-training.md
 │   │   ├── ADR-ML-017-pipeline-orchestration.md
-│   │   └── ADR-ML-018-batch-inference.md
+│   │   ├── ADR-ML-018-batch-inference.md
+│   │   ├── ADR-ML-019-online-learning.md
+│   │   ├── ADR-ML-020-multi-cloud-serving.md
+│   │   ├── ADR-ML-021-model-optimization.md
+│   │   ├── ADR-ML-022-llmops.md
+│   │   ├── ADR-ML-023-self-service-portal.md
+│   │   ├── ADR-ML-024-federated-learning.md
+│   │   └── README.md
 │   ├── golden-paths
 │   │   ├── batch-inference.md
 │   │   ├── data-versioning.md
 │   │   ├── distributed-training.md
 │   │   ├── experiment-tracking.md
 │   │   ├── fairness-and-explainability.md
+│   │   ├── federated-learning.md
+│   │   ├── llmops.md
 │   │   ├── ml-cost-attribution.md
 │   │   ├── mlops-workflow.md
 │   │   ├── model-monitoring.md
+│   │   ├── model-optimization.md
 │   │   ├── model-registry.md
 │   │   ├── model-serving.md
 │   │   ├── model-training-pipeline.md
+│   │   ├── multi-cloud-serving.md
 │   │   ├── multi-env-promotion.md
-│   │   └── pipeline-orchestration.md
+│   │   ├── online-learning.md
+│   │   ├── pipeline-orchestration.md
+│   │   └── self-service-portal.md
 │   ├── guides
 │   │   ├── feature-store-patterns.md
 │   │   └── gpu-cost-governance.md
@@ -154,6 +193,18 @@ Generated from current workspace structure.
 │       ├── feature_store.yaml
 │       ├── README.md
 │       └── repo.py
+├── federated_learning
+│   ├── aggregation
+│   │   ├── __init__.py
+│   │   ├── fedavg.py
+│   │   └── fedprox.py
+│   ├── privacy
+│   │   ├── __init__.py
+│   │   └── dp_wrapper.py
+│   ├── __init__.py
+│   ├── coordinator.py
+│   ├── party.py
+│   └── README.md
 ├── finops
 │   ├── alerts
 │   │   └── ml-cost-alerts.yaml
@@ -170,6 +221,32 @@ Generated from current workspace structure.
 │   │   ├── monthly-cost-report.py
 │   │   └── weekly-cost-report.py
 │   └── README.md
+├── llmops
+│   ├── evaluation
+│   │   ├── benchmarks
+│   │   │   ├── commonsense_qa.yaml
+│   │   │   └── summarisation.yaml
+│   │   ├── golden_dataset
+│   │   │   └── README.md
+│   │   ├── __init__.py
+│   │   └── harness.py
+│   ├── fine_tuning
+│   │   ├── __init__.py
+│   │   ├── full_fine_tune.py
+│   │   ├── lora_trainer.py
+│   │   ├── qlora_trainer.py
+│   │   └── trainer_config.py
+│   ├── prompts
+│   │   ├── __init__.py
+│   │   ├── registry.py
+│   │   └── schema.yaml
+│   ├── rlhf
+│   │   ├── __init__.py
+│   │   ├── ppo_trainer.py
+│   │   ├── preference_dataset.py
+│   │   └── reward_model.py
+│   ├── __init__.py
+│   └── README.md
 ├── mlflow
 │   ├── metadata-store
 │   │   ├── client.py
@@ -181,6 +258,24 @@ Generated from current workspace structure.
 │       ├── .env.example
 │       ├── docker-compose.yml
 │       └── README.md
+├── model_optimization
+│   ├── distillation
+│   │   ├── student_configs
+│   │   │   └── README.md
+│   │   ├── __init__.py
+│   │   └── trainer.py
+│   ├── targets
+│   │   ├── cpu.yaml
+│   │   ├── cuda-a100.yaml
+│   │   ├── cuda-h100.yaml
+│   │   ├── triton-onnx.yaml
+│   │   └── triton-trt.yaml
+│   ├── __init__.py
+│   ├── benchmark.py
+│   ├── pipeline.py
+│   ├── pruning.py
+│   ├── quantisation.py
+│   └── README.md
 ├── monitoring
 │   ├── alerts
 │   │   └── drift-alerts.yaml
@@ -194,10 +289,38 @@ Generated from current workspace structure.
 │   │   └── README.md
 │   ├── fairness
 │   │   └── fairness-alerts.yaml
+│   ├── multi-cloud
+│   │   └── cross-cloud-alerts.yaml
+│   ├── online-learning
+│   │   └── online-learning-alerts.yaml
 │   ├── prometheus
 │   ├── slos
+│   │   ├── _defaults.yaml
+│   │   ├── README.md
+│   │   ├── slo-template.yaml
 │   │   └── vllm-serving-slo.yaml
 │   └── README.md
+├── multi_cloud_serving
+│   ├── routing-config
+│   │   ├── _config-schema.yaml
+│   │   └── README.md
+│   ├── __init__.py
+│   ├── health_check.py
+│   ├── README.md
+│   ├── registry.py
+│   └── router.py
+├── online_learning
+│   ├── consumers
+│   │   ├── __init__.py
+│   │   ├── kafka_consumer.py
+│   │   ├── kinesis_consumer.py
+│   │   └── pubsub_consumer.py
+│   ├── __init__.py
+│   ├── consumer.py
+│   ├── README.md
+│   ├── rollback.py
+│   ├── updater.py
+│   └── validator.py
 ├── pipelines
 │   ├── components
 │   │   ├── data_ingestion
@@ -232,10 +355,40 @@ Generated from current workspace structure.
 │   │   ├── approved-versions.yaml
 │   │   └── README.md
 │   └── README.md
+├── portal
+│   ├── backend
+│   │   ├── api
+│   │   │   ├── __init__.py
+│   │   │   ├── budgets.py
+│   │   │   ├── deployments.py
+│   │   │   ├── models.py
+│   │   │   └── notifications.py
+│   │   ├── __init__.py
+│   │   ├── github_client.py
+│   │   ├── k8s_client.py
+│   │   ├── main.py
+│   │   ├── mlflow_client.py
+│   │   └── requirements.txt
+│   ├── frontend
+│   │   ├── src
+│   │   │   ├── pages
+│   │   │   │   ├── Budgets.tsx
+│   │   │   │   ├── CostDashboard.tsx
+│   │   │   │   ├── Deploy.tsx
+│   │   │   │   ├── ModelDetail.tsx
+│   │   │   │   └── ModelList.tsx
+│   │   │   └── App.tsx
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   ├── __init__.py
+│   ├── Dockerfile
+│   └── README.md
 ├── scripts
 │   ├── bootstrap.ps1
 │   ├── bootstrap.sh
-│   └── generate-repo-map.ps1
+│   ├── generate_model_card.py
+│   ├── generate-repo-map.ps1
+│   └── model-card-template.md.j2
 ├── serving
 │   ├── torchserve
 │   │   ├── config.properties
@@ -266,6 +419,8 @@ Generated from current workspace structure.
 │   │   └── variables.tf
 │   ├── gpu-cluster
 │   │   └── main.tf
+│   ├── portal
+│   │   └── main.tf
 │   ├── ray-cluster
 │   │   ├── main.tf
 │   │   └── variables.tf
@@ -284,5 +439,6 @@ Generated from current workspace structure.
 ├── GETTING_STARTED.md
 ├── Makefile
 ├── README.md
-└── Taskfile.yml
+├── Taskfile.yml
+└── website.md
 ```

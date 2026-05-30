@@ -32,8 +32,16 @@ gpu_type_rates:
   "NVIDIA-H100":   8.50
 
 # ─────────────────────────────────────────────
+# Multi-cloud inference cost rates (USD per 1000 predictions).
+# Used by multi_cloud_serving/router.py and FinOps dashboards for
+# cross-cloud cost normalisation.
+sagemaker_cost_per_1k: 0.10   # AWS SageMaker ml.g4dn.xlarge ~$0.10/1k predictions
+vertex_cost_per_1k: 0.09      # GCP Vertex AI custom-serving-cpu-1 ~$0.09/1k
+azure_cost_per_1k: 0.11       # Azure ML Standard_DS3_v2 ~$0.11/1k predictions
+
+# ─────────────────────────────────────────────
 # Last updated
-last_updated: "2026-05-29"
+last_updated: "2026-05-30"
 notes: >
   Rates are approximate AWS on-demand us-east-1 prices.
   Adjust for your region and reserved instance discounts.

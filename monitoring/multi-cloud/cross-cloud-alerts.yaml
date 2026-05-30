@@ -1,0 +1,78 @@
+---
+# monitoring/multi-cloud/cross-cloud-alerts.yaml
+# Prometheus alerting rules for multi-cloud serving events.
+# Apply with: kubectl apply -f monitoring/multi-cloud/cross-cloud-alerts.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cross-cloud-serving-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: multi-cloud-serving
+      interval: 30s
+      rules:
+
+        # ── Failover Triggered ─────────────────────────────────────────────
+        - alert: CrossCloudFailoverTriggered
+          expr: |
+            increase(multi_cloud_failover_total[5m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "Cross-cloud failover triggered for {{ $labels.model_name }}"
+            description: >
+              Traffic has been automatically shifted away from cloud
+              {{ $labels.cloud }} for model {{ $labels.model_name }} due to
+              elevated error rate.  Review endpoint health immediately.
+
+        # ── All Clouds Unhealthy ───────────────────────────────────────────
+        - alert: AllCloudsUnhealthy
+          expr: |
+            sum by (model_name) (multi_cloud_endpoint_healthy) == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: ml-platform
+          annotations:
+            summary: "All serving clouds unavailable for {{ $labels.model_name }}"
+            description: >
+              Zero healthy endpoints remain for {{ $labels.model_name }}.
+              The MultiCloudRouter will reject requests.  Page on-call immediately.
+
+        # ── Single Cloud Error Rate High ───────────────────────────────────
+        - alert: CloudEndpointHighErrorRate
+          expr: |
+            rate(multi_cloud_request_errors_total[2m])
+            / rate(multi_cloud_requests_total[2m]) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "High error rate on {{ $labels.cloud }} for {{ $labels.model_name }}"
+            description: >
+              Error rate on {{ $labels.cloud }} endpoint for model
+              {{ $labels.model_name }} has exceeded 5% over the last 2 minutes.
+              Automatic failover may activate shortly.
+
+        # ── Cross-Cloud Latency Divergence ─────────────────────────────────
+        - alert: CrossCloudLatencyDivergence
+          expr: |
+            max by (model_name) (multi_cloud_latency_p99_ms)
+            / min by (model_name) (multi_cloud_latency_p99_ms) > 3
+          for: 5m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "P99 latency divergence >3× across clouds for {{ $labels.model_name }}"
+            description: >
+              The slowest cloud endpoint is more than 3× slower than the fastest
+              for model {{ $labels.model_name }}.  Consider reducing traffic weight
+              to the slower cloud.

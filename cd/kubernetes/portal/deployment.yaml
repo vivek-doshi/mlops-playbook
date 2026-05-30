@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-portal
+  namespace: mlops-portal
+  labels:
+    app: mlops-portal
+    # Required cost labels (Phase 3 Kubernetes rules)
+    cost-center: platform-engineering
+    team: mlops
+    model-name: portal
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mlops-portal
+  template:
+    metadata:
+      labels:
+        app: mlops-portal
+        cost-center: platform-engineering
+        team: mlops
+        model-name: portal
+        environment: production
+    spec:
+      serviceAccountName: mlops-portal
+      containers:
+        - name: portal
+          image: ghcr.io/your-org/mlops-portal:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MLFLOW_TRACKING_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: MLFLOW_TRACKING_URI
+            - name: GITHUB_REPOSITORY
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: GITHUB_REPOSITORY
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-portal-github-app
+                  key: app_id
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-portal-github-app
+                  key: private_key
+            - name: GITHUB_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-portal-github-app
+                  key: installation_id
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000

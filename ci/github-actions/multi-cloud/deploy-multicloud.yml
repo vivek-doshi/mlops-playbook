@@ -1,0 +1,143 @@
+# ci/github-actions/multi-cloud/deploy-multicloud.yml
+#
+# Trigger:  workflow_dispatch (manual) or called by the promotion workflow
+#           after a model is approved for Production.
+# Inputs:   model_name     — MLflow registered model name
+#           model_version  — Model version to deploy
+#           clouds         — Comma-separated list: aws,gcp,azure (default: all)
+# Outputs:  (none — endpoint URLs are written to Terraform outputs)
+# Beginner note:
+#   Deploys the same model version to AWS SageMaker, GCP Vertex AI, and Azure ML
+#   in parallel jobs.  Each cloud job calls the existing single-cloud deploy
+#   workflow for that provider.  All three must succeed for the workflow to pass.
+---
+name: Multi-Cloud — Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      model_version:
+        required: true
+        type: string
+      clouds:
+        description: Comma-separated target clouds (aws,gcp,azure)
+        required: false
+        default: "aws,gcp,azure"
+        type: string
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      model_version:
+        required: true
+        type: string
+      clouds:
+        required: false
+        type: string
+        default: "aws,gcp,azure"
+
+jobs:
+  deploy-aws:
+    name: Deploy → AWS SageMaker
+    if: contains(inputs.clouds, 'aws')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install mlflow boto3 sagemaker
+      - name: Deploy to SageMaker
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python ci/scripts/deploy_sagemaker.py \
+            --model-name    "${{ inputs.model_name }}" \
+            --model-version "${{ inputs.model_version }}"
+
+  deploy-gcp:
+    name: Deploy → GCP Vertex AI
+    if: contains(inputs.clouds, 'gcp')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install mlflow google-cloud-aiplatform
+      - name: Deploy to Vertex AI
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python ci/scripts/deploy_vertex.py \
+            --model-name    "${{ inputs.model_name }}" \
+            --model-version "${{ inputs.model_version }}"
+
+  deploy-azure:
+    name: Deploy → Azure ML
+    if: contains(inputs.clouds, 'azure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install mlflow azure-ai-ml azure-identity
+      - name: Deploy to Azure ML
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python ci/scripts/deploy_azure_ml.py \
+            --model-name    "${{ inputs.model_name }}" \
+            --model-version "${{ inputs.model_version }}"
+
+  summary:
+    name: Deployment Summary
+    needs: [deploy-aws, deploy-gcp, deploy-azure]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print deployment status
+        run: |
+          echo "### Multi-Cloud Deployment: ${{ inputs.model_name }} v${{ inputs.model_version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cloud | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| AWS SageMaker | ${{ needs.deploy-aws.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| GCP Vertex AI | ${{ needs.deploy-gcp.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Azure ML      | ${{ needs.deploy-azure.result }} |" >> "$GITHUB_STEP_SUMMARY"

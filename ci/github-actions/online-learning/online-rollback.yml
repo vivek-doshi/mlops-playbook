@@ -1,0 +1,85 @@
+---
+# Trigger: workflow_call from online-update.yml on accuracy gate failure
+# Inputs: model_name, current_version, reason
+# Outputs: restored_version (MLflow version string of restored model)
+# Beginner note: This workflow runs automatically when the accuracy gate in
+#   online-update.yml fails. It archives the failing version and restores the
+#   most recent Staging or previously-Production version.
+
+name: Online Learning Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: Registered model name
+        required: true
+      current_version:
+        description: Model version to roll back
+        required: true
+      reason:
+        description: Rollback reason
+        required: false
+        default: accuracy_drop
+  workflow_call:
+    inputs:
+      model_name:
+        type: string
+        required: true
+      current_version:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: false
+        default: accuracy_drop
+    outputs:
+      restored_version:
+        description: Version restored to Production
+        value: ${{ jobs.rollback.outputs.restored_version }}
+
+jobs:
+  rollback:
+    name: Roll Back Online Update
+    runs-on: ubuntu-latest
+    outputs:
+      restored_version: ${{ steps.rollback.outputs.restored_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Execute rollback
+        id: rollback
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python - <<'EOF'
+          from online_learning import OnlineRollback
+
+          model_name = "${{ inputs.model_name }}"
+          current_version = "${{ inputs.current_version }}"
+          reason = "${{ inputs.reason }}"
+
+          rb = OnlineRollback(model_name=model_name)
+          restored = rb.execute(current_version=current_version, reason=reason)
+          if restored:
+              print(f"::set-output name=restored_version::{restored}")
+          else:
+              print("::error::No candidate version found for rollback")
+              exit(1)
+          EOF
+
+      - name: Post rollback notification
+        if: always()
+        run: |
+          echo "Rollback complete for ${{ inputs.model_name }} v${{ inputs.current_version }}"
+          echo "Restored version: ${{ steps.rollback.outputs.restored_version }}"

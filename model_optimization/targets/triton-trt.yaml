@@ -1,0 +1,20 @@
+# Triton TensorRT backend benchmark target
+target: triton-trt
+description: Triton Inference Server with TensorRT backend (NVIDIA GPU)
+
+batch_size: 32
+input_shape: [32, 128]
+dtype: float16
+
+warmup_requests: 1000
+measurement_requests: 5000
+concurrency: 8
+
+latency_p99_threshold_ms: 15
+latency_p50_threshold_ms: 6
+
+default_precision: fp16
+quantisation_backend: tensorrt
+trt_workspace_gb: 4
+triton_model_repository: /models
+triton_max_batch_size: 256

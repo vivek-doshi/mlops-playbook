@@ -187,17 +187,80 @@ tasks:
           --report-path reports/fairness/fairness_report.json"
       - echo "✓ Fairness report written to reports/fairness/fairness_report.json"
 
-  fairness:explain:
-    desc: Generate SHAP explainability report (requires MODEL_NAME, MODEL_VERSION, TEST_DATA)
+  fairness:check:
+    desc: Run fairness evaluation locally (requires MLFLOW_RUN_ID, MODEL_NAME, MODEL_VERSION, TEST_DATA)
+    preconditions:
+      - sh: test -n "$MLFLOW_RUN_ID"
+        msg: "Set the MLFLOW_RUN_ID environment variable before running fairness:check."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set the MODEL_VERSION environment variable before running fairness:check."
     cmds:
-      - mkdir -p reports/explainability
-      - "{{.PYTHON}} -m fairness.explainability
+      - mkdir -p reports/fairness
+      - "{{.PYTHON}} -m fairness.evaluate
           --model-uri models:/$MODEL_NAME/$MODEL_VERSION
           --test-data $TEST_DATA
-          --output-dir reports/explainability/"
-      - echo "✓ Explainability report written to reports/explainability/"
+          --config    policy/fairness/fraud-detection-fairness.yaml
+          --report-path reports/fairness/fairness_report.json"
+      - echo "✓ Fairness report written to reports/fairness/fairness_report.json"
 
-  batch:score:
+  distributed:train:
+    desc: Submit a distributed Ray training job (requires CONFIG and FRAMEWORK env vars)
+    preconditions:
+      - sh: test -n "$CONFIG"
+        msg: "Set CONFIG (e.g. training/config/fraud-detection.yaml)."
+      - sh: test -n "$FRAMEWORK"
+        msg: "Set FRAMEWORK (e.g. pytorch or sklearn)."
+    cmds:
+      - ray job submit --working-dir .
+          -- {{.PYTHON}} training/ray/train_distributed.py --config $CONFIG
+      - echo "✓ Distributed training job submitted. Check Ray dashboard for status."
+
+  batch:run:
+    desc: Run a one-shot batch inference job locally (requires JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$JOB_CONFIG"
+        msg: "Set JOB_CONFIG (e.g. batch/jobs/fraud-detection-batch-job.yaml)."
+    cmds:
+      - "{{.PYTHON}} batch/runner/batch_scorer.py --job-config $JOB_CONFIG"
+      - echo "✓ Batch inference job complete."
+
+  batch:validate:
+    desc: Validate batch job config YAML against schema (requires JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$JOB_CONFIG"
+        msg: "Set JOB_CONFIG to the batch job YAML to validate."
+    cmds:
+      - "{{.PYTHON}} batch/runner/input_validator.py --schema batch/jobs/_job-schema.yaml --job-config $JOB_CONFIG"
+      - echo "✓ Batch job config is valid."
+
+  finops:daily:
+    desc: Run daily cost attribution
+    cmds:
+      - mkdir -p reports/finops/daily
+      - "{{.PYTHON}} finops/scripts/ml-cost-attribution.py
+          --rates-file  finops/data/instance-rates.yaml
+          --output-path reports/finops/daily/cost-attribution.json
+          --lookback-hours 24"
+      - echo "✓ Daily cost attribution written to reports/finops/daily/cost-attribution.json"
+
+  finops:weekly:
+    desc: Generate weekly cost report
+    cmds:
+      - mkdir -p reports/finops
+      - "{{.PYTHON}} finops/scripts/weekly-cost-report.py --output reports/finops/weekly-cost-report.json"
+      - echo "✓ Weekly cost report written to reports/finops/weekly-cost-report.json"
+
+  finops:monthly:
+    desc: Generate monthly chargeback report
+    cmds:
+      - mkdir -p reports/finops/monthly
+      - "{{.PYTHON}} finops/scripts/monthly-cost-report.py
+          --reports-dir finops/reports/daily/
+          --output-dir  reports/finops/monthly/
+          --budget-dir  finops/budgets/"
+      - echo "✓ Monthly chargeback report written to reports/finops/monthly/"
+
+
     desc: Run batch inference scorer (requires BATCH_JOB_CONFIG)
     preconditions:
       - sh: test -n "$BATCH_JOB_CONFIG"
@@ -306,15 +369,79 @@ tasks:
       - tf:validate:ray-cluster
       - tf:validate:vertex-pipelines
 
-  tf:plan:azure-ml:
+  tf:validate:azure:
+    desc: Validate Azure ML Terraform module syntax (alias for tf:validate:azure-ml)
+    deps: [tf:validate:azure-ml]
+
+  tf:plan:azure:
     desc: Plan Azure ML Terraform changes (requires Azure creds)
     dir: terraform/azure-ml
     cmds:
       - terraform plan
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Repo Maintenance
+  # Model Promotion and Rollback
   # ──────────────────────────────────────────────────────────────────────────
+  promote:dev:
+    desc: Trigger dev promotion workflow via gh CLI (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before promoting."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before promoting."
+    cmds:
+      - gh workflow run promote-dev.yml
+          --field model_name=$MODEL_NAME
+          --field model_version=$MODEL_VERSION
+      - echo "✓ Dev promotion workflow triggered for $MODEL_NAME v$MODEL_VERSION."
+
+  promote:staging:
+    desc: Trigger staging promotion workflow via gh CLI (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before promoting."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before promoting."
+    cmds:
+      - gh workflow run promote-staging.yml
+          --field model_name=$MODEL_NAME
+          --field model_version=$MODEL_VERSION
+      - echo "✓ Staging promotion workflow triggered for $MODEL_NAME v$MODEL_VERSION."
+
+  rollback:
+    desc: Trigger rollback workflow (requires MODEL_NAME, ENV, and REASON)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before rolling back."
+      - sh: test -n "$ENV"
+        msg: "Set ENV (dev|staging|production) before rolling back."
+      - sh: test -n "$REASON"
+        msg: "Set REASON for the rollback."
+    cmds:
+      - gh workflow run rollback.yml
+          --field model_name=$MODEL_NAME
+          --field environment=$ENV
+          --field reason="$REASON"
+      - echo "✓ Rollback workflow triggered for $MODEL_NAME in $ENV."
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Model Cards
+  # ──────────────────────────────────────────────────────────────────────────
+  generate-model-card:
+    desc: Generate a model card (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before generating model card."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before generating model card."
+    cmds:
+      - "{{.PYTHON}} scripts/generate_model_card.py
+          --model-name    $MODEL_NAME
+          --model-version $MODEL_VERSION
+          --output-dir    docs/model-cards/"
+      - echo "✓ Model card written to docs/model-cards/$MODEL_NAME/v$MODEL_VERSION.md"
+
+
   repo-map:
     desc: Regenerate .ai/context/repo_map.md using the repo map generator script
     platforms: [windows]

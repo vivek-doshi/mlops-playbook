@@ -1,0 +1,46 @@
+# llmops/evaluation/benchmarks/commonsense_qa.yaml
+#
+# Benchmark: CommonsenseQA subset
+# Metric: exact_match
+# Description: Tests the model's commonsense reasoning capability against
+#              a small curated subset of the CommonsenseQA dataset.
+---
+name: commonsense_qa
+metric: exact_match
+description: >
+  Commonsense reasoning — 5-option multiple-choice questions.
+  The model must output the letter of the correct answer (A–E).
+
+examples:
+  - prompt: >
+      Question: Where would you keep your pet hamster?
+      Choices:
+        A) A bookcase
+        B) A cage
+        C) A drawer
+        D) A pond
+        E) A microwave
+      Answer with the letter only.
+    reference: "B"
+
+  - prompt: >
+      Question: What is the purpose of a dictionary?
+      Choices:
+        A) Store food
+        B) Play music
+        C) Look up word definitions
+        D) Write code
+        E) Track time
+      Answer with the letter only.
+    reference: "C"
+
+  - prompt: >
+      Question: If you are cold, what would help you warm up?
+      Choices:
+        A) Jump in a lake
+        B) Put on a coat
+        C) Open a window
+        D) Remove your socks
+        E) Stand in shadow
+      Answer with the letter only.
+    reference: "B"

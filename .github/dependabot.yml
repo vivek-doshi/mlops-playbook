@@ -67,6 +67,8 @@ updates:
         patterns: ["feast*"]
       ray:
         patterns: ["ray*"]
+      azure-ml:
+        patterns: ["azure-ai-ml*", "azure-identity*", "azure-storage*"]
       dev-tooling:
         patterns: ["black*", "isort*", "ruff*", "bandit*", "pre-commit*", "pytest*"]
     # Allow both direct and indirect (transitive) dependency updates.

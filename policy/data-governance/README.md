@@ -101,6 +101,32 @@ dvc remote modify azure-eu account_name my_storage_account
 
 ---
 
+## 6. Federated Learning — Raw Data Policy
+
+When using the federated learning framework (`federated_learning/`), the following
+rule is a **hard policy violation** (not a recommendation):
+
+> **Raw training data MUST NEVER leave the federated party's environment.**
+> Only model weights or gradient deltas may be transmitted to the coordinator.
+
+This policy is enforced by:
+- Kubernetes `NetworkPolicy` resources that block data egress from party pods
+  except on the designated model-weight port (8443)
+- CI checks in `federated-train.yml` that verify no dataset file paths appear
+  in coordinator communication logs
+- Party images do not include any outbound dataset upload utilities
+
+Violations of this policy must be reported to the Data Protection Officer immediately.
+
+When federated data is `confidential` or `restricted` classified, Differential Privacy
+(DP) via `opacus` is **required**.  The `dp_epsilon` and `dp_delta` values must be
+logged as MLflow tags on every federated training run.
+
+See `federated_learning/README.md` for technical implementation details and
+`docs/decisions/ADR-ML-024-federated-learning.md` for the architectural decision record.
+
+---
+
 ## Related
 
 - `policy/data-governance/pii-model-checklist.md` — PII model promotion checklist
