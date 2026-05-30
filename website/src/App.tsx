@@ -8,6 +8,7 @@ import type { FileEntry, FileIndex, Theme } from './types'
 
 const FILE_QUERY_PARAM = 'file'
 const MOBILE_MEDIA_QUERY = '(max-width: 900px)'
+const LOADER_INTRO_MS = 3200
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\//, '')
@@ -107,6 +108,7 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>('dusk')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [introComplete, setIntroComplete] = useState(false)
   const [isMobileLayout, setIsMobileLayout] = useState(() => getIsMobileLayout())
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getIsMobileLayout())
 
@@ -159,6 +161,11 @@ export default function App() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIntroComplete(true), LOADER_INTRO_MS)
+    return () => window.clearTimeout(timer)
   }, [])
 
   const filesByPath = useCallback(() => {
@@ -261,20 +268,78 @@ export default function App() {
     setSearchQuery('')
   }, [index, searchQuery, selectFile])
 
-  if (loading) {
+  if (loading || !introComplete) {
     return (
       <div data-theme={theme} style={{ height: '100vh', background: 'var(--bg-base)', position: 'relative' }}>
         <NeuralCanvas theme={theme} />
-        <div className="loading-screen" style={{ background: 'transparent' }}>
-          <div className="loading-content">
+        <div className="loading-screen loading-screen-journey" style={{ background: 'transparent' }}>
+          <div className="loading-content loading-content-journey">
             <div className="loading-logo">
               <MLOpsIcon size={44} className="loading-icon-svg" />
               <h1>MLOps Playbook</h1>
             </div>
-            <div className="loading-bar">
-              <div className="loading-fill" />
+            <p className="loading-text loading-text-journey">Booting the MLOps path…</p>
+
+            <div className="loading-journey" aria-hidden="true">
+              <div className="journey-stage journey-code">
+                <div className="journey-stage-label">Model code</div>
+                <div className="journey-file-stack">
+                  <span className="journey-file journey-file-main">model.py</span>
+                  <span className="journey-file journey-file-secondary">train.py</span>
+                  <span className="journey-file journey-file-secondary">utils.py</span>
+                </div>
+              </div>
+
+              <div className="journey-bridge journey-bridge-data">
+                <span className="journey-bridge-icon">⇢⇢</span>
+                <span className="journey-bridge-label">parallel data</span>
+                <span className="journey-bridge-stream journey-bridge-stream-a" />
+                <span className="journey-bridge-stream journey-bridge-stream-b" />
+              </div>
+
+              <div className="journey-stage journey-data">
+                <div className="journey-stage-icon">📊</div>
+                <div className="journey-stage-label">Data fan-out</div>
+                <div className="journey-stage-copy">feature sets, batches, and event streams</div>
+              </div>
+
+              <div className="journey-bridge journey-bridge-gpu">
+                <span className="journey-bridge-icon">⇢</span>
+                <span className="journey-bridge-label">GPU training</span>
+              </div>
+
+              <div className="journey-stage journey-gpu">
+                <div className="journey-stage-icon">GPU</div>
+                <div className="journey-stage-label">Training</div>
+                <div className="journey-stage-copy">accelerated on a dedicated accelerator</div>
+              </div>
+
+              <div className="journey-bridge journey-bridge-deploy">
+                <span className="journey-bridge-icon">⇢</span>
+                <span className="journey-bridge-label">deploy</span>
+              </div>
+
+              <div className="journey-stage journey-deploy">
+                <div className="journey-stage-icon">🚀</div>
+                <div className="journey-stage-label">Deploy</div>
+                <div className="journey-stage-copy">packaged and promoted into the serving stack</div>
+              </div>
+
+              <div className="journey-bridge journey-bridge-cluster">
+                <span className="journey-bridge-icon">⇢</span>
+                <span className="journey-bridge-label">GPU cluster online</span>
+              </div>
+
+              <div className="journey-stage journey-cluster">
+                <div className="journey-cluster-icon-wrap">
+                  <span className="journey-cluster-icon">🖥️</span>
+                  <span className="journey-cluster-badge">GPU</span>
+                </div>
+                <div className="journey-stage-label">GPU Cluster</div>
+                <div className="journey-stage-copy">servers, autoscaling, and runtime traffic</div>
+              </div>
             </div>
-            <p className="loading-text">Indexing templates…</p>
+            <p className="loading-text loading-text-sub">Indexing templates and syncing the page…</p>
           </div>
         </div>
       </div>
@@ -311,6 +376,8 @@ export default function App() {
             onOpenInternalLink={openLinkTarget}
             isMobileLayout={isMobileLayout}
             onOpenSidebar={openSidebar}
+            templateCount={index?.totalFiles ?? 0}
+            categoryCount={index ? new Set(index.files.map(f => f.category)).size : 0}
           />
         </div>
       </div>

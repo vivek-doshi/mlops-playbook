@@ -30,12 +30,22 @@ interface Props {
   onOpenInternalLink: (currentFilePath: string, href: string) => boolean
   isMobileLayout: boolean
   onOpenSidebar: () => void
+  templateCount: number
+  categoryCount: number
 }
 
 // Configure marked once
 marked.setOptions({ gfm: true, breaks: false })
 
-export function CodeViewer({ file, theme: _theme, onOpenInternalLink, isMobileLayout, onOpenSidebar }: Props) {
+export function CodeViewer({
+  file,
+  theme: _theme,
+  onOpenInternalLink,
+  isMobileLayout,
+  onOpenSidebar,
+  templateCount,
+  categoryCount,
+}: Props) {
   const preRef  = useRef<HTMLPreElement>(null)
   const [copied,  setCopied]  = useState(false)
   const [viewKey, setViewKey] = useState(0)
@@ -110,7 +120,7 @@ export function CodeViewer({ file, theme: _theme, onOpenInternalLink, isMobileLa
               <div className="terminal-dot td3" />
             </div>
             <span className="terminal-line">$ mlops-playbook explore</span>
-            <span className="terminal-line">  Scanning 156 templates across 14 categories…</span>
+            <span className="terminal-line">  Scanning {templateCount} templates across {categoryCount} categories…</span>
             <span className="terminal-line">  ✓ Index loaded successfully</span>
             <span className="terminal-line">$ # Click any template in the sidebar ←</span>
             <span className="terminal-line">  or press <kbd>Ctrl+K</kbd> to search</span>
