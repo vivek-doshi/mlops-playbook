@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import Prism from 'prismjs'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-python'
@@ -27,12 +27,13 @@ function formatBytes(b: number): string {
 interface Props {
   file: FileEntry | null
   theme: Theme
+  onOpenInternalLink: (currentFilePath: string, href: string) => boolean
 }
 
 // Configure marked once
 marked.setOptions({ gfm: true, breaks: false })
 
-export function CodeViewer({ file, theme: _theme }: Props) {
+export function CodeViewer({ file, theme: _theme, onOpenInternalLink }: Props) {
   const preRef  = useRef<HTMLPreElement>(null)
   const [copied,  setCopied]  = useState(false)
   const [viewKey, setViewKey] = useState(0)
@@ -75,6 +76,19 @@ export function CodeViewer({ file, theme: _theme }: Props) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
+  }
+
+  const onMarkdownClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!file || !isMarkdown) return
+    const target = event.target as HTMLElement | null
+    const anchor = target?.closest('a') as HTMLAnchorElement | null
+    if (!anchor) return
+
+    const href = anchor.getAttribute('href')
+    if (!href) return
+
+    const handled = onOpenInternalLink(file.path, href)
+    if (handled) event.preventDefault()
   }
 
   if (!file) {
@@ -164,6 +178,7 @@ export function CodeViewer({ file, theme: _theme }: Props) {
         <div className="cv-scroll cv-md-scroll" key={viewKey}>
           <div
             className="cv-markdown"
+            onClick={onMarkdownClick}
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         </div>

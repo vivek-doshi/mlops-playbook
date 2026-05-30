@@ -1,0 +1,16 @@
+{
+  "name": "MLOps Playbook",
+  "short_name": "MLOps",
+  "description": "Interactive template browser for production MLOps workflows.",
+  "start_url": "/mlops-playbook/",
+  "display": "standalone",
+  "background_color": "#070d1a",
+  "theme_color": "#070d1a",
+  "icons": [
+    {
+      "src": "/mlops-playbook/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

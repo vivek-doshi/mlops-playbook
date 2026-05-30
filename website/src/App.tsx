@@ -6,6 +6,83 @@ import { CodeViewer } from './components/CodeViewer'
 import { MLOpsIcon } from './components/MLOpsIcon'
 import type { FileEntry, FileIndex, Theme } from './types'
 
+const FILE_QUERY_PARAM = 'file'
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\//, '')
+}
+
+function hasExtension(path: string): boolean {
+  const seg = path.split('/').pop() ?? ''
+  return seg.includes('.')
+}
+
+function getQueryFilePath(): string | null {
+  const url = new URL(window.location.href)
+  const value = url.searchParams.get(FILE_QUERY_PARAM)
+  if (!value) return null
+  return normalizePath(value)
+}
+
+function resolveInternalLinkTarget(currentFilePath: string, href: string): string | null {
+  const raw = href.trim()
+  if (!raw || raw.startsWith('#')) return null
+  if (raw.startsWith('mailto:') || raw.startsWith('tel:') || raw.startsWith('javascript:')) return null
+
+  try {
+    const absolute = new URL(raw)
+    if (absolute.protocol === 'http:' || absolute.protocol === 'https:') {
+      const blobPrefix = '/vivek-doshi/mlops-playbook/blob/main/'
+      if (absolute.hostname === 'github.com' && absolute.pathname.includes(blobPrefix)) {
+        const idx = absolute.pathname.indexOf(blobPrefix)
+        const fromRepoRoot = absolute.pathname.slice(idx + blobPrefix.length)
+        return normalizePath(decodeURIComponent(fromRepoRoot))
+      }
+      return null
+    }
+    return null
+  } catch {
+    // Continue as relative URL.
+  }
+
+  const withoutFragment = raw.split('#')[0].split('?')[0]
+  if (!withoutFragment) return null
+
+  if (withoutFragment.startsWith('/')) {
+    return normalizePath(decodeURIComponent(withoutFragment))
+  }
+
+  const baseParts = currentFilePath.split('/')
+  baseParts.pop()
+  const relParts = withoutFragment.split('/')
+  for (const part of relParts) {
+    if (!part || part === '.') continue
+    if (part === '..') {
+      if (baseParts.length > 0) baseParts.pop()
+      continue
+    }
+    baseParts.push(part)
+  }
+  return normalizePath(decodeURIComponent(baseParts.join('/')))
+}
+
+function pickExistingFilePath(candidate: string, filesByPath: Map<string, FileEntry>): string | null {
+  const normalized = normalizePath(candidate)
+  const variants = [normalized]
+
+  if (normalized.endsWith('/')) {
+    variants.push(`${normalized}README.md`)
+  } else {
+    variants.push(`${normalized}/README.md`)
+    if (!hasExtension(normalized)) variants.push(`${normalized}.md`)
+  }
+
+  for (const variant of variants) {
+    if (filesByPath.has(variant)) return variant
+  }
+  return null
+}
+
 export default function App() {
   const [index, setIndex] = useState<FileIndex | null>(null)
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null)
@@ -49,6 +126,80 @@ export default function App() {
       .catch(() => setLoading(false))
   }, [])
 
+  const filesByPath = useCallback(() => {
+    const map = new Map<string, FileEntry>()
+    if (!index) return map
+    for (const file of index.files) map.set(normalizePath(file.path), file)
+    return map
+  }, [index])
+
+  const updateUrlForFile = useCallback((file: FileEntry | null, replace = false) => {
+    const url = new URL(window.location.href)
+    if (file) {
+      url.searchParams.set(FILE_QUERY_PARAM, normalizePath(file.path))
+    } else {
+      url.searchParams.delete(FILE_QUERY_PARAM)
+    }
+    const historyState = { filePath: file ? normalizePath(file.path) : null }
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`
+    if (replace) {
+      window.history.replaceState(historyState, '', nextUrl)
+    } else {
+      window.history.pushState(historyState, '', nextUrl)
+    }
+  }, [])
+
+  const selectFile = useCallback((file: FileEntry | null, pushHistory = true, replaceHistory = false) => {
+    setSelectedFile(file)
+    if (!pushHistory) return
+    const currentPath = selectedFile ? normalizePath(selectedFile.path) : null
+    const nextPath = file ? normalizePath(file.path) : null
+    if (currentPath === nextPath) return
+    updateUrlForFile(file, replaceHistory)
+  }, [selectedFile, updateUrlForFile])
+
+  useEffect(() => {
+    if (!index) return
+    const map = filesByPath()
+    const fromUrl = getQueryFilePath()
+    if (fromUrl && map.has(fromUrl)) {
+      setSelectedFile(map.get(fromUrl) ?? null)
+      return
+    }
+
+    // Keep URL and app state in sync when query points to an unknown file.
+    updateUrlForFile(selectedFile, true)
+  }, [index, filesByPath, selectedFile, updateUrlForFile])
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (!index) return
+      const map = filesByPath()
+      const fromUrl = getQueryFilePath()
+      if (!fromUrl) {
+        setSelectedFile(null)
+        return
+      }
+      setSelectedFile(map.get(fromUrl) ?? null)
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [index, filesByPath])
+
+  const openLinkTarget = useCallback((currentFilePath: string, href: string): boolean => {
+    if (!index) return false
+    const map = filesByPath()
+    const candidate = resolveInternalLinkTarget(currentFilePath, href)
+    if (!candidate) return false
+    const matchedPath = pickExistingFilePath(candidate, map)
+    if (!matchedPath) return false
+    const next = map.get(matchedPath)
+    if (!next) return false
+    selectFile(next, true, false)
+    return true
+  }, [index, filesByPath, selectFile])
+
   const toggleTheme = useCallback(() => {
     setTheme(t => (t === 'dawn' ? 'dusk' : 'dawn'))
   }, [])
@@ -63,9 +214,9 @@ export default function App() {
       : index.files
     if (pool.length === 0) return
     const pick = pool[Math.floor(Math.random() * pool.length)]
-    setSelectedFile(pick)
+    selectFile(pick)
     setSearchQuery('')
-  }, [index, searchQuery])
+  }, [index, searchQuery, selectFile])
 
   if (loading) {
     return (
@@ -101,11 +252,11 @@ export default function App() {
           <Sidebar
             index={index}
             selectedFile={selectedFile}
-            onSelectFile={setSelectedFile}
+            onSelectFile={selectFile}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
-          <CodeViewer file={selectedFile} theme={theme} />
+          <CodeViewer file={selectedFile} theme={theme} onOpenInternalLink={openLinkTarget} />
         </div>
       </div>
     </div>

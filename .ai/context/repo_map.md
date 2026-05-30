@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: d:/projects/mlops-playbook
-- Generated: 2026-05-30 11:05:29
+- Generated: 2026-05-30 14:16:40
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -20,7 +20,6 @@ Generated from current workspace structure.
 │   │   └── deploy-website.yml
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
-│   ├── copilot-instructions-phase3.md
 │   ├── dependabot.yml
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── batch
@@ -171,6 +170,7 @@ Generated from current workspace structure.
 │   │   ├── pipeline-orchestration.md
 │   │   └── self-service-portal.md
 │   ├── guides
+│   │   ├── concepts.md
 │   │   ├── feature-store-patterns.md
 │   │   └── gpu-cost-governance.md
 │   ├── model-cards
@@ -439,6 +439,5 @@ Generated from current workspace structure.
 ├── GETTING_STARTED.md
 ├── Makefile
 ├── README.md
-├── Taskfile.yml
-└── website.md
+└── Taskfile.yml
 ```

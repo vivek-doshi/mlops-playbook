@@ -2,7 +2,7 @@
 
 A production-oriented, opinionated guide for the full ML lifecycle — from raw data to monitored, production-serving models. Built for engineering teams that want reproducible experiments, auditable model promotion, and operational confidence in deployed models.
 
-**New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) | GPU / Dev Container setup → [docs/local-setup.md](docs/local-setup.md)
+**New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) | Concepts guide → [docs/guides/concepts.md](docs/guides/concepts.md) | GPU / Dev Container setup → [docs/local-setup.md](docs/local-setup.md)
 
 ---
 
@@ -118,6 +118,7 @@ Specifically, you need:
 | Task | Start here |
 |------|-----------|
 | First experiment | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| Understand MLOps concepts in this repo | [docs/guides/concepts.md](docs/guides/concepts.md) |
 | Local / GPU / Dev Container setup | [docs/local-setup.md](docs/local-setup.md) |
 | Full lifecycle walkthrough | [docs/golden-paths/mlops-workflow.md](docs/golden-paths/mlops-workflow.md) |
 | Log metrics in code | [experiment-tracking.md](docs/golden-paths/experiment-tracking.md) |
