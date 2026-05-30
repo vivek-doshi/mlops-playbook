@@ -1,0 +1,21 @@
+# CPU benchmark target
+target: cpu
+description: Generic x86-64 CPU inference (ONNX Runtime)
+
+# Input configuration
+batch_size: 1
+input_shape: [1, 128]
+dtype: float32
+
+# Benchmark parameters
+warmup_requests: 1000
+measurement_requests: 5000
+concurrency: 1
+
+# Latency SLO (ms) — used by gate in pipeline.py
+latency_p99_threshold_ms: 200
+latency_p50_threshold_ms: 80
+
+# Quantisation defaults for this target
+default_precision: int8
+quantisation_backend: onnxruntime

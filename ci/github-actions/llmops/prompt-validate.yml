@@ -1,0 +1,126 @@
+# ci/github-actions/llmops/prompt-validate.yml
+#
+# Trigger:  pull_request touching llmops/prompts/**
+#           or workflow_dispatch (manual with prompt file path input).
+# Inputs:   prompt_file  — Path to the prompt YAML file to validate
+# Outputs:  prompt_hash  — Content hash of the validated prompt
+# Beginner note:
+#   Validates a prompt template YAML file against llmops/prompts/schema.yaml and
+#   registers it in MLflow on merge to main.  PRs only validate; registration
+#   only runs on push to main.
+---
+name: LLMOps — Prompt Validate and Register
+
+on:
+  pull_request:
+    paths:
+      - "llmops/prompts/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "llmops/prompts/**"
+  workflow_dispatch:
+    inputs:
+      prompt_file:
+        description: Path to prompt YAML file to validate/register
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate prompt templates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --upgrade pip pyyaml jsonschema
+
+      - name: Validate prompt YAML files
+        run: |
+          python - <<'EOF'
+          import sys
+          import yaml
+          import jsonschema
+          from pathlib import Path
+
+          schema_path = Path("llmops/prompts/schema.yaml")
+          if not schema_path.exists():
+              print("SKIP: schema.yaml not found.")
+              sys.exit(0)
+
+          schema = yaml.safe_load(schema_path.read_text())
+          errors = []
+
+          target = "${{ inputs.prompt_file }}"
+          if target:
+              files = [Path(target)]
+          else:
+              files = list(Path("llmops/prompts").glob("*.yaml"))
+              files = [f for f in files if f.name != "schema.yaml"]
+
+          for f in files:
+              data = yaml.safe_load(f.read_text())
+              try:
+                  jsonschema.validate(data, schema)
+                  print(f"  PASS {f}")
+              except jsonschema.ValidationError as e:
+                  print(f"  FAIL {f}: {e.message}")
+                  errors.append(str(f))
+
+          if errors:
+              print(f"\n{len(errors)} validation error(s).")
+              sys.exit(1)
+          print("\nAll prompt files are valid.")
+          EOF
+
+  register:
+    name: Register prompts on merge to main
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --upgrade pip mlflow pyyaml jsonschema
+
+      - name: Register changed prompt files
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          git diff --name-only HEAD~1 HEAD -- 'llmops/prompts/*.yaml' \
+            | grep -v schema.yaml \
+            | while read -r pfile; do
+                echo "Registering $pfile ..."
+                python - <<PYEOF
+          import sys
+          from pathlib import Path
+          from llmops.prompts.registry import PromptRegistry
+          import yaml
+
+          p = Path("$pfile")
+          data = yaml.safe_load(p.read_text())
+          model_name = data.get("metadata", {}).get("model_name", p.stem.split("-")[0])
+          registry = PromptRegistry()
+          run_id = registry.register(model_name=model_name, prompt_file=p)
+          print(f"Registered: run_id={run_id}")
+          PYEOF
+              done

@@ -86,6 +86,13 @@ Use the table below to jump to the golden path guide for your current task.
 | Promote a model to production | [Model Registry](docs/golden-paths/model-registry.md) | `mlflow.register_model()` |
 | Choose a serving runtime | [Model Serving](docs/golden-paths/model-serving.md) | Triton / TorchServe / vLLM |
 | Monitor for data drift | [Model Monitoring](docs/golden-paths/model-monitoring.md) | Evidently AI |
+| Promote model through environments | [Multi-env Promotion](docs/golden-paths/multi-env-promotion.md) | `promote-production.yml` |
+| Run fairness evaluation | [Fairness & Explainability](docs/golden-paths/fairness-and-explainability.md) | `fairness/evaluate.py` |
+| Run distributed training | [Distributed Training](docs/golden-paths/distributed-training.md) | `ray/train_distributed.py` |
+| Run batch inference | [Batch Inference](docs/golden-paths/batch-inference.md) | `batch/runner/batch_scorer.py` |
+| Track ML cost attribution | [ML Cost Attribution](docs/golden-paths/ml-cost-attribution.md) | `finops/scripts/` |
+| Orchestrate ML pipelines | [Pipeline Orchestration](docs/golden-paths/pipeline-orchestration.md) | `pipelines/training_pipeline.py` |
+| Deploy on Azure ML | [Model Serving](docs/golden-paths/model-serving.md) | `terraform/azure-ml/` |
 | End-to-end overview | [MLOps Workflow](docs/golden-paths/mlops-workflow.md) | All of the above |
 
 ---
@@ -193,6 +200,21 @@ See [Model Registry](docs/golden-paths/model-registry.md) for the full flow.
 | Set up CI for automated training | [ci/github-actions/](ci/github-actions/) |
 | Deploy to Kubernetes | [Model Serving](docs/golden-paths/model-serving.md) |
 | Understand data governance rules | [policy/data-governance/README.md](policy/data-governance/README.md) |
+
+---
+
+## Phase 2 Capabilities
+
+After completing your first experiment, Phase 2 capabilities are available:
+
+| Capability | Start here |
+|---|---|
+| Multi-environment promotion (dev→staging→prod) | [multi-env-promotion.md](docs/golden-paths/multi-env-promotion.md) |
+| Fairness gates and explainability | [fairness-and-explainability.md](docs/golden-paths/fairness-and-explainability.md) |
+| Distributed GPU training | [distributed-training.md](docs/golden-paths/distributed-training.md) |
+| Batch inference at scale | [batch-inference.md](docs/golden-paths/batch-inference.md) |
+| Cost attribution | [ml-cost-attribution.md](docs/golden-paths/ml-cost-attribution.md) |
+| Pipeline DAG orchestration | [pipeline-orchestration.md](docs/golden-paths/pipeline-orchestration.md) |
 
 ---
 

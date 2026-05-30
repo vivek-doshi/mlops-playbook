@@ -1,0 +1,63 @@
+# routing-config/_config-schema.yaml
+# JSON Schema for per-model multi-cloud routing config files.
+# Each model must have a file at routing-config/<model-name>.yaml matching this schema.
+---
+$schema: "http://json-schema.org/draft-07/schema#"
+title: MultiCloudRoutingConfig
+type: object
+required: [model_name, endpoints]
+properties:
+  model_name:
+    type: string
+    description: MLflow registered model name
+  timeout_seconds:
+    type: integer
+    default: 30
+    minimum: 1
+    maximum: 300
+  endpoints:
+    type: object
+    description: >
+      Map of cloud name (aws | gcp | azure) to endpoint configuration.
+      At least one cloud must be defined.
+    minProperties: 1
+    additionalProperties:
+      type: object
+      required: [url, weight]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Cloud-specific serving endpoint URL
+        weight:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Traffic fraction (all weights should sum to 1.0)
+        region:
+          type: string
+          description: Cloud region (informational)
+        runtime:
+          type: string
+          enum: [sagemaker, vertex-ai, azure-ml, vllm, triton]
+          description: Serving runtime on this cloud
+
+example:
+  model_name: my-classifier
+  timeout_seconds: 30
+  endpoints:
+    aws:
+      url: https://runtime.sagemaker.us-east-1.amazonaws.com/endpoints/my-classifier/invocations
+      weight: 0.40
+      region: us-east-1
+      runtime: sagemaker
+    gcp:
+      url: https://us-central1-aiplatform.googleapis.com/v1/projects/my-project/locations/us-central1/endpoints/1234/predict
+      weight: 0.40
+      region: us-central1
+      runtime: vertex-ai
+    azure:
+      url: https://my-endpoint.eastus.inference.ml.azure.com/score
+      weight: 0.20
+      region: eastus
+      runtime: azure-ml

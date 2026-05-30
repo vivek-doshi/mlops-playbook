@@ -1,0 +1,67 @@
+# llmops/prompts/schema.yaml
+#
+# JSON Schema (draft-07) for LLM prompt template YAML files.
+# All prompt files registered via llmops/prompts/registry.py must conform
+# to this schema before they are accepted into the registry.
+---
+$schema: "http://json-schema.org/draft-07/schema#"
+title: PromptTemplate
+type: object
+required:
+  - name
+  - version
+  - template
+  - variables
+additionalProperties: false
+properties:
+  name:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: >
+      Slug-style name for the prompt (lowercase, hyphens allowed).
+      Used as the MLflow run tag `prompt_name`.
+
+  version:
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+$"
+    description: Semantic version of this prompt (MAJOR.MINOR.PATCH).
+
+  description:
+    type: string
+    description: Human-readable description of the prompt's purpose.
+
+  template:
+    type: string
+    description: >
+      The prompt template string.  Variable placeholders are enclosed
+      in double curly braces, e.g. {{ user_input }}.
+
+  variables:
+    type: array
+    description: List of variable names that appear in the template.
+    items:
+      type: object
+      required:
+        - name
+        - type
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Variable placeholder name (without braces).
+        type:
+          type: string
+          enum: [string, integer, float, boolean]
+          description: Expected Python type of the variable.
+        required:
+          type: boolean
+          default: true
+          description: Whether this variable must be provided at render time.
+        default:
+          description: Default value if the variable is not required.
+
+  metadata:
+    type: object
+    description: Optional key-value metadata (author, task, language, etc.).
+    additionalProperties:
+      type: string

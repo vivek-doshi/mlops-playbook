@@ -1,0 +1,90 @@
+# Model Card: {{ model_name }}
+
+## 1) Model Details
+
+- **Model name:** `{{ model_name }}`
+- **Model version:** `{{ model_version }}`
+- **Model type:** {{ model_tags.get('model_type', '[NOT SET — set tag model_type on training run]') }}
+- **Framework:** {{ model_tags.get('framework', '[NOT SET — set tag framework on training run]') }}
+- **Primary owner:** {{ model_tags.get('owner', '[NOT SET — set tag owner on training run]') }}
+- **Serving runtime:** {{ model_tags.get('serving_runtime', '[NOT SET — set tag serving_runtime on training run]') }}
+- **Last updated:** {{ last_updated }}
+
+## 2) Intended Use
+
+- **Primary use case:** {{ model_tags.get('use_case', '[NOT SET — set tag use_case on training run]') }}
+- **Intended users:** {{ model_tags.get('intended_users', '[NOT SET — set tag intended_users on training run]') }}
+- **Out-of-scope usage:** {{ model_tags.get('out_of_scope', '[NOT SET — set tag out_of_scope on training run]') }}
+
+## 3) Training Data
+
+- **DVC dataset hash:** {{ model_tags.get('dvc_dataset_hash', '[NOT SET — set tag dvc_dataset_hash on training run]') }}
+- **Data classification:** {{ model_tags.get('data_classification', '[NOT SET — set tag data_classification on training run]') }}
+- **Row count:** {{ model_tags.get('training_row_count', '[NOT SET — set tag training_row_count on training run]') }}
+- **Data source description:** {{ model_tags.get('data_source', '[NOT SET — set tag data_source on training run]') }}
+- **Feature lineage:** Every training run stores feature snapshot hash and source dataset hash.
+
+## 4) Evaluation Results
+
+{% if metrics %}
+| Metric | Value |
+|---|---|
+{% for k, v in metrics.items() %}| {{ k }} | {{ "%.4f" | format(v) if v is not none else "[NOT RECORDED]" }} |
+{% endfor %}
+{% else %}
+*No evaluation metrics recorded for this run.*
+{% endif %}
+
+- **Drift score:** {{ model_tags.get('drift_score', '[NOT SET — set tag drift_score on training run]') }}
+- **MLflow run ID:** `{{ run_id }}`
+
+## 5) Fairness Considerations
+
+{% if fairness_config %}
+Fairness policy loaded from `policy/fairness/{{ model_name }}-fairness.yaml`:
+
+{% for key, value in fairness_config.items() %}
+- **{{ key }}:** {{ value }}
+{% endfor %}
+{% else %}
+*No fairness policy file found at `policy/fairness/{{ model_name }}-fairness.yaml`.*
+*Create a fairness policy file to populate this section.*
+{% endif %}
+
+## 6) Serving SLOs
+
+{% if slo_config %}
+SLO configuration loaded from `monitoring/slos/{{ model_name }}-slo.yaml`.
+
+- **Availability target:** {{ slo_defaults.availability.target | default('99.5%') }}
+- **Latency P99 threshold:** {{ slo_defaults.latency_p99_ms.threshold | default(500) }} ms
+- **Error rate ceiling:** {{ slo_defaults.error_rate_pct.threshold | default(1.0) }}%
+{% else %}
+*No model-specific SLO file found. Default SLO thresholds from `monitoring/slos/_defaults.yaml` apply:*
+
+- **Availability target:** 99.5% (30-day window)
+- **Latency P99 threshold:** 500 ms
+- **Error rate ceiling:** 1.0%
+{% endif %}
+
+## 7) Ethical and Operational Limitations
+
+- {{ model_tags.get('ethical_limitations', 'Document known ethical limitations via tag ethical_limitations on the training run.') }}
+- The model may underperform during abrupt distribution shifts or concept drift.
+- Regular retraining and analyst feedback loops are required to maintain effectiveness.
+- Monitor performance disaggregated by subgroup to detect disparate impact post-deployment.
+
+## 8) Approval and Governance
+
+{% if approval_entry %}
+- **Approved version:** `{{ approval_entry.get('version', model_version) }}`
+- **Approved by:** {{ approval_entry.get('approved_by', '[NOT SET]') }}
+- **Approval date:** {{ approval_entry.get('approval_date', '[NOT SET]') }}
+- **Approval notes:** {{ approval_entry.get('notes', '[NONE]') }}
+{% else %}
+*No approval entry found in `policy/model-approval/approved-versions.yaml` for this version.*
+{% endif %}
+
+- Production promotion requires policy compliance with `policy/model-approval/README.md`.
+- PII and governance checklist must pass when sensitive features are introduced.
+- Incident response follows monitoring and model rollback runbooks in golden paths.

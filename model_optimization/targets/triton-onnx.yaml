@@ -1,0 +1,19 @@
+# Triton ONNX Runtime backend benchmark target
+target: triton-onnx
+description: Triton Inference Server with ONNX Runtime backend
+
+batch_size: 8
+input_shape: [8, 128]
+dtype: float32
+
+warmup_requests: 1000
+measurement_requests: 5000
+concurrency: 4
+
+latency_p99_threshold_ms: 50
+latency_p50_threshold_ms: 20
+
+default_precision: int8
+quantisation_backend: onnxruntime
+triton_model_repository: /models
+triton_max_batch_size: 64

@@ -1,0 +1,119 @@
+##
+# Trigger:  workflow_call (from federated-train.yml) or workflow_dispatch (manual)
+# Inputs:
+#   model_name    - registered model name in MLflow
+#   model_version - model version to evaluate (registered after final aggregation round)
+# Outputs:
+#   accuracy      - global test set accuracy (float string)
+#   eval_passed   - "true" if accuracy meets the Production gate
+# Beginner note:
+#   This workflow evaluates the globally aggregated model on a held-out test set
+#   held by the coordinator.  No party data is used.  The model must pass this
+#   gate before it can be promoted to Production.
+##
+
+name: Federated Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: "Registered model name in MLflow"
+        required: true
+        type: string
+      model_version:
+        description: "Model version to evaluate"
+        required: true
+        type: string
+
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      model_version:
+        required: true
+        type: string
+    outputs:
+      accuracy:
+        description: "Global test set accuracy"
+        value: ${{ jobs.evaluate.outputs.accuracy }}
+      eval_passed:
+        description: "true if accuracy gate passed"
+        value: ${{ jobs.evaluate.outputs.eval_passed }}
+
+jobs:
+  evaluate:
+    name: Evaluate Global Model
+    runs-on: ubuntu-latest
+    outputs:
+      accuracy: ${{ steps.eval.outputs.accuracy }}
+      eval_passed: ${{ steps.eval.outputs.eval_passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir \
+            mlflow==2.14.2 \
+            torch>=2.3.0 \
+            numpy>=1.26 \
+            scikit-learn>=1.5
+
+      - name: Configure MLflow
+        run: |
+          echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> $GITHUB_ENV
+
+      - name: Evaluate global model
+        id: eval
+        env:
+          MODEL_NAME: ${{ inputs.model_name }}
+          MODEL_VERSION: ${{ inputs.model_version }}
+          ACCURACY_GATE: "0.80"
+          GLOBAL_TEST_DATA: "data/global_test.parquet"
+        run: |
+          python -c "
+          import os, mlflow
+          import pandas as pd
+          from sklearn.metrics import accuracy_score
+          import numpy as np
+
+          model = mlflow.pytorch.load_model(
+              f\"models:/{os.environ['MODEL_NAME']}/{os.environ['MODEL_VERSION']}\"
+          )
+          model.eval()
+
+          test_df = pd.read_parquet(os.environ['GLOBAL_TEST_DATA'])
+          import torch
+          X = torch.tensor(test_df.drop('label', axis=1).values, dtype=torch.float32)
+          y_true = test_df['label'].values
+
+          with torch.no_grad():
+              logits = model(X)
+              y_pred = logits.argmax(dim=1).numpy()
+
+          accuracy = float(accuracy_score(y_true, y_pred))
+          gate = float(os.environ['ACCURACY_GATE'])
+          passed = accuracy >= gate
+
+          print(f'Global accuracy: {accuracy:.4f} (gate={gate}) passed={passed}')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'accuracy={accuracy:.4f}\n')
+              f.write(f'eval_passed={str(passed).lower()}\n')
+          "
+
+      - name: Fail if accuracy gate not met
+        if: steps.eval.outputs.eval_passed == 'false'
+        run: |
+          echo "::error::Federated model accuracy gate FAILED."
+          echo "Global accuracy ${{ steps.eval.outputs.accuracy }} is below the required gate."
+          exit 1

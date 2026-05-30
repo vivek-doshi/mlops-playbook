@@ -61,6 +61,14 @@ updates:
         patterns: ["dvc*"]
       data-science:
         patterns: ["pandas*", "numpy*", "scikit-learn*", "pyarrow*"]
+      fairness:
+        patterns: ["fairlearn*", "shap*", "matplotlib*"]
+      feature-store:
+        patterns: ["feast*"]
+      ray:
+        patterns: ["ray*"]
+      azure-ml:
+        patterns: ["azure-ai-ml*", "azure-identity*", "azure-storage*"]
       dev-tooling:
         patterns: ["black*", "isort*", "ruff*", "bandit*", "pre-commit*", "pytest*"]
     # Allow both direct and indirect (transitive) dependency updates.
@@ -102,9 +110,70 @@ updates:
       prefix: "chore(docker)"
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Terraform — provider version updates
+  # Terraform — provider version updates (all modules below)
   # Dependabot reads `required_providers` blocks in .tf files.
   # ──────────────────────────────────────────────────────────────────────────
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Terraform — Azure ML workspace module
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "terraform"
+    directory: "/terraform/azure-ml"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "azure"
+    commit-message:
+      prefix: "chore(terraform)"
+    groups:
+      azure-providers:
+        patterns: ["hashicorp/azurerm*", "hashicorp/azuread*", "hashicorp/random*"]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Terraform — Ray cluster on Kubernetes module
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "terraform"
+    directory: "/terraform/ray-cluster"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "ray"
+    commit-message:
+      prefix: "chore(terraform)"
+    groups:
+      k8s-providers:
+        patterns: ["hashicorp/helm*", "hashicorp/kubernetes*"]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Terraform — Vertex AI Pipelines storage module
+  # ──────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "terraform"
+    directory: "/terraform/vertex-pipelines"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "gcp"
+    commit-message:
+      prefix: "chore(terraform)"
+    groups:
+      gcp-providers:
+        patterns: ["hashicorp/google*"]
+
   - package-ecosystem: "terraform"
     directory: "/terraform/aws-sagemaker"
     schedule:

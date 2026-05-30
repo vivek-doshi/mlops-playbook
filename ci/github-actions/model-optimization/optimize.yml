@@ -1,0 +1,108 @@
+# ci/github-actions/model-optimization/optimize.yml
+#
+# Trigger:  workflow_dispatch (manual), or called by the promotion workflow
+#           when a model is promoted to Production.
+# Inputs:   model_name     — MLflow registered model name
+#           model_version  — Model version in Production stage
+#           method         — quantisation | pruning | distillation
+#           target         — cpu | cuda-a100 | cuda-h100 | triton-onnx | triton-trt
+# Outputs:  optimised_run_id  — MLflow run ID of the optimised model, or empty if rejected
+# Beginner note:
+#   Runs the full optimisation pipeline: download → optimise → benchmark → gate check →
+#   register.  Both accuracy and latency gates must pass.  If rejected, the baseline
+#   model is kept and the job exits cleanly (no failure).
+---
+name: Model Optimization — Optimise
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      model_version:
+        description: Production-stage model version
+        required: true
+        type: string
+      method:
+        description: Optimisation method
+        required: false
+        type: choice
+        default: quantisation
+        options: [quantisation, pruning, distillation]
+      target:
+        description: Hardware target
+        required: false
+        type: choice
+        default: cpu
+        options: [cpu, cuda-a100, cuda-h100, triton-onnx, triton-trt]
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      model_version:
+        required: true
+        type: string
+      method:
+        required: false
+        type: string
+        default: quantisation
+      target:
+        required: false
+        type: string
+        default: cpu
+    outputs:
+      optimised_run_id:
+        description: MLflow run ID of the registered optimised model
+        value: ${{ jobs.optimise.outputs.optimised_run_id }}
+
+jobs:
+  optimise:
+    name: >
+      Optimise ${{ inputs.model_name }} v${{ inputs.model_version }}
+      (${{ inputs.method || 'quantisation' }} / ${{ inputs.target || 'cpu' }})
+    runs-on: ${{ (inputs.target == 'cpu' || inputs.target == 'triton-onnx') && 'ubuntu-latest' || fromJSON('["self-hosted","gpu"]') }}
+    timeout-minutes: 120
+
+    outputs:
+      optimised_run_id: ${{ steps.optimise.outputs.optimised_run_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install mlflow onnx onnxruntime optimum torch numpy pyyaml
+
+      - name: Run optimisation pipeline
+        id: optimise
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python model_optimization/pipeline.py \
+            --model-name    "${{ inputs.model_name }}" \
+            --model-version "${{ inputs.model_version }}" \
+            --method        "${{ inputs.method || 'quantisation' }}" \
+            --target        "${{ inputs.target || 'cpu' }}" \
+            | tee opt_output.txt
+
+          RUN_ID=$(grep -oP 'run_id=\K\S+' opt_output.txt || echo "")
+          echo "optimised_run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload optimised artefacts
+        uses: actions/upload-artifact@v4
+        if: steps.optimise.outputs.optimised_run_id != ''
+        with:
+          name: optimised-model-${{ inputs.model_name }}-v${{ inputs.model_version }}
+          path: outputs/optimised/
+          retention-days: 30

@@ -1,0 +1,31 @@
+# llmops/evaluation/benchmarks/summarisation.yaml
+#
+# Benchmark: Summarisation quality
+# Metric: rouge_l
+# Description: Evaluates summarisation quality using ROUGE-L F1 scores.
+---
+name: summarisation
+metric: rouge_l
+description: >
+  Short-document summarisation.  The model receives a passage and must produce
+  a concise summary.  Scored with ROUGE-L F1 against reference summaries.
+
+examples:
+  - prompt: >
+      Summarise the following in one sentence:
+      "The transformer architecture, introduced in the 2017 paper 'Attention is
+      All You Need', replaced recurrent networks in most NLP tasks by relying
+      entirely on self-attention mechanisms. It enabled training on much larger
+      datasets and became the foundation for GPT, BERT, and other modern LLMs."
+    reference: >
+      The transformer architecture uses self-attention instead of recurrence
+      and became the basis for modern large language models.
+
+  - prompt: >
+      Summarise the following in one sentence:
+      "Gradient descent is an optimisation algorithm that iteratively adjusts
+      model weights in the direction that minimises the loss function by
+      computing gradients via backpropagation."
+    reference: >
+      Gradient descent minimises the loss by updating weights along the
+      negative gradient direction computed via backpropagation.

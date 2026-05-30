@@ -46,7 +46,7 @@ tasks:
       - task --list
 
   setup:
-    desc: Install core Python dependencies (mlflow, dvc, evidently, pandas)
+    desc: Install core Python dependencies (mlflow, dvc, evidently, fairlearn, shap, feast)
     cmds:
       - pip install --upgrade pip
       - pip install
@@ -56,6 +56,12 @@ tasks:
           pandas
           scikit-learn
           pyarrow
+          "fairlearn>=0.10"
+          "shap>=0.44"
+          "matplotlib>=3.8"
+          feast
+          "pyyaml>=6.0"
+          "requests>=2.31"
 
   setup:dev:
     desc: Install dev tooling + pre-commit hooks on top of core deps
@@ -167,24 +173,127 @@ tasks:
           --threshold {{.DRIFT_THRESHOLD}}"
       - echo "✓ Drift report written to {{.DRIFT_REPORT}}"
 
+  fairness:eval:
+    desc: Run fairlearn fairness evaluation (requires MLFLOW_RUN_ID, MODEL_NAME, MODEL_VERSION, TEST_DATA)
+    preconditions:
+      - sh: test -n "$MLFLOW_RUN_ID"
+        msg: "Set the MLFLOW_RUN_ID environment variable before running fairness:eval."
+    cmds:
+      - mkdir -p reports/fairness
+      - "{{.PYTHON}} -m fairness.evaluate
+          --model-uri models:/$MODEL_NAME/$MODEL_VERSION
+          --test-data $TEST_DATA
+          --config    policy/fairness/fraud-detection-fairness.yaml
+          --report-path reports/fairness/fairness_report.json"
+      - echo "✓ Fairness report written to reports/fairness/fairness_report.json"
+
+  fairness:check:
+    desc: Run fairness evaluation locally (requires MLFLOW_RUN_ID, MODEL_NAME, MODEL_VERSION, TEST_DATA)
+    preconditions:
+      - sh: test -n "$MLFLOW_RUN_ID"
+        msg: "Set the MLFLOW_RUN_ID environment variable before running fairness:check."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set the MODEL_VERSION environment variable before running fairness:check."
+    cmds:
+      - mkdir -p reports/fairness
+      - "{{.PYTHON}} -m fairness.evaluate
+          --model-uri models:/$MODEL_NAME/$MODEL_VERSION
+          --test-data $TEST_DATA
+          --config    policy/fairness/fraud-detection-fairness.yaml
+          --report-path reports/fairness/fairness_report.json"
+      - echo "✓ Fairness report written to reports/fairness/fairness_report.json"
+
+  distributed:train:
+    desc: Submit a distributed Ray training job (requires CONFIG and FRAMEWORK env vars)
+    preconditions:
+      - sh: test -n "$CONFIG"
+        msg: "Set CONFIG (e.g. training/config/fraud-detection.yaml)."
+      - sh: test -n "$FRAMEWORK"
+        msg: "Set FRAMEWORK (e.g. pytorch or sklearn)."
+    cmds:
+      - ray job submit --working-dir .
+          -- {{.PYTHON}} training/ray/train_distributed.py --config $CONFIG
+      - echo "✓ Distributed training job submitted. Check Ray dashboard for status."
+
+  batch:run:
+    desc: Run a one-shot batch inference job locally (requires JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$JOB_CONFIG"
+        msg: "Set JOB_CONFIG (e.g. batch/jobs/fraud-detection-batch-job.yaml)."
+    cmds:
+      - "{{.PYTHON}} batch/runner/batch_scorer.py --job-config $JOB_CONFIG"
+      - echo "✓ Batch inference job complete."
+
+  batch:validate:
+    desc: Validate batch job config YAML against schema (requires JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$JOB_CONFIG"
+        msg: "Set JOB_CONFIG to the batch job YAML to validate."
+    cmds:
+      - "{{.PYTHON}} batch/runner/input_validator.py --schema batch/jobs/_job-schema.yaml --job-config $JOB_CONFIG"
+      - echo "✓ Batch job config is valid."
+
+  finops:daily:
+    desc: Run daily cost attribution
+    cmds:
+      - mkdir -p reports/finops/daily
+      - "{{.PYTHON}} finops/scripts/ml-cost-attribution.py
+          --rates-file  finops/data/instance-rates.yaml
+          --output-path reports/finops/daily/cost-attribution.json
+          --lookback-hours 24"
+      - echo "✓ Daily cost attribution written to reports/finops/daily/cost-attribution.json"
+
+  finops:weekly:
+    desc: Generate weekly cost report
+    cmds:
+      - mkdir -p reports/finops
+      - "{{.PYTHON}} finops/scripts/weekly-cost-report.py --output reports/finops/weekly-cost-report.json"
+      - echo "✓ Weekly cost report written to reports/finops/weekly-cost-report.json"
+
+  finops:monthly:
+    desc: Generate monthly chargeback report
+    cmds:
+      - mkdir -p reports/finops/monthly
+      - "{{.PYTHON}} finops/scripts/monthly-cost-report.py
+          --reports-dir finops/reports/daily/
+          --output-dir  reports/finops/monthly/
+          --budget-dir  finops/budgets/"
+      - echo "✓ Monthly chargeback report written to reports/finops/monthly/"
+
+
+    desc: Run batch inference scorer (requires BATCH_JOB_CONFIG)
+    preconditions:
+      - sh: test -n "$BATCH_JOB_CONFIG"
+        msg: "Set BATCH_JOB_CONFIG (e.g. batch/jobs/fraud-detection-batch-job.yaml)."
+    cmds:
+      - "{{.PYTHON}} batch/runner/batch_scorer.py --job-config $BATCH_JOB_CONFIG"
+      - echo "✓ Batch scoring complete."
+
+  finops:report:
+    desc: Generate weekly ML cost report
+    cmds:
+      - mkdir -p reports/finops
+      - "{{.PYTHON}} finops/scripts/weekly-cost-report.py --output reports/finops/weekly-cost-report.json"
+      - echo "✓ FinOps report written to reports/finops/weekly-cost-report.json"
+
   # ──────────────────────────────────────────────────────────────────────────
   # Code Quality
   # ──────────────────────────────────────────────────────────────────────────
   format:
     desc: Auto-format Python source files with Black + isort
     cmds:
-      - black monitoring/ scripts/
-      - isort --profile black monitoring/ scripts/
+      - black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
+      - isort --profile black batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
   lint:
     desc: Lint Python source files with Ruff (fast flake8 replacement)
     cmds:
-      - ruff check monitoring/ scripts/
+      - ruff check batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/
 
   security:bandit:
     desc: Run Bandit security scan on Python source files
     cmds:
-      - bandit -r monitoring/ scripts/ --severity-level medium
+      - bandit -r batch/ fairness/ finops/scripts/ monitoring/ pipelines/ scripts/ --severity-level medium
 
   security:pip-audit:
     desc: Audit Python dependencies for known CVEs
@@ -229,13 +338,110 @@ tasks:
       - terraform init -backend=false
       - terraform validate
 
+  tf:validate:azure-ml:
+    desc: Validate Azure ML Terraform module syntax
+    dir: terraform/azure-ml
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:ray-cluster:
+    desc: Validate Ray cluster Terraform module syntax
+    dir: terraform/ray-cluster
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
+  tf:validate:vertex-pipelines:
+    desc: Validate Vertex Pipelines Terraform module syntax
+    dir: terraform/vertex-pipelines
+    cmds:
+      - terraform init -backend=false
+      - terraform validate
+
   tf:validate:
     desc: Validate all Terraform modules
-    deps: [tf:fmt, tf:validate:sagemaker, tf:validate:vertex]
+    deps:
+      - tf:fmt
+      - tf:validate:sagemaker
+      - tf:validate:vertex
+      - tf:validate:azure-ml
+      - tf:validate:ray-cluster
+      - tf:validate:vertex-pipelines
+
+  tf:validate:azure:
+    desc: Validate Azure ML Terraform module syntax (alias for tf:validate:azure-ml)
+    deps: [tf:validate:azure-ml]
+
+  tf:plan:azure:
+    desc: Plan Azure ML Terraform changes (requires Azure creds)
+    dir: terraform/azure-ml
+    cmds:
+      - terraform plan
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Repo Maintenance
+  # Model Promotion and Rollback
   # ──────────────────────────────────────────────────────────────────────────
+  promote:dev:
+    desc: Trigger dev promotion workflow via gh CLI (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before promoting."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before promoting."
+    cmds:
+      - gh workflow run promote-dev.yml
+          --field model_name=$MODEL_NAME
+          --field model_version=$MODEL_VERSION
+      - echo "✓ Dev promotion workflow triggered for $MODEL_NAME v$MODEL_VERSION."
+
+  promote:staging:
+    desc: Trigger staging promotion workflow via gh CLI (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before promoting."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before promoting."
+    cmds:
+      - gh workflow run promote-staging.yml
+          --field model_name=$MODEL_NAME
+          --field model_version=$MODEL_VERSION
+      - echo "✓ Staging promotion workflow triggered for $MODEL_NAME v$MODEL_VERSION."
+
+  rollback:
+    desc: Trigger rollback workflow (requires MODEL_NAME, ENV, and REASON)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before rolling back."
+      - sh: test -n "$ENV"
+        msg: "Set ENV (dev|staging|production) before rolling back."
+      - sh: test -n "$REASON"
+        msg: "Set REASON for the rollback."
+    cmds:
+      - gh workflow run rollback.yml
+          --field model_name=$MODEL_NAME
+          --field environment=$ENV
+          --field reason="$REASON"
+      - echo "✓ Rollback workflow triggered for $MODEL_NAME in $ENV."
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Model Cards
+  # ──────────────────────────────────────────────────────────────────────────
+  generate-model-card:
+    desc: Generate a model card (requires MODEL_NAME and MODEL_VERSION)
+    preconditions:
+      - sh: test -n "$MODEL_NAME"
+        msg: "Set MODEL_NAME before generating model card."
+      - sh: test -n "$MODEL_VERSION"
+        msg: "Set MODEL_VERSION before generating model card."
+    cmds:
+      - "{{.PYTHON}} scripts/generate_model_card.py
+          --model-name    $MODEL_NAME
+          --model-version $MODEL_VERSION
+          --output-dir    docs/model-cards/"
+      - echo "✓ Model card written to docs/model-cards/$MODEL_NAME/v$MODEL_VERSION.md"
+
+
   repo-map:
     desc: Regenerate .ai/context/repo_map.md using the repo map generator script
     platforms: [windows]

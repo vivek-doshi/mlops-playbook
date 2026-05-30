@@ -1,0 +1,76 @@
+---
+# monitoring/online-learning/online-learning-alerts.yaml
+# Prometheus alerting rules for online learning pipeline events.
+# Apply with: kubectl apply -f monitoring/online-learning/online-learning-alerts.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: online-learning-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: online-learning
+      interval: 30s
+      rules:
+
+        # ── Online Update Rollback ─────────────────────────────────────────
+        - alert: OnlineUpdateRolledBack
+          expr: |
+            increase(online_learning_rollbacks_total[10m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "Online update rolled back for {{ $labels.model_name }}"
+            description: >
+              An online model update was automatically rolled back for model
+              {{ $labels.model_name }} due to accuracy drop exceeding 2%.
+              Review the holdout evaluation metrics and stream data quality.
+
+        # ── Stream Consumer Lag High ───────────────────────────────────────
+        - alert: OnlineLearningStreamLagHigh
+          expr: |
+            online_learning_stream_lag_seconds > 300
+          for: 5m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "High stream lag for {{ $labels.model_name }} ({{ $labels.source }})"
+            description: >
+              The online learning consumer for {{ $labels.model_name }} on
+              {{ $labels.source }} has lag > 300 seconds.  Updates may be stale.
+
+        # ── Cooldown Blocking Updates ──────────────────────────────────────
+        - alert: OnlineLearningCooldownSaturated
+          expr: |
+            online_learning_cooldown_blocks_total > 10
+          for: 1h
+          labels:
+            severity: info
+            team: ml-platform
+          annotations:
+            summary: "Cooldown blocking too many updates for {{ $labels.model_name }}"
+            description: >
+              More than 10 online update attempts for {{ $labels.model_name }}
+              have been skipped due to the 30-minute cooldown in the last hour.
+              Consider tuning the cooldown or increasing batch size.
+
+        # ── Accuracy Drop Near Threshold ──────────────────────────────────
+        - alert: OnlineLearningAccuracyDropNearThreshold
+          expr: |
+            online_learning_accuracy_drop > 0.015
+          for: 2m
+          labels:
+            severity: warning
+            team: ml-platform
+          annotations:
+            summary: "Accuracy drop approaching rollback threshold for {{ $labels.model_name }}"
+            description: >
+              The online-updated {{ $labels.model_name }} has an accuracy drop
+              of {{ $value | humanizePercentage }} (threshold: 2%).  A rollback
+              may trigger soon if the trend continues.

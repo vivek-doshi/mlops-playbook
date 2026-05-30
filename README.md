@@ -91,10 +91,29 @@ Specifically, you need:
 - AWS SageMaker Terraform: [`terraform/aws-sagemaker/`](terraform/aws-sagemaker/)
 - GCP Vertex AI Terraform (with IAM, lifecycle, outputs): [`terraform/gcp-vertex-ai/`](terraform/gcp-vertex-ai/)
 - GPU cluster reference (documentation-as-code stub, consumes platform module): [`terraform/gpu-cluster/`](terraform/gpu-cluster/)
+- Azure ML Terraform (workspace, compute clusters, online endpoint, ADLS Gen2): [`terraform/azure-ml/`](terraform/azure-ml/)
 
 ---
 
-## Quick Links
+### Phase 2 — Production Hardening
+
+- **Multi-environment promotion** — structured dev/staging/production Kubernetes namespaces
+  with Kustomize overlays, ResourceQuotas, NetworkPolicies, PodDisruptionBudgets, and
+  approval gates: `cd/kubernetes/environments/`, `ci/github-actions/promotion/`
+- **Fairness & explainability** — Fairlearn bias metrics, SHAP explainability reports,
+  CI fairness gate with configurable per-model thresholds: `fairness/`, `policy/fairness/`
+- **ML cost attribution** — pod-level cost labelling, per-model budget files,
+  daily/weekly/monthly reports, Grafana dashboard: `finops/`, `monitoring/dashboards/ml-cost-attribution.json`
+- **Distributed training** — KubeRay (primary) and Kubeflow PyTorchJob/TFJob (secondary),
+  spot node pools, CheckpointCallback, GPU approval gate: `training/`, `cd/kubernetes/training/`
+- **Batch inference** — MLflow pyfunc scorer, input validator, output quality gate,
+  downstream notifier, Kubernetes Job/CronJob: `batch/`, `cd/kubernetes/batch/`
+- **Pipeline orchestration** — Argo Workflows DAGs, reusable Python components,
+  drift-triggered retraining pipeline, optional Vertex AI backend:
+  `pipelines/`, `cd/argo/`, `terraform/vertex-pipelines/`
+- **Architecture Decisions** — ADR-ML-014 through ADR-ML-018 in `docs/decisions/`
+
+
 
 | Task | Start here |
 |------|-----------|

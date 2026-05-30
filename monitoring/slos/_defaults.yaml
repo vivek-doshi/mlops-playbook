@@ -1,0 +1,35 @@
+# monitoring/slos/_defaults.yaml
+#
+# Default SLO thresholds applied when no model-specific file exists.
+# Override per model by creating monitoring/slos/<model-name>-slo.yaml
+# and referencing these defaults or providing model-specific values.
+#
+# BEGINNER NOTE:
+#   SLOs (Service Level Objectives) define the reliability targets for a
+#   deployed model endpoint. When actual behaviour breaches these thresholds
+#   the associated PrometheusRule alerts fire.
+
+slo_defaults:
+  availability:
+    window: "30d"
+    target: 0.995          # 99.5% availability over 30 days
+
+  latency_p99_ms:
+    window: "5m"
+    threshold: 500         # 500 ms P99 latency budget
+
+  latency_p50_ms:
+    window: "5m"
+    threshold: 100         # 100 ms median latency budget
+
+  error_rate_pct:
+    window: "5m"
+    threshold: 1.0         # 1% error rate ceiling
+
+  burn_rate_critical:
+    window: "1h"
+    multiplier: 14.4       # 1-hour fast burn (exhausts 30-day budget in ~2h)
+
+  burn_rate_warning:
+    window: "6h"
+    multiplier: 6.0        # 6-hour slow burn (exhausts 30-day budget in ~5 days)

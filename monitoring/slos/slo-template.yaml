@@ -1,0 +1,136 @@
+# monitoring/slos/slo-template.yaml
+#
+# Copy-paste template for new model SLO PrometheusRules.
+#
+# USAGE:
+#   1. Copy this file to monitoring/slos/<model-name>-slo.yaml
+#   2. Replace every occurrence of <model-name> with your model's name.
+#   3. Adjust threshold values if the model has different requirements;
+#      otherwise leave them at the defaults from _defaults.yaml.
+#   4. Apply to the cluster:
+#        kubectl apply -f monitoring/slos/<model-name>-slo.yaml
+#
+# DEFAULTS (from _defaults.yaml):
+#   availability target  : 99.5% over 30 days
+#   latency P99          : 500 ms over 5 minutes
+#   latency P50          : 100 ms over 5 minutes
+#   error rate ceiling   : 1% over 5 minutes
+#   fast burn multiplier : 14.4x (1-hour window)
+#   slow burn multiplier :  6.0x (6-hour window)
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: <model-name>-serving-slo-rules
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: <model-name>-serving-slo
+    mlops/model: <model-name>
+spec:
+  groups:
+    # ──────────────────────────────────────────────────────────────────────
+    # SLI recording rules
+    # ──────────────────────────────────────────────────────────────────────
+    - name: <model-name>-serving-sli
+      interval: 30s
+      rules:
+        # Availability: fraction of non-5xx responses over 5 min
+        - record: model:<model-name>:request_availability:ratio5m
+          expr: |
+            sum(rate(http_requests_total{model="<model-name>",code!~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{model="<model-name>"}[5m]))
+
+        # P99 latency in seconds
+        - record: model:<model-name>:latency_p99_seconds:5m
+          expr: |
+            histogram_quantile(
+              0.99,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{model="<model-name>"}[5m])
+              )
+            )
+
+        # P50 latency in seconds
+        - record: model:<model-name>:latency_p50_seconds:5m
+          expr: |
+            histogram_quantile(
+              0.50,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{model="<model-name>"}[5m])
+              )
+            )
+
+        # Error rate as a percentage
+        - record: model:<model-name>:error_rate_pct:5m
+          expr: |
+            100 * sum(rate(http_requests_total{model="<model-name>",code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{model="<model-name>"}[5m]))
+
+    # ──────────────────────────────────────────────────────────────────────
+    # SLO alert rules  (thresholds from _defaults.yaml)
+    # ──────────────────────────────────────────────────────────────────────
+    - name: <model-name>-serving-slo-alerts
+      interval: 30s
+      rules:
+        # Fast-burn alert: 14.4× budget consumption rate over 1 hour
+        - alert: ModelAvailabilitySLOFastBurn
+          expr: |
+            (
+              1 - model:<model-name>:request_availability:ratio5m
+            ) > (14.4 * (1 - 0.995))
+          for: 5m
+          labels:
+            severity: critical
+            slo: availability
+            model: <model-name>
+          annotations:
+            summary: "{{ $labels.model }} availability fast burn critical"
+            description: >
+              Error budget is being consumed at 14.4× the sustainable rate.
+              Current availability: {{ $value | humanizePercentage }}.
+              SLO target: 99.5%.
+
+        # Slow-burn alert: 6× budget consumption rate over 6 hours
+        - alert: ModelAvailabilitySLOSlowBurn
+          expr: |
+            (
+              1 - model:<model-name>:request_availability:ratio5m
+            ) > (6.0 * (1 - 0.995))
+          for: 30m
+          labels:
+            severity: warning
+            slo: availability
+            model: <model-name>
+          annotations:
+            summary: "{{ $labels.model }} availability slow burn warning"
+            description: >
+              Error budget is being consumed at 6× the sustainable rate over 6 hours.
+              Current availability: {{ $value | humanizePercentage }}.
+
+        # P99 latency breach
+        - alert: ModelLatencyP99SLOBreach
+          expr: model:<model-name>:latency_p99_seconds:5m > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            slo: latency
+            model: <model-name>
+          annotations:
+            summary: "{{ $labels.model }} P99 latency SLO breach"
+            description: >
+              P99 latency is {{ $value | humanizeDuration }}, exceeding the 500 ms SLO threshold.
+
+        # Error rate ceiling breach
+        - alert: ModelErrorRateSLOBreach
+          expr: model:<model-name>:error_rate_pct:5m > 1.0
+          for: 5m
+          labels:
+            severity: critical
+            slo: error_rate
+            model: <model-name>
+          annotations:
+            summary: "{{ $labels.model }} error rate SLO breach"
+            description: >
+              Error rate is {{ $value }}%, exceeding the 1% SLO ceiling.

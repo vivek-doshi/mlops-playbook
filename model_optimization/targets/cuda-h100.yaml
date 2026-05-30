@@ -1,0 +1,19 @@
+# NVIDIA H100 GPU benchmark target
+target: cuda-h100
+description: NVIDIA H100 80GB GPU inference (TensorRT FP8 or FP16)
+
+batch_size: 64
+input_shape: [64, 128]
+dtype: float16
+
+warmup_requests: 1000
+measurement_requests: 5000
+concurrency: 16
+
+latency_p99_threshold_ms: 10
+latency_p50_threshold_ms: 4
+
+default_precision: fp16
+quantisation_backend: tensorrt
+trt_workspace_gb: 8
+enable_fp8: true

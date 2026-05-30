@@ -1,0 +1,94 @@
+# ci/github-actions/llmops/evaluate-llm.yml
+#
+# Trigger:  workflow_call (called by fine-tune.yml or promote.yml)
+#           or workflow_dispatch (manual).
+# Inputs:   model_name     — MLflow registered model name
+#           model_version  — MLflow model version to evaluate
+#           endpoint_url   — Model serving endpoint URL
+# Outputs:  overall_score  — Mean benchmark score
+# Beginner note:
+#   Runs benchmark evaluation against a deployed LLM endpoint and logs
+#   results to MLflow.  Fails if overall_score drops below the gate threshold.
+---
+name: LLMOps — Evaluate LLM
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+      model_version:
+        required: true
+        type: string
+      endpoint_url:
+        required: true
+        type: string
+    outputs:
+      overall_score:
+        description: Mean score across all benchmarks
+        value: ${{ jobs.evaluate.outputs.overall_score }}
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: MLflow registered model name
+        required: true
+        type: string
+      model_version:
+        description: MLflow model version
+        required: true
+        type: string
+      endpoint_url:
+        description: Model serving endpoint URL
+        required: true
+        type: string
+
+jobs:
+  evaluate:
+    name: Evaluate ${{ inputs.model_name }} v${{ inputs.model_version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    outputs:
+      overall_score: ${{ steps.eval.outputs.overall_score }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --upgrade pip mlflow requests rouge-score pyyaml
+
+      - name: Run evaluation harness
+        id: eval
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python llmops/evaluation/harness.py \
+            --model-name    "${{ inputs.model_name }}" \
+            --model-version "${{ inputs.model_version }}" \
+            --endpoint-url  "${{ inputs.endpoint_url }}" \
+            --benchmarks-dir llmops/evaluation/benchmarks/ \
+            | tee eval_output.txt
+
+          # Extract overall_score from stdout
+          SCORE=$(grep -oP 'Overall score: \K[\d.]+' eval_output.txt || echo "0")
+          echo "overall_score=${SCORE}" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce score gate
+        run: |
+          python - <<'EOF'
+          import sys
+          score = float("${{ steps.eval.outputs.overall_score }}" or 0)
+          threshold = 0.60  # Adjust per model requirements
+          if score < threshold:
+              print(f"FAIL: overall_score {score:.4f} < threshold {threshold}")
+              sys.exit(1)
+          print(f"PASS: overall_score {score:.4f} >= threshold {threshold}")
+          EOF
