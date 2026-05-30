@@ -28,6 +28,7 @@
 - [ ] Dependency update (Dependabot)
 - [ ] Bug fix
 - [ ] Refactor (no functional change)
+- [ ] Website (gh pages)
 
 ---
 
