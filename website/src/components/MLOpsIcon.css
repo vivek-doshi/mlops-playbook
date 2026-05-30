@@ -1,0 +1,45 @@
+/* ── Node pulse ─────────────────────────────────────────────────────────── */
+@keyframes ml-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%       { transform: scale(1.3); opacity: 1;    }
+}
+
+/* ── Connection data flow ────────────────────────────────────────────────── */
+@keyframes ml-flow {
+  from { stroke-dashoffset:  0; }
+  to   { stroke-dashoffset: -16; }
+}
+
+.ml-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ml-pulse ease-in-out infinite;
+}
+
+.ml-conn {
+  animation: ml-flow linear infinite;
+  opacity: 0.55;
+}
+
+/* ── Node stagger ────────────────────────────────────────────────────────── */
+.ml-n1 { animation-duration: 2.4s; animation-delay: 0.00s; }
+.ml-n2 { animation-duration: 2.8s; animation-delay: 0.40s; }
+.ml-n3 { animation-duration: 2.2s; animation-delay: 0.15s; }
+.ml-n4 { animation-duration: 3.0s; animation-delay: 0.55s; }
+.ml-n5 { animation-duration: 2.5s; animation-delay: 0.30s; }
+.ml-n6 { animation-duration: 2.3s; animation-delay: 0.10s; }
+.ml-n7 { animation-duration: 2.6s; animation-delay: 0.45s; }
+
+/* ── Connection stagger ──────────────────────────────────────────────────── */
+.ml-c1  { animation-duration: 1.5s; animation-delay: 0.00s; }
+.ml-c2  { animation-duration: 1.9s; animation-delay: 0.12s; }
+.ml-c3  { animation-duration: 2.3s; animation-delay: 0.30s; }
+.ml-c4  { animation-duration: 1.7s; animation-delay: 0.50s; }
+.ml-c5  { animation-duration: 2.1s; animation-delay: 0.22s; }
+.ml-c6  { animation-duration: 1.8s; animation-delay: 0.40s; }
+.ml-c7  { animation-duration: 1.4s; animation-delay: 0.05s; }
+.ml-c8  { animation-duration: 1.8s; animation-delay: 0.35s; }
+.ml-c9  { animation-duration: 2.0s; animation-delay: 0.15s; }
+.ml-c10 { animation-duration: 1.6s; animation-delay: 0.45s; }
+.ml-c11 { animation-duration: 2.2s; animation-delay: 0.25s; }
+.ml-c12 { animation-duration: 1.7s; animation-delay: 0.55s; }

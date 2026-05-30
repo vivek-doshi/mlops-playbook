@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Prism from 'prismjs'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-python'
@@ -7,6 +7,8 @@ import 'prismjs/components/prism-json'
 import 'prismjs/components/prism-hcl'
 import 'prismjs/components/prism-markdown'
 import 'prismjs/components/prism-docker'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import type { FileEntry, Theme } from '../types'
 import './CodeViewer.css'
 
@@ -27,18 +29,34 @@ interface Props {
   theme: Theme
 }
 
+// Configure marked once
+marked.setOptions({ gfm: true, breaks: false })
+
 export function CodeViewer({ file, theme: _theme }: Props) {
   const preRef  = useRef<HTMLPreElement>(null)
-  const [copied, setCopied] = useState(false)
-  const [viewKey, setViewKey] = useState(0) // force re-animation on file change
+  const [copied,  setCopied]  = useState(false)
+  const [viewKey, setViewKey] = useState(0)
+  const [rawView, setRawView] = useState(false)
+
+  const isMarkdown = file?.language === 'markdown'
+
+  // Parsed & sanitized HTML — only computed for markdown files
+  const renderedHtml = useMemo(() => {
+    if (!file || !isMarkdown) return ''
+    const html = marked.parse(file.content) as string
+    return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
+  }, [file, isMarkdown])
 
   useEffect(() => {
-    if (preRef.current) {
+    // Only highlight with Prism when showing raw/code view
+    if (preRef.current && (!isMarkdown || rawView)) {
       Prism.highlightElement(preRef.current.querySelector('code')!)
     }
     setViewKey(k => k + 1)
     setCopied(false)
-  }, [file])
+    // Reset to rendered view when switching to a new markdown file
+    if (isMarkdown) setRawView(false)
+  }, [file]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const copyToClipboard = async () => {
     if (!file) return
@@ -95,7 +113,7 @@ export function CodeViewer({ file, theme: _theme }: Props) {
     <main className="code-viewer-panel">
       {/* Toolbar */}
       <div className="cv-toolbar">
-        <div className="cv-breadcrumb">
+        <div className="cv-breadcrumb" key={viewKey}>
           {segments.map((seg, i) => (
             <span key={i}>
               {i > 0 && <span className="cv-breadcrumb-sep"> / </span>}
@@ -111,6 +129,16 @@ export function CodeViewer({ file, theme: _theme }: Props) {
           <span className="cv-size-badge">{formatBytes(file.size)}</span>
           <span className="cv-lang-chip">{file.language}</span>
         </div>
+
+        {isMarkdown && (
+          <button
+            className={`cv-btn cv-toggle-btn ${rawView ? 'active' : ''}`}
+            onClick={() => setRawView(v => !v)}
+            title={rawView ? 'Show rendered preview' : 'Show raw source'}
+          >
+            {rawView ? '👁 Preview' : '⟨/⟩ Raw'}
+          </button>
+        )}
 
         <button
           className={`cv-btn ${copied ? 'copied' : ''}`}
@@ -131,14 +159,24 @@ export function CodeViewer({ file, theme: _theme }: Props) {
         </a>
       </div>
 
-      {/* Code */}
-      <div className="cv-scroll" key={viewKey}>
-        <pre ref={preRef} className="cv-pre cv-pre-with-lines">
-          <code className={`language-${prismLang}`}>
-            {file.content}
-          </code>
-        </pre>
-      </div>
+      {/* Markdown preview */}
+      {isMarkdown && !rawView ? (
+        <div className="cv-scroll cv-md-scroll" key={viewKey}>
+          <div
+            className="cv-markdown"
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
+          />
+        </div>
+      ) : (
+        /* Code / raw view */
+        <div className="cv-scroll" key={viewKey}>
+          <pre ref={preRef} className="cv-pre cv-pre-with-lines">
+            <code className={`language-${prismLang}`}>
+              {file.content}
+            </code>
+          </pre>
+        </div>
+      )}
     </main>
   )
 }

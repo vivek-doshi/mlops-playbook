@@ -179,7 +179,9 @@ body {
   font-family: 'JetBrains Mono', monospace;
   animation: blink 1.2s step-start infinite;
 }
-
+.loading-icon-svg {
+  filter: drop-shadow(0 0 14px rgba(var(--accent-rgb), 0.55)) drop-shadow(0 0 28px rgba(var(--accent2-rgb), 0.3));
+}
 /* ── Empty state ────────────────────────────────────────────────────────── */
 .empty-state {
   flex: 1;

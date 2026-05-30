@@ -1,3 +1,4 @@
+import { MLOpsIcon } from './MLOpsIcon'
 import type { FileIndex, Theme } from '../types'
 import './Header.css'
 
@@ -20,7 +21,9 @@ export function Header({ theme, onToggleTheme, onPickRandom, index }: Props) {
   return (
     <header className="header">
       <a className="header-logo" href="#" aria-label="MLOps Playbook home">
-        <div className="logo-icon">⚗️</div>
+        <div className="logo-icon">
+          <MLOpsIcon size={28} />
+        </div>
         <div className="logo-text">
           <div className="logo-title">MLOps Playbook</div>
           <div className="logo-sub">Template Lab</div>

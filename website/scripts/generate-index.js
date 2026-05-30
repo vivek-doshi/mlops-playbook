@@ -17,21 +17,22 @@ const OUT_FILE  = path.resolve(__dirname, '../public/index.json')
 // ── Config ─────────────────────────────────────────────────────────────────
 
 const EXCLUDE_DIRS = new Set([
-  'website', 'node_modules', '.git', '.github', '__pycache__',
+  'website', 'node_modules', '.git', '.github', '.ai', '__pycache__',
   '.mypy_cache', '.pytest_cache', '.venv', 'venv', 'env', '.env',
   'dist', 'build', '.terraform', '.task',
 ])
 
 const EXCLUDE_FILES = new Set([
   '.DS_Store', 'Thumbs.db', '.gitignore', '.gitattributes',
-  '.pre-commit-config.yaml', '.env', '.env.example',
+  '.env', '.env.example',
   'package-lock.json', 'yarn.lock', 'poetry.lock',
+  '__init__.py',
 ])
 
 const INCLUDE_EXTS = new Set([
   '.yml', '.yaml', '.py', '.tf', '.tfvars', '.hcl',
   '.json', '.sh', '.bash', '.md', '.dockerfile', 'dockerfile',
-  '.toml', '.ini', '.cfg',
+  '.toml', '.ini', '.cfg', 'makefile', 'taskfile.yml',
 ])
 
 const EXT_TO_LANG = {
@@ -43,6 +44,7 @@ const EXT_TO_LANG = {
   '.md':   'markdown',
   '.toml': 'toml',  '.ini': 'ini', '.cfg': 'ini',
   '.dockerfile': 'dockerfile', 'dockerfile': 'dockerfile',
+  'makefile': 'makefile', 'taskfile.yml': 'yaml',
 }
 
 const CATEGORY_DIRS = [
@@ -118,13 +120,49 @@ function walkDir(dir, category, repoRelBase, files = []) {
 
 console.log('🔍  Scanning repo at:', REPO_ROOT)
 
+// Dynamically discover all top-level directories (skip only explicitly excluded dirs)
+const topLevelDirs = fs.readdirSync(REPO_ROOT, { withFileTypes: true })
+  .filter(e => e.isDirectory() && !EXCLUDE_DIRS.has(e.name))
+  .map(e => e.name)
+
+// Apply known category ordering first, then sort any remaining alphabetically
+const orderedDirs = [
+  ...CATEGORY_DIRS.filter(c => topLevelDirs.includes(c)),
+  ...topLevelDirs.filter(c => !CATEGORY_DIRS.includes(c)).sort(),
+]
+
 const allFiles = []
-for (const cat of CATEGORY_DIRS) {
+for (const cat of orderedDirs) {
   const dir = path.join(REPO_ROOT, cat)
-  if (!fs.existsSync(dir)) { console.log(`  ⚠  ${cat}/ not found — skipping`) ; continue }
   const catFiles = walkDir(dir, cat, dir)
   allFiles.push(...catFiles)
   console.log(`  ✓  ${cat}: ${catFiles.length} files`)
+}
+
+// Scan root-level files directly (README.md, Makefile, Taskfile.yml, .pre-commit-config.yaml, etc.)
+const rootFiles = []
+for (const entry of fs.readdirSync(REPO_ROOT, { withFileTypes: true })) {
+  if (!entry.isFile()) continue
+  const fullPath = path.join(REPO_ROOT, entry.name)
+  if (!shouldInclude(fullPath)) continue
+  const stat = fs.statSync(fullPath)
+  if (stat.size > MAX_FILE_SIZE) continue
+  let content
+  try { content = fs.readFileSync(fullPath, 'utf8') } catch { continue }
+  content = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trimEnd()
+  rootFiles.push({
+    id:       fileId(entry.name),
+    name:     entry.name,
+    path:     entry.name,
+    language: detectLang(fullPath),
+    size:     Buffer.byteLength(content, 'utf8'),
+    content,
+    category: 'root',
+  })
+}
+if (rootFiles.length) {
+  allFiles.push(...rootFiles)
+  console.log(`  ✓  root: ${rootFiles.length} files`)
 }
 
 // Sort: by category order, then by path

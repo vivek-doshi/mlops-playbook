@@ -24,17 +24,19 @@
 }
 
 .logo-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  box-shadow: var(--glow);
-  animation: glowPulse 3s ease-in-out infinite;
-  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.4));
+  animation: logoIconGlow 3s ease-in-out infinite;
+}
+
+@keyframes logoIconGlow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.3)) drop-shadow(0 0 10px rgba(var(--accent2-rgb), 0.2)); }
+  50%       { filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.7)) drop-shadow(0 0 20px rgba(var(--accent2-rgb), 0.4)); }
 }
 
 .logo-text { line-height: 1.15; }

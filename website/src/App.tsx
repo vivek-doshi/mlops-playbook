@@ -3,6 +3,7 @@ import { NeuralCanvas } from './components/NeuralCanvas'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { CodeViewer } from './components/CodeViewer'
+import { MLOpsIcon } from './components/MLOpsIcon'
 import type { FileEntry, FileIndex, Theme } from './types'
 
 export default function App() {
@@ -43,7 +44,6 @@ export default function App() {
       .then(r => r.json())
       .then((data: FileIndex) => {
         setIndex(data)
-        if (data.files.length > 0) setSelectedFile(data.files[0])
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -74,7 +74,7 @@ export default function App() {
         <div className="loading-screen" style={{ background: 'transparent' }}>
           <div className="loading-content">
             <div className="loading-logo">
-              <span className="loading-icon">⚗️</span>
+              <MLOpsIcon size={44} className="loading-icon-svg" />
               <h1>MLOps Playbook</h1>
             </div>
             <div className="loading-bar">
