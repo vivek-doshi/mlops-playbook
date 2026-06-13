@@ -70,9 +70,9 @@
     },
 
     // GitHub CLI — for creating PRs, checking workflow runs, managing releases.
-    "ghcr.io/devcontainers/features/github-cli:1": {
-      "version": "latest"
-    },
+    //"ghcr.io/devcontainers/features/github-cli:1": {
+    //  "version": "latest"
+    //},
 
     // AWS CLI — for DVC remote (S3) and SageMaker Terraform.
     "ghcr.io/devcontainers/features/aws-cli:1": {
@@ -80,9 +80,9 @@
     },
 
     // Google Cloud CLI — for DVC remote (GCS) and Vertex AI Terraform.
-    "ghcr.io/devcontainers/features/gcloud-cli:1": {
-      "version": "latest"
-    },
+    //"ghcr.io/devcontainers/features/gcloud-cli:1": {
+    //  "version": "latest"
+    //},
 
     // Azure CLI — for Azure ML Terraform and azure-ml CI jobs.
     "ghcr.io/devcontainers/features/azure-cli:1": {
