@@ -52,9 +52,15 @@
   "features": {
     // Docker-in-Docker: lets you run `docker compose` from inside the container.
     // Required to start the MLflow stack (PostgreSQL + MinIO + MLflow).
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    /* "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",
       "dockerDashComposeVersion": "v2"
+    }, */
+
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2",
+      "moby": false        // ← use docker-ce-cli instead of moby-cli
     },
 
     // Terraform CLI — for editing and validating IaC in terraform/.
