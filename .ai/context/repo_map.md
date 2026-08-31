@@ -9,7 +9,8 @@ Generated from current workspace structure.
 ```text
 .
 ├── .devcontainer
-│   └── devcontainer.json
+│   ├── devcontainer.json
+│   └── devcontainer-lock.json
 ├── .github
 │   ├── ISSUE_TEMPLATE
 │   │   ├── bug_report.yml
@@ -37,95 +38,97 @@ Generated from current workspace structure.
 │   │   └── pipelines
 │   │       ├── batch-inference-workflow.yaml
 │   │       └── training-workflow.yaml
-│   └── kubernetes
-│       ├── _base
-│       │   ├── deployment.yaml
-│       │   ├── kustomization.yaml
-│       │   └── service.yaml
-│       ├── batch
-│       │   ├── batch-cronjob.yaml
-│       │   └── batch-job.yaml
-│       ├── environments
-│       │   ├── dev
-│       │   │   ├── kustomization.yaml
-│       │   │   ├── network-policy.yaml
-│       │   │   └── resource-quota.yaml
-│       │   ├── production
-│       │   │   ├── kustomization.yaml
-│       │   │   ├── network-policy.yaml
-│       │   │   └── pdb.yaml
-│       │   └── staging
-│       │       ├── kustomization.yaml
-│       │       ├── network-policy.yaml
-│       │       └── resource-quota.yaml
-│       ├── portal
-│       │   ├── deployment.yaml
-│       │   ├── ingress.yaml
-│       │   ├── network-policy.yaml
-│       │   └── service.yaml
-│       └── training
-│           ├── checkpointing-pvc.yaml
-│           ├── pytorch-job.yaml
-│           ├── ray-job.yaml
-│           └── tf-job.yaml
+│   ├── kubernetes
+│   │   ├── _base
+│   │   │   ├── deployment.yaml
+│   │   │   ├── kustomization.yaml
+│   │   │   └── service.yaml
+│   │   ├── batch
+│   │   │   ├── batch-cronjob.yaml
+│   │   │   └── batch-job.yaml
+│   │   ├── environments
+│   │   │   ├── dev
+│   │   │   │   ├── kustomization.yaml
+│   │   │   │   ├── network-policy.yaml
+│   │   │   │   └── resource-quota.yaml
+│   │   │   ├── production
+│   │   │   │   ├── kustomization.yaml
+│   │   │   │   ├── network-policy.yaml
+│   │   │   │   └── pdb.yaml
+│   │   │   └── staging
+│   │   │       ├── kustomization.yaml
+│   │   │       ├── network-policy.yaml
+│   │   │       └── resource-quota.yaml
+│   │   ├── portal
+│   │   │   ├── deployment.yaml
+│   │   │   ├── ingress.yaml
+│   │   │   ├── network-policy.yaml
+│   │   │   └── service.yaml
+│   │   └── training
+│   │       ├── checkpointing-pvc.yaml
+│   │       ├── pytorch-job.yaml
+│   │       ├── ray-job.yaml
+│   │       └── tf-job.yaml
+│   └── README.md
 ├── ci
 │   ├── azure-ml
 │   │   └── train-job.yaml
 │   ├── dvc
 │   │   └── dvc-pipeline.yml
-│   └── github-actions
-│       ├── _shared
-│       │   └── reusable-mlops-scan.yml
-│       ├── batch
-│       │   ├── batch-quality-check.yml
-│       │   ├── scheduled-batch.yml
-│       │   └── trigger-batch-job.yml
-│       ├── distributed-training
-│       │   ├── distributed-train.yml
-│       │   └── gpu-approval-gate.yml
-│       ├── fairness
-│       │   └── fairness-gate.yml
-│       ├── federated
-│       │   ├── federated-eval.yml
-│       │   └── federated-train.yml
-│       ├── finops
-│       │   ├── cost-budget-check.yml
-│       │   ├── monthly-cost-report.yml
-│       │   └── weekly-cost-report.yml
-│       ├── llmops
-│       │   ├── evaluate-llm.yml
-│       │   ├── fine-tune.yml
-│       │   ├── prompt-validate.yml
-│       │   └── rlhf-train.yml
-│       ├── model-cards
-│       │   └── generate-card.yml
-│       ├── model-deployment
-│       │   └── deploy.yml
-│       ├── model-evaluation
-│       │   └── evaluate.yml
-│       ├── model-monitoring
-│       │   └── drift-check.yml
-│       ├── model-optimization
-│       │   ├── benchmark.yml
-│       │   └── optimize.yml
-│       ├── model-training
-│       │   ├── continuous-training.yml
-│       │   └── train.yml
-│       ├── multi-cloud
-│       │   ├── deploy-multicloud.yml
-│       │   └── failover-test.yml
-│       ├── online-learning
-│       │   ├── online-rollback.yml
-│       │   └── online-update.yml
-│       ├── pipelines
-│       │   ├── trigger-batch-inference.yml
-│       │   └── trigger-training-pipeline.yml
-│       └── promotion
-│           ├── promote-dev.yml
-│           ├── promote-production.yml
-│           ├── promote-staging.yml
-│           ├── promotion-gates.yml
-│           └── rollback.yml
+│   ├── github-actions
+│   │   ├── _shared
+│   │   │   └── reusable-mlops-scan.yml
+│   │   ├── batch
+│   │   │   ├── batch-quality-check.yml
+│   │   │   ├── scheduled-batch.yml
+│   │   │   └── trigger-batch-job.yml
+│   │   ├── distributed-training
+│   │   │   ├── distributed-train.yml
+│   │   │   └── gpu-approval-gate.yml
+│   │   ├── fairness
+│   │   │   └── fairness-gate.yml
+│   │   ├── federated
+│   │   │   ├── federated-eval.yml
+│   │   │   └── federated-train.yml
+│   │   ├── finops
+│   │   │   ├── cost-budget-check.yml
+│   │   │   ├── monthly-cost-report.yml
+│   │   │   └── weekly-cost-report.yml
+│   │   ├── llmops
+│   │   │   ├── evaluate-llm.yml
+│   │   │   ├── fine-tune.yml
+│   │   │   ├── prompt-validate.yml
+│   │   │   └── rlhf-train.yml
+│   │   ├── model-cards
+│   │   │   └── generate-card.yml
+│   │   ├── model-deployment
+│   │   │   └── deploy.yml
+│   │   ├── model-evaluation
+│   │   │   └── evaluate.yml
+│   │   ├── model-monitoring
+│   │   │   └── drift-check.yml
+│   │   ├── model-optimization
+│   │   │   ├── benchmark.yml
+│   │   │   └── optimize.yml
+│   │   ├── model-training
+│   │   │   ├── continuous-training.yml
+│   │   │   └── train.yml
+│   │   ├── multi-cloud
+│   │   │   ├── deploy-multicloud.yml
+│   │   │   └── failover-test.yml
+│   │   ├── online-learning
+│   │   │   ├── online-rollback.yml
+│   │   │   └── online-update.yml
+│   │   ├── pipelines
+│   │   │   ├── trigger-batch-inference.yml
+│   │   │   └── trigger-training-pipeline.yml
+│   │   └── promotion
+│   │       ├── promote-dev.yml
+│   │       ├── promote-production.yml
+│   │       ├── promote-staging.yml
+│   │       ├── promotion-gates.yml
+│   │       └── rollback.yml
+│   └── README.md
 ├── docs
 │   ├── decisions
 │   │   ├── ADR-ML-001-experiment-tracking.md
@@ -175,24 +178,27 @@ Generated from current workspace structure.
 │   │   └── gpu-cost-governance.md
 │   ├── model-cards
 │   │   └── fraud-detection-model-card.md
-│   └── local-setup.md
+│   ├── local-setup.md
+│   └── README.md
 ├── dvc
 │   ├── pipeline-templates
 │   │   └── train-eval-deploy.yaml
-│   └── remote-storage
-│       ├── azure.remote.sample
-│       ├── gcs.remote.sample
-│       ├── README.md
-│       └── s3.remote.sample
+│   ├── remote-storage
+│   │   ├── azure.remote.sample
+│   │   ├── gcs.remote.sample
+│   │   ├── README.md
+│   │   └── s3.remote.sample
+│   └── README.md
 ├── fairness
 │   ├── evaluate.py
 │   ├── explainability.py
 │   └── README.md
 ├── feature-store
-│   └── feast
-│       ├── feature_store.yaml
-│       ├── README.md
-│       └── repo.py
+│   ├── feast
+│   │   ├── feature_store.yaml
+│   │   ├── README.md
+│   │   └── repo.py
+│   └── README.md
 ├── federated_learning
 │   ├── aggregation
 │   │   ├── __init__.py
@@ -254,10 +260,11 @@ Generated from current workspace structure.
 │   │   └── schema.sql
 │   ├── model-registry
 │   │   └── README.md
-│   └── tracking-server
-│       ├── .env.example
-│       ├── docker-compose.yml
-│       └── README.md
+│   ├── tracking-server
+│   │   ├── .env.example
+│   │   ├── docker-compose.yml
+│   │   └── README.md
+│   └── README.md
 ├── model_optimization
 │   ├── distillation
 │   │   ├── student_configs
@@ -293,7 +300,6 @@ Generated from current workspace structure.
 │   │   └── cross-cloud-alerts.yaml
 │   ├── online-learning
 │   │   └── online-learning-alerts.yaml
-│   ├── prometheus
 │   ├── slos
 │   │   ├── _defaults.yaml
 │   │   ├── README.md
@@ -388,7 +394,8 @@ Generated from current workspace structure.
 │   ├── bootstrap.sh
 │   ├── generate_model_card.py
 │   ├── generate-repo-map.ps1
-│   └── model-card-template.md.j2
+│   ├── model-card-template.md.j2
+│   └── README.md
 ├── serving
 │   ├── torchserve
 │   │   ├── config.properties
@@ -424,9 +431,10 @@ Generated from current workspace structure.
 │   ├── ray-cluster
 │   │   ├── main.tf
 │   │   └── variables.tf
-│   └── vertex-pipelines
-│       ├── main.tf
-│       └── variables.tf
+│   ├── vertex-pipelines
+│   │   ├── main.tf
+│   │   └── variables.tf
+│   └── README.md
 ├── training
 │   ├── kubeflow
 │   │   ├── train_pytorch.py
