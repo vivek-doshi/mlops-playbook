@@ -4,28 +4,28 @@ Practical search terms and patterns to accelerate accurate retrieval.
 
 ## High-Value Keywords By Domain
 
-- CI: build-test, reusable, workflow, matrix, oidc, deploy
-- CD: targets, helm, kustomize, argocd, flux, rollout
+- CI: model-training, model-evaluation, model-deployment, promotion, drift-check
+- Delivery: kustomize, argo, rollout, triton, torchserve, vllm
 - Terraform: provider, module, backend, state, plan, apply
-- Security: trivy, gitleaks, semgrep, snyk, kyverno, secret
-- SecOps: compromised-pod, node-compromise, secret-exposure, supply-chain-incident
-- FinOps: infracost, budget-alerts, rightsizing, costcenter, kubecost
-- Observability: prometheus, grafana, loki, otel, alertmanager
+- Governance: model-approval, data-governance, pii, fairness, gitleaks, pip-audit
+- FinOps: budget, rightsizing, cost-center, model-name, gpu
+- Monitoring: evidently, drift, prometheus, grafana, slo, alert
 
 ## Path-Focused Search Patterns
 
-- ci/**/build-test.yml
-- cd/targets/**
+- ci/github-actions/**
+- cd/kubernetes/**
+- cd/argo/**
 - terraform/**/main.tf
-- security/**
-- secops/runbooks/**
+- policy/**
+- monitoring/**
 - finops/**
 
 ## Query Refinement Tips
 
 - Add cloud target: aws, azure, gcp.
-- Add runtime stack: dotnet, python, java, node, react, angular.
-- Add lifecycle phase: build, scan, deploy, observe, respond, optimize.
+- Add runtime stack: triton, torchserve, vllm, ray, kubeflow, argo.
+- Add lifecycle phase: experiment, version, train, evaluate, promote, serve, monitor.
 
 ## Disambiguation
 

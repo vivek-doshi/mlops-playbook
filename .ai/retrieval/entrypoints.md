@@ -6,38 +6,35 @@ Recommended first files to open by intent.
 
 - README.md
 - GETTING_STARTED.md
-- docs/ARCHITECTURE_DECISION_GUIDE.md
+- docs/golden-paths/mlops-workflow.md
 - docs/golden-paths/
 
 ## By Task Type
 
-- New service delivery:
-  - docs/golden-paths/kubernetes-microservice.md
-  - docs/golden-paths/serverless-app.md
-  - docs/golden-paths/frontend-spa.md
+- ML lifecycle delivery:
+  - docs/golden-paths/mlops-workflow.md
+  - docs/golden-paths/model-training-pipeline.md
+  - docs/golden-paths/model-serving.md
 - Pipeline setup:
-  - ci/README.md
   - ci/github-actions/
-  - ci/azure-pipelines/
-  - ci/gitlab-ci/
+  - pipelines/
+  - cd/argo/pipelines/
 - Cloud deployment:
-  - cd/targets/
-  - terraform/README.md
+  - terraform/
+  - cd/kubernetes/environments/
 - Kubernetes patterns:
-  - cd/kubernetes/README.md
   - cd/kubernetes/_base/
-  - cd/kubernetes/_patterns/
+  - cd/kubernetes/training/
+  - cd/kubernetes/batch/
 - Security baseline:
-  - security/README.md
   - policy/README.md
-  - secops/README.md
+  - ci/github-actions/_shared/reusable-mlops-scan.yml
 - FinOps baseline:
   - finops/README.md
-  - finops/docs/
+  - monitoring/dashboards/ml-cost-attribution.json
 
 ## Triage Entrypoint Order
 
-1. docs/ARCHITECTURE_DECISION_GUIDE.md
-2. matching docs/golden-paths/*
-3. domain README
-4. implementation template files
+1. matching docs/golden-paths/*
+2. domain README
+3. implementation template files

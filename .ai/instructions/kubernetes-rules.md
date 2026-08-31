@@ -1,6 +1,6 @@
 # Kubernetes Rules
 
-Rules for manifests and patterns under cd/kubernetes/, cd/helm/, policy/, secops/, observability/, and finops/policies/.
+Rules for manifests and patterns under cd/kubernetes/, cd/argo/, policy/, monitoring/, and finops/.
 
 ## Workload Safety Baseline
 
@@ -28,4 +28,4 @@ Rules for manifests and patterns under cd/kubernetes/, cd/helm/, policy/, secops
 
 - Reuse patterns from cd/kubernetes/_base and cd/kubernetes/_patterns.
 - Keep GitOps-compatible manifests for argocd and flux targets.
-- Align guardrails with policies in policy/, security/, and finops/policies/.
+- Align guardrails with policy/, the reusable CI security scan, and finops/ budget controls.

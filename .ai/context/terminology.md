@@ -10,7 +10,7 @@ Defines canonical language for this repository. Use these terms consistently in 
 - Baseline: Minimum acceptable standard for production readiness.
 - Pattern: Reusable technical approach, often represented as a template family.
 - Runbook: Action-oriented operational procedure for incidents or routine operations.
-- Target: Deployment destination template under cd/targets/.
+- Target: Deployment destination represented by a Kubernetes environment overlay, Argo workflow, or cloud-specific Terraform module.
 - Overlay: Environment-specific customization on top of base Kubernetes manifests.
 - Policy: Enforceable rule expressed in admission controls or CI checks.
 
