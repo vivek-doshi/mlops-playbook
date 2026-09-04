@@ -27,6 +27,13 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - DevOps and SRE teams integrating ML services with production controls.
 - Governance teams enforcing model approval and data policy boundaries.
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 ## Key Repository Domains
 
 - `docs/`: golden paths and guides for MLOps operations.
@@ -37,7 +44,7 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - `serving/`: runtime serving stacks.
 - `monitoring/`: drift and metrics integration points.
 - `policy/`: model-approval and data-governance controls.
-
+- `docs/topology/`: integration bridge, dependency matrix, control plane/data plane, and routing quality documentation.
 ## Suggested Navigation
 
 1. Read `README.md` for integration boundary and prerequisites.

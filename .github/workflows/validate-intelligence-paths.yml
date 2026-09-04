@@ -1,0 +1,55 @@
+name: Validate Intelligence Paths
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on the 1st
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  validate-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check context path references
+        run: |
+          echo "Checking context path references..."
+          Get-ChildItem -Path .ai/context -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
+      
+      - name: Check retrieval path references
+        run: |
+          echo "Checking retrieval path references..."
+          Get-ChildItem -Path .ai/retrieval -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
+      
+      - name: Check instructions path references
+        run: |
+          echo "Checking instructions path references..."
+          Get-ChildItem -Path .ai/instructions -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
+      
+      - name: Validate all paths exist
+        run: |
+          echo "Validating all referenced paths exist..."
+          
+          # Extract all unique paths from context files
+          $context_paths = Get-Content .ai/context/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
+          
+          # Extract all unique paths from retrieval files
+          $retrieval_paths = Get-Content .ai/retrieval/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
+          
+          # Extract all unique paths from instructions files
+          $instructions_paths = Get-Content .ai/instructions/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
+          
+          # Combine and validate
+          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique
+          
+          foreach ($path in $all_paths) {
+            if ($path) {
+              if (-not (Test-Path $path)) {
+                Write-Output "❌ Missing path: $path"
+              } else {
+                Write-Output "✓ Valid path: $path"
+              }
+            }
+          }

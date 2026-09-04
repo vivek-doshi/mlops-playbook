@@ -1,33 +1,44 @@
 # Bounded Contexts
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Repository contexts and their boundaries for retrieval and change planning.
 
 ## Core Contexts
 
-- Build Context
-  - Scope: docker/, compose/, local-dev/
-  - Concern: packaging and local runtime
+- Experiment And Data Context
+  - Scope: mlflow/, dvc/, feature-store/
+  - Concern: experiment lineage, model artifacts, data versioning, and features
 - CI Context
-  - Scope: ci/
-  - Concern: build/test/scan automation
-- CD Context
-  - Scope: cd/
-  - Concern: deployment orchestration and targets
+  - Scope: ci/github-actions/
+  - Concern: training, evaluation, security scanning, promotion, and deployment automation
+- Delivery Context
+  - Scope: cd/kubernetes/, cd/argo/, serving/
+  - Concern: model serving, deployment orchestration, and pipeline execution
 - Infrastructure Context
-  - Scope: terraform/, cd/pulumi/, backup/terraform/
-  - Concern: infrastructure provisioning and lifecycle
-- Security Context
-  - Scope: security/, policy/, secrets/, secops/
-  - Concern: prevention, detection, response, compliance
-- Observability Context
-  - Scope: observability/, notifications/
-  - Concern: telemetry, alerting, diagnostics
+  - Scope: terraform/
+  - Concern: cloud-specific ML infrastructure provisioning
+- Governance Context
+  - Scope: policy/, fairness/
+  - Concern: model approval, data governance, and fairness evaluation
+- Monitoring Context
+  - Scope: monitoring/, docs/runbooks/
+  - Concern: drift detection, serving SLOs, alerts, and operational response
 - FinOps Context
   - Scope: finops/
   - Concern: spend visibility, cost governance, optimization
 - Documentation Context
-  - Scope: docs/, runbooks, guides
+  - Scope: docs/, docs/runbooks/, docs/golden-paths/, docs/decisions/
   - Concern: decision support and operational knowledge
+
+## External Platform Context
+
+`devops-playbook` provides cluster provisioning, secrets, OIDC, cluster observability, and notification integrations. Retrieve its published interfaces only when a task crosses the Integration Bridge.
 
 ## Boundary Rules
 

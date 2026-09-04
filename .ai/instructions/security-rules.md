@@ -31,5 +31,5 @@ Security baseline for code templates, IaC, CI/CD, runtime configuration, and inc
 
 ## Repo Alignment
 
-- Follow templates in security/, secops/, policy/, secrets/, and notifications/.
+- Follow ci/github-actions/_shared/reusable-mlops-scan.yml, policy/, and data-governance controls. Cluster secrets and incident notification integrations are external `devops-playbook` dependencies.
 - Keep security checks consistent across GitHub Actions, Azure Pipelines, GitLab CI, and Jenkins templates.

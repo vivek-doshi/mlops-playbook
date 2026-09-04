@@ -1,70 +1,57 @@
-version: 1
-updated: 2026-05-22
+version: 2
+updated: 2026-08-31
 defaults:
   start_with:
     - README.md
-    - docs/ARCHITECTURE_DECISION_GUIDE.md
+    - docs/golden-paths/mlops-workflow.md
   guardrails:
-    - security/
     - policy/
     - finops/
 task_to_domain:
-  containerize_application:
-    domains: [docker, compose, local-dev]
-    paths:
-      - docker/
-      - compose/
-      - local-dev/
   setup_ci_pipeline:
-    domains: [ci, quality, security]
+    domains: [ci, policy, security-scan]
     paths:
-      - ci/
-      - quality/
-      - security/
+      - ci/github-actions/
+      - ci/github-actions/_shared/
+      - policy/
   deploy_application:
     domains: [cd, terraform, kubernetes]
     paths:
-      - cd/targets/
-      - terraform/
       - cd/kubernetes/
+      - terraform/
+      - serving/
   kubernetes_workload:
-    domains: [cd-kubernetes, helm, gitops, policy]
+    domains: [cd-kubernetes, argo, policy]
     paths:
       - cd/kubernetes/
-      - cd/helm/
-      - cd/gitops/
+      - cd/argo/
       - policy/
   infrastructure_provisioning:
-    domains: [terraform, pulumi]
+    domains: [terraform]
     paths:
       - terraform/
-      - cd/pulumi/
-      - backup/terraform/
   security_hardening:
-    domains: [security, policy, secrets, secops]
+    domains: [security-scan, policy, data-governance]
     paths:
-      - security/
+      - ci/github-actions/_shared/reusable-mlops-scan.yml
       - policy/
-      - secrets/
-      - secops/
   incident_response:
-    domains: [secops, docs-runbooks, observability, notifications]
+    domains: [docs-runbooks, monitoring, external-platform]
     paths:
-      - secops/runbooks/
       - docs/runbooks/
-      - observability/
-      - notifications/
+      - monitoring/
+      - devops-playbook/notifications/ # external dependency
   observability_setup:
-    domains: [observability, notifications]
+    domains: [monitoring, external-platform]
     paths:
-      - observability/
-      - notifications/
+      - monitoring/
+      - devops-playbook/observability/ # external dependency
   finops_governance:
     domains: [finops, policy, ci]
     paths:
       - finops/
-      - finops/policies/
-      - finops/cicd/
+      - policy/
+      - ci/github-actions/
   documentation_or_decision_support:
     domains: [docs, runbooks]
     paths:

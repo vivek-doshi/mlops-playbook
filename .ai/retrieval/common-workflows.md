@@ -1,51 +1,40 @@
 # Common Workflows
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Standard retrieval paths for frequent engineering tasks.
 
-## 1. Build and Deploy a Kubernetes Microservice
+## 1. Train, Evaluate, and Promote a Model
 
-1. docs/golden-paths/kubernetes-microservice.md
-2. docker/<stack>/Dockerfile*
-3. ci/<platform>/<stack>/
-4. terraform/<cloud-k8s-target>/
-5. cd/targets/<cloud-k8s-target>/
-6. cd/kubernetes/_base and _overlays
-7. security/, policy/, finops/policies/ checks
+1. docs/golden-paths/mlops-workflow.md
+2. docs/golden-paths/model-training-pipeline.md
+3. dvc/pipeline-templates/train-eval-deploy.yaml
+4. ci/github-actions/model-training/ and ci/github-actions/model-evaluation/
+5. policy/model-approval/ and policy/data-governance/
 
-## 2. Build and Deploy a Serverless App
+## 2. Deploy and Monitor a Model
 
-1. docs/golden-paths/serverless-app.md
-2. ci/<platform>/<stack>/
-3. terraform/aws-lambda or cloud equivalent target
-4. cd/targets/aws-lambda/
-5. security/secret-detection and dependency-audit
+1. docs/golden-paths/model-serving.md
+2. serving/
+3. cd/kubernetes/environments/ and ci/github-actions/model-deployment/
+4. docs/golden-paths/model-monitoring.md and monitoring/
+5. finops/ and docs/guides/gpu-cost-governance.md
 
-## 3. Deliver a Frontend SPA
+## 3. Run Batch or Orchestrated Inference
 
-1. docs/golden-paths/frontend-spa.md
-2. docker/react or docker/angular
-3. ci/<platform>/react or angular
-4. cd/targets/azure-app-service (or chosen platform)
-5. observability/ and notifications/
+1. batch/README.md or pipelines/README.md
+2. batch/ or pipelines/
+3. cd/kubernetes/batch/ or cd/argo/pipelines/
+4. policy/ and finops/
 
-## 4. Add Security and Compliance Gates
+## 4. Respond to Model Incidents
 
-1. security/README.md
-2. security/sast, dependency-audit, container-scanning, secret-detection
-3. policy/ and secops/
-4. ci templates for integration
-
-## 5. Enable Cost Governance
-
-1. finops/README.md
-2. finops/policies/
-3. finops/cicd/
-4. finops/prometheus/ and finops/dashboards/
-5. finops/scripts/
-
-## 6. Incident Response Handling
-
-1. docs/golden-paths/incident-response.md
-2. secops/runbooks/
-3. observability/ logs and alerts
-4. notifications/ integration files
+1. docs/runbooks/
+2. monitoring/alerts/ and monitoring/slos/
+3. policy/model-approval/ for rollback and promotion controls
+4. devops-playbook notifications and cluster observability interfaces (external dependency)

@@ -1,45 +1,44 @@
 # Architecture Overview
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/ARCHITECTURE_DECISION_GUIDE.md
+**Depends On**: external devops-playbook repository
+---
+
 ## System-Level Architecture
 
-This repository is organized as a reference architecture for software delivery lifecycle controls.
-It spans development, build, test, security scanning, deployment, runtime operations, reliability engineering, service ownership governance, incident response, and cost optimization.
+This repository is a production-oriented MLOps playbook. It implements the ML lifecycle layer on top of platform controls supplied by the external `devops-playbook` repository.
 
 ## High-Level Layers
 
-### 1. Build And Packaging Layer
+### 1. Experiment, Data, And Registry Layer
 
-- docker/ defines production and development image patterns.
-- compose/ and local-dev/ provide reproducible local runtime environments.
+- mlflow/ provides experiment tracking, model registry, and metadata patterns.
+- dvc/ provides data versioning, remote storage examples, and pipeline templates.
+- feature-store/ provides Feast integration patterns.
 
-### 2. Continuous Integration Layer
+### 2. CI And Governance Layer
 
-- ci/ contains platform-specific pipeline templates.
-- quality/ and ci-security/ provide linting, testing, SAST, dependency, IaC, and container scanning integrations.
+- ci/github-actions/ provides training, evaluation, deployment, monitoring, promotion, and shared security scan workflows.
+- policy/ provides model approval, data governance, and fairness controls.
+- fairness/ implements Fairlearn metrics and SHAP explainability analysis.
 
-### 3. Delivery And Deployment Layer
+### 3. Delivery And Runtime Layer
 
-- cd/ contains deployment targets for cloud platforms, Kubernetes manifests, Helm charts, and GitOps definitions.
-- terraform/ and cd/pulumi/ provide infrastructure provisioning blueprints.
+- cd/kubernetes/ provides base, environment, training, batch, and promotion manifests.
+- cd/argo/pipelines/ provides production workflow DAGs.
+- terraform/ provides cloud-specific ML infrastructure starter configurations.
+- serving/ provides Triton, TorchServe, and vLLM patterns.
 
-### 4. Runtime Governance Layer
+### 4. Operations And Cost Layer
 
-- policy/ and secops/ define policy enforcement and runtime security operations.
-- observability/ and notifications/ define telemetry collection, SLO alerting, and incident routing.
+- monitoring/ provides drift detection, alert rules, SLOs, and Grafana dashboards.
+- finops/ provides ML cost attribution, budgets, alerts, and reports.
+- docs/runbooks/, docs/diagrams/, docs/golden-paths/, and docs/decisions/ provide operational guidance and architecture records.
 
-### 5. Service Ownership And Reliability Layer
-
-- catalog/ defines Git-native service and team inventory, ownership metadata, and routing details.
-- observability/prometheus/slos/, recording-rules/, and alerts/ implement SLO-driven operations.
-- docs/runbooks/ and docs/golden-paths/ provide breach response and reliability workflows.
-- docs/decisions/ captures architecture and operational decisions, indexed in `docs/decisions/README.md`.
-
-### 6. Cost And Operational Excellence Layer
-
-- finops/ provides label governance, budget alerts, rightsizing analysis, reserved-capacity planning, cross-cloud normalization, dashboards, and CI/CD cost estimation patterns.
-- monitoring/dashboards/ml-cost-attribution.json provides Grafana cost visibility by model, team, and environment.
-
-### 7. ML Lifecycle Execution Layer
+### 5. ML Lifecycle Execution Layer
 
 - pipelines/ contains local-mode pipeline runners (training, batch inference, drift-triggered retraining) and reusable step components under pipelines/components/.
 - cd/argo/pipelines/ provides Argo Workflows DAG definitions for production execution on Kubernetes.
@@ -50,18 +49,21 @@ It spans development, build, test, security scanning, deployment, runtime operat
 
 ## Reference Flow
 
-1. Choose a golden path and baseline templates.
-2. Build and test with CI templates and quality controls.
-3. Apply security and policy checks pre-deploy.
-4. Provision or update infrastructure via Terraform or Pulumi.
-5. Deploy workloads through CD targets or GitOps.
-6. Register/validate service ownership metadata in catalog.
-7. Operate with observability, SLO runbooks, security runbooks, and FinOps controls.
+1. Choose a golden path and version data with DVC.
+2. Train and track experiments with MLflow.
+3. Evaluate model quality, lineage, fairness, and approval gates in CI.
+4. Promote an approved model through Kubernetes environments.
+5. Serve with Triton, TorchServe, or vLLM.
+6. Monitor drift and serving SLOs, and enforce FinOps controls.
 
 ## Canonical Source Areas
 
 - docs/ for architectural and procedural guidance.
-- cd/, ci/, terraform/, ci-security/, secops/, finops/, catalog/ for executable patterns.
+- ci/, cd/, terraform/, mlflow/, dvc/, serving/, monitoring/, policy/, and finops/ for executable patterns.
+
+## External Platform Dependencies
+
+`devops-playbook` supplies Kubernetes cluster provisioning, base security controls, secrets management, OIDC federation, cluster-wide observability, and incident notification integrations. These are dependencies, not local paths in this repository.
 
 ## Documentation Navigation Anchors
 
@@ -69,3 +71,8 @@ It spans development, build, test, security scanning, deployment, runtime operat
 - Runbook index and authoring standard: `docs/runbooks/README.md`
 - Diagram inventory: `docs/diagrams/README.md`
 - Concepts guide: `docs/guides/concepts.md`
+- Integration bridge: `docs/topology/INTEGRATION-BRIDGE.md`
+- Dependency matrix: `docs/topology/DEPENDENCY-MATRIX.md`
+- Control plane/data plane: `docs/topology/CONTROL-PLANES.md`
+- Compatibility contract: `docs/topology/COMPATIBILITY-CONTRACT.md`
+- Routing quality: `docs/topology/ROUTING-QUALITY.md`

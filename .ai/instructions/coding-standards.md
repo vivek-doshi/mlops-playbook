@@ -31,5 +31,5 @@ Language-independent standards for all templates, scripts, infrastructure, and d
 ## Reuse And Composition
 
 - Reuse shared workflow patterns where available.
-- Prefer extending base templates in docker/_base, compose/_templates, and cd/kubernetes/_base.
+- Prefer extending reusable pipeline components, shared CI workflows, and cd/kubernetes/_base manifests.
 - Document every new pattern with when-to-use guidance.

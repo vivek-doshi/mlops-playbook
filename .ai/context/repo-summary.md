@@ -1,5 +1,12 @@
 # Repository Summary
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 ## What This Repository Fundamentally Is
 
 This repository is a production-oriented MLOps playbook.
@@ -37,6 +44,7 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - **Website Markdown Browser Navigation** — in-app markdown link navigation with URL-based state (`?file=<path>`), repo-root fallback for markdown links, and browser back/forward support in `website/src/App.tsx` and `website/src/components/CodeViewer.tsx`.
 - **Website Mobile Template Browser** — full-width mobile sidebar drawer with header/viewer reopen controls and auto-close on file selection in `website/src/App.tsx`, `website/src/components/Header.tsx`, and `website/src/components/Sidebar.tsx`.
 - **Website SEO and Branding Assets** — favicon, Open Graph image, robots/sitemap, and metadata for GitHub Pages discoverability in `website/index.html` and `website/public/`.
+- **Integration Bridge Documentation** — Platform vs MLOps responsibilities, dependency matrix, control plane/data plane architecture, and compatibility contract in `docs/topology/`.
 
 ## How Teams Use It
 

@@ -1,45 +1,32 @@
 # Canonical Files
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Primary files and directories that should be consulted first for most tasks.
 
 ## Repository-Level Canonical Files
 
 - README.md: Primary repository purpose, capabilities, and quick links.
 - GETTING_STARTED.md: Fast path from need to file.
-- docs/ARCHITECTURE_DECISION_GUIDE.md: Canonical decision matrix.
+- docs/golden-paths/mlops-workflow.md: Canonical end-to-end lifecycle guide.
 - docs/golden-paths/: End-to-end preferred workflows.
 
 ## Domain Canonical Files
 
-- CI/CD:
-  - ci/README.md
-  - cd/README.md
-  - cd/targets/<platform>/
-  - ci/github-actions/_shared/
-- Infrastructure:
-  - terraform/README.md
-  - terraform/<target>/
-  - cd/pulumi/README.md
-- Kubernetes and runtime delivery:
-  - cd/kubernetes/README.md
-  - cd/helm/README.md
-  - cd/gitops/argocd/
-  - cd/gitops/flux/
-- Security and policy:
-  - security/README.md
-  - policy/README.md
-  - secops/README.md
-- Cost governance:
-  - finops/README.md
-  - finops/docs/
-  - finops/policies/
-- Observability:
-  - observability/README.md
-  - notifications/
+- CI/CD: ci/github-actions/ and ci/github-actions/_shared/
+- Infrastructure: terraform/<cloud-target>/
+- Kubernetes and runtime delivery: cd/kubernetes/, cd/argo/, and serving/
+- Security and policy: policy/ and ci/github-actions/_shared/reusable-mlops-scan.yml
+- Cost governance: finops/
+- Monitoring: monitoring/
 
 ## Canonical Runbook Areas
 
-- secops/runbooks/: Incident response runbooks.
 - docs/runbooks/: Supporting operations and procedures.
 
 ## Canonical Selection Rules

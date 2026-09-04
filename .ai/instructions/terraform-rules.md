@@ -1,6 +1,6 @@
 # Terraform Rules
 
-Rules for Terraform under terraform/, backup/terraform/, and related CI/CD workflows.
+Rules for Terraform under terraform/ and related CI/CD workflows.
 
 ## Required Practices
 
@@ -29,4 +29,4 @@ Rules for Terraform under terraform/, backup/terraform/, and related CI/CD workf
 
 - Use existing cloud targets such as terraform/aws-eks, terraform/azure-aks, terraform/gcp-gke as references.
 - Keep bootstrap and testing concerns isolated in terraform/_bootstrap and terraform/_testing.
-- Align deployment automation with cd/targets and ci templates.
+- Align deployment automation with cd/kubernetes/, cd/argo/, and ci/github-actions/ workflows.
