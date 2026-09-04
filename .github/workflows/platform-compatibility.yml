@@ -14,8 +14,8 @@ jobs:
       
       - name: Download platform manifest
         run: |
-          echo "Downloading platform manifest from cicd-reference..."
-          git clone https://github.com/platform/cicd-reference.git
+          echo "Downloading platform manifest from devops-playbook..."
+          git clone https://github.com/platform/devops-playbook
           
       - name: Validate platform version
         run: |

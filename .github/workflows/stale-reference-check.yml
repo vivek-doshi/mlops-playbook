@@ -51,8 +51,9 @@ jobs:
           done
       
       - name: Validate path references
+        shell: pwsh
         run: |
-          echo "Validating path references..."
+          Write-Host "Validating path references..."
           
           # Extract all unique paths from context files
           $context_paths = Get-ChildItem -Path .ai/context -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
@@ -64,7 +65,7 @@ jobs:
           $instructions_paths = Get-ChildItem -Path .ai/instructions -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
           
           # Combine and validate
-          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique)
+          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique
           
           $stale_count = 0
           
@@ -77,7 +78,7 @@ jobs:
             }
           }
           
-          if [ $stale_count -gt 0 ]; then
+          if ($stale_count -gt 0) {
             echo "❌ Found $stale_count stale references"
             exit 1
           else
