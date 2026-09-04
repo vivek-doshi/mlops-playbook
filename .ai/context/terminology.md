@@ -24,6 +24,12 @@ Use:
 - reusable templates
 - multi-cloud parity
 - policy enforcement
+- integration contract
+- dependency matrix
+- control plane
+- data plane
+- compatibility contract
+- routing quality
 
 Avoid:
 

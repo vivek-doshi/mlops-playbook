@@ -55,29 +55,27 @@ jobs:
           echo "Validating path references..."
           
           # Extract all unique paths from context files
-          context_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/context/*.md | sort -u)
+          $context_paths = Get-ChildItem -Path .ai/context -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
           
           # Extract all unique paths from retrieval files
-          retrieval_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/retrieval/*.md | sort -u)
+          $retrieval_paths = Get-ChildItem -Path .ai/retrieval -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
           
           # Extract all unique paths from instructions files
-          instructions_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/instructions/*.md | sort -u)
+          $instructions_paths = Get-ChildItem -Path .ai/instructions -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
           
           # Combine and validate
-          all_paths=$(echo "$context_paths
-$retrieval_paths
-$instructions_paths" | sort -u)
+          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique)
           
-          stale_count=0
+          $stale_count = 0
           
-          for path in $all_paths; do
-            if [ -n "$path" ]; then
-              if [ ! -f "$path" ]; then
-                echo "❌ Missing path: $path"
-                stale_count=$((stale_count + 1))
-              fi
-            fi
-          done
+          foreach ($path in $all_paths) {
+            if ($path -ne '') {
+              if (-not (Test-Path -Path $path)) {
+                Write-Host "❌ Missing path: $path"
+                $stale_count++
+              }
+            }
+          }
           
           if [ $stale_count -gt 0 ]; then
             echo "❌ Found $stale_count stale references"

@@ -24,3 +24,8 @@
 - SAST: Static Application Security Testing integrated in pipeline templates.
 - SLO: Service Level Objective used for reliability targets.
 - VPA: Vertical Pod Autoscaler for rightsizing recommendations.
+- Integration Bridge: Documentation in `docs/topology/` describing platform vs MLOps responsibilities and dependencies.
+- Dependency Matrix: Documentation in `docs/topology/` showing platform primitives and MLOps component dependencies.
+- Control Plane/Data Plane: Documentation in `docs/topology/` describing governance vs execution layers.
+- Compatibility Contract: Documentation in `docs/topology/` defining platform version requirements.
+- Routing Quality: Documentation in `docs/topology/` describing MLOps-specific routing patterns.

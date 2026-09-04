@@ -4,7 +4,7 @@ Generated from current workspace structure.
 
 - Root: d:/personal/projects/mlops-playbook
 - Generated: 2026-09-03 21:53:20
-- Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
+- Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/, docs/topology/
 
 ```text
 .

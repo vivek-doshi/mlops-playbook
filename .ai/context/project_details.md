@@ -44,7 +44,7 @@ The two repos are not islands. You create a deliberate, documented dependency.
 - `serving/`: runtime serving stacks.
 - `monitoring/`: drift and metrics integration points.
 - `policy/`: model-approval and data-governance controls.
-
+- `docs/topology/`: integration bridge, dependency matrix, control plane/data plane, and routing quality documentation.
 ## Suggested Navigation
 
 1. Read `README.md` for integration boundary and prerequisites.

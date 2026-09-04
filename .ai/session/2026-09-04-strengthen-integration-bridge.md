@@ -49,6 +49,27 @@ Completed Priority 3: Strengthen the Integration Bridge in the repository intell
 
 All integration bridge components created and documented. CI check for platform manifest compatibility implemented.
 
+## AI Folder Update (2026-09-04)
+
+Updated `.ai` folder contents to reflect topology documentation:
+
+### Context Files Updated
+- [repo_map.md](../context/repo_map.md) - Added topology directory exclusion
+- [repo-summary.md](../context/repo-summary.md) - Added integration bridge documentation reference
+- [project_details.md](../context/project_details.md) - Added topology documentation reference
+- [architecture-overview.md](../context/architecture-overview.md) - Added topology documentation anchors
+- [glossary.md](../context/glossary.md) - Added topology documentation terms
+- [terminology.md](../context/terminology.md) - Added topology documentation word choices
+
+### Session Files Updated
+- [session/README.md](../session/README.md) - Documented recent session notes
+
+### Instructions Files Updated
+- [instructions/README.md](../instructions/README.md) - Documented routing quality improvements
+
+### Retrieval Files Updated
+- [retrieval/README.md](../retrieval/README.md) - Documented routing quality improvements
+
 ## Next Steps
 
 Priority 1: Add missing agent entrypoints (deferred)

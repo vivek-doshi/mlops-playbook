@@ -71,3 +71,8 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 - Runbook index and authoring standard: `docs/runbooks/README.md`
 - Diagram inventory: `docs/diagrams/README.md`
 - Concepts guide: `docs/guides/concepts.md`
+- Integration bridge: `docs/topology/INTEGRATION-BRIDGE.md`
+- Dependency matrix: `docs/topology/DEPENDENCY-MATRIX.md`
+- Control plane/data plane: `docs/topology/CONTROL-PLANES.md`
+- Compatibility contract: `docs/topology/COMPATIBILITY-CONTRACT.md`
+- Routing quality: `docs/topology/ROUTING-QUALITY.md`
