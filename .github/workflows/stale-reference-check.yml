@@ -51,34 +51,40 @@ jobs:
           done
       
       - name: Validate path references
-        shell: pwsh
         run: |
-          Write-Host "Validating path references..."
+          echo "Validating path references..."
           
           # Extract all unique paths from context files
-          $context_paths = Get-ChildItem -Path .ai/context -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
+          context_paths=$(find .ai/context -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
           
           # Extract all unique paths from retrieval files
-          $retrieval_paths = Get-ChildItem -Path .ai/retrieval -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
+          retrieval_paths=$(find .ai/retrieval -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
           
           # Extract all unique paths from instructions files
-          $instructions_paths = Get-ChildItem -Path .ai/instructions -Filter *.md | ForEach-Object { Get-Content $_.FullName } | Select-String -Pattern ': ' | ForEach-Object { $_.Matches.Groups[1].Value + '.md' } | Sort-Object -Unique
+          instructions_paths=$(find .ai/instructions -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
           
           # Combine and validate
-          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique
+          all_paths=$(echo "$context_paths
+$retrieval_paths
+$instructions_paths" | sort -u)
           
-          $stale_count = 0
+          stale_count=0
           
-          foreach ($path in $all_paths) {
-            if ($path -ne '') {
-              if (-not (Test-Path -Path $path)) {
-                Write-Host "❌ Missing path: $path"
-                $stale_count++
-              }
-            }
-          }
+          for path in $all_paths; do
+            if [ -n "$path" ]; then
+              if [ ! -f "$path" ]; then
+                echo "❌ Missing path: $path"
+                stale_count=$((stale_count + 1))
+              fi
+            fi
+          done
           
-          if ($stale_count -gt 0) {
+          if [ $stale_count -gt 0 ]; then
+            echo "❌ Found $stale_count stale path references!"
+            exit 1
+          else
+            echo "✅ All path references are valid!"
+          fi
             echo "❌ Found $stale_count stale references"
             exit 1
           else

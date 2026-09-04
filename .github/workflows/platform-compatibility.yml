@@ -15,7 +15,7 @@ jobs:
       - name: Download platform manifest
         run: |
           echo "Downloading platform manifest from devops-playbook..."
-          git clone https://github.com/platform/devops-playbook
+          git clone https://github.com/platform/devops-playbook.git
           
       - name: Validate platform version
         run: |
