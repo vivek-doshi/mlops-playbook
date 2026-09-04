@@ -16,48 +16,40 @@ jobs:
       - name: Check context path references
         run: |
           echo "Checking context path references..."
-          find .ai/context -name "*.md" -exec grep -l "\./\|/\|\.\./" {} \; | while read file; do
-            echo "  - $file"
-          done
+          Get-ChildItem -Path .ai/context -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
       
       - name: Check retrieval path references
         run: |
           echo "Checking retrieval path references..."
-          find .ai/retrieval -name "*.md" -exec grep -l "\./\|/\|\.\./" {} \; | while read file; do
-            echo "  - $file"
-          done
+          Get-ChildItem -Path .ai/retrieval -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
       
       - name: Check instructions path references
         run: |
           echo "Checking instructions path references..."
-          find .ai/instructions -name "*.md" -exec grep -l "\./\|/\|\.\./" {} \; | while read file; do
-            echo "  - $file"
-          done
+          Get-ChildItem -Path .ai/instructions -Filter "*.md" | ForEach-Object { Get-Content $_.FullName | Select-String -Pattern '\./|/|\.\./' | ForEach-Object { Write-Output "  - $($_.Path)" } }
       
       - name: Validate all paths exist
         run: |
           echo "Validating all referenced paths exist..."
           
           # Extract all unique paths from context files
-          context_paths=$(grep -oP ':[^:]+\.md' .ai/context/*.md | sort -u)
+          $context_paths = Get-Content .ai/context/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
           
           # Extract all unique paths from retrieval files
-          retrieval_paths=$(grep -oP ':[^:]+\.md' .ai/retrieval/*.md | sort -u)
+          $retrieval_paths = Get-Content .ai/retrieval/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
           
           # Extract all unique paths from instructions files
-          instructions_paths=$(grep -oP ':[^:]+\.md' .ai/instructions/*.md | sort -u)
+          $instructions_paths = Get-Content .ai/instructions/*.md | Select-String -Pattern ':[^:]+\.md' | ForEach-Object { $_.Matches.Groups[1].Value } | Sort-Object -Unique
           
           # Combine and validate
-          all_paths=$(echo "$context_paths
-$retrieval_paths
-$instructions_paths" | sort -u)
+          $all_paths = @($context_paths) + @($retrieval_paths) + @($instructions_paths) | Sort-Object -Unique
           
-          for path in $all_paths; do
-            if [ -n "$path" ]; then
-              if [ ! -f "$path" ]; then
-                echo "❌ Missing path: $path"
-              else
-                echo "✓ Valid path: $path"
-              fi
-            fi
-          done
+          foreach ($path in $all_paths) {
+            if ($path) {
+              if (-not (Test-Path $path)) {
+                Write-Output "❌ Missing path: $path"
+              } else {
+                Write-Output "✓ Valid path: $path"
+              }
+            }
+          }
