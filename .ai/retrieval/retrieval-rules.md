@@ -1,5 +1,12 @@
 # Retrieval Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Rules for reliable, low-noise, high-signal retrieval in this repository.
 
 ## Core Rules

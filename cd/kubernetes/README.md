@@ -1,18 +1,21 @@
-# CD - Continuous Delivery for MLOps
+# Kubernetes - Kubernetes Patterns for MLOps
 
 ## Purpose and Scope
 
-This folder contains deployment orchestration assets for training, batch inference, and portal workloads.
-It defines how artifacts produced in CI are promoted into Kubernetes environments and Argo-managed workflows.
+This folder contains Kubernetes resource definitions and patterns for MLOps workloads, including:
+
+- **Batch Inference**: Offline scoring jobs and cronjobs
+- **Training**: Distributed training resources (RayJob, PyTorchJob, TFJob)
+- **Portal**: Portal deployment, service, ingress, and network policies
+- **Environments**: Environment overlays for progressive promotion
 
 ## Folder Structure
 
-- `argo/pipelines/`: Argo workflow definitions for training and batch inference execution
-- `kubernetes/_base/`: Common Kubernetes base resources used by overlays
-- `kubernetes/batch/`: Kubernetes `Job` and `CronJob` manifests for offline scoring
-- `kubernetes/portal/`: Portal deployment, service, ingress, and network policy manifests
-- `kubernetes/training/`: Distributed training resources (RayJob, PyTorchJob, TFJob, checkpoint PVC)
-- `kubernetes/environments/`: Environment overlays (`dev`, `staging`, `production`) for progressive promotion
+- `batch/`: Kubernetes `Job` and `CronJob` manifests for offline scoring
+- `training/`: Distributed training resources (RayJob, PyTorchJob, TFJob, checkpoint PVC)
+- `portal/`: Portal deployment, service, ingress, and network policy manifests
+- `environments/`: Environment overlays (`dev`, `staging`, `production`) for progressive promotion
+- `_base/`: Common Kubernetes base resources used by overlays
 
 ## How to Use This as an Individual Component
 
@@ -38,4 +41,4 @@ It defines how artifacts produced in CI are promoted into Kubernetes environment
 
 - Golden paths: See [docs/golden-paths/](../docs/golden-paths/)
 - CI workflows: See [ci/github-actions/](../ci/github-actions/)
-- Infrastructure: See [terraform/](../terraform/)
+- CD workflows: See [cd/argo/pipelines/](../cd/argo/pipelines/)

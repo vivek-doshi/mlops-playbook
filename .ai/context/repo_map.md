@@ -2,8 +2,8 @@
 
 Generated from current workspace structure.
 
-- Root: d:/projects/mlops-playbook
-- Generated: 2026-08-31 22:36:28
+- Root: d:/personal/projects/mlops-playbook
+- Generated: 2026-09-03 21:53:20
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -18,7 +18,9 @@ Generated from current workspace structure.
 │   │   ├── feature_request.yml
 │   │   └── model_quality_issue.yml
 │   ├── workflows
-│   │   └── deploy-website.yml
+│   │   ├── deploy-website.yml
+│   │   ├── stale-reference-check.yml
+│   │   └── validate-intelligence-paths.yml
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
 │   ├── dependabot.yml
@@ -64,11 +66,12 @@ Generated from current workspace structure.
 │   │   │   ├── ingress.yaml
 │   │   │   ├── network-policy.yaml
 │   │   │   └── service.yaml
-│   │   └── training
-│   │       ├── checkpointing-pvc.yaml
-│   │       ├── pytorch-job.yaml
-│   │       ├── ray-job.yaml
-│   │       └── tf-job.yaml
+│   │   ├── training
+│   │   │   ├── checkpointing-pvc.yaml
+│   │   │   ├── pytorch-job.yaml
+│   │   │   ├── ray-job.yaml
+│   │   │   └── tf-job.yaml
+│   │   └── README.md
 │   └── README.md
 ├── ci
 │   ├── azure-ml
@@ -178,6 +181,8 @@ Generated from current workspace structure.
 │   │   └── gpu-cost-governance.md
 │   ├── model-cards
 │   │   └── fraud-detection-model-card.md
+│   ├── ARCHITECTURE_DECISION_GUIDE.md
+│   ├── improvements.md
 │   ├── local-setup.md
 │   └── README.md
 ├── dvc

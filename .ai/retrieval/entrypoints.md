@@ -1,5 +1,12 @@
 # Entrypoints
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Recommended first files to open by intent.
 
 ## Global Entrypoints
@@ -15,6 +22,7 @@ Recommended first files to open by intent.
   - docs/golden-paths/mlops-workflow.md
   - docs/golden-paths/model-training-pipeline.md
   - docs/golden-paths/model-serving.md
+  - docs/ARCHITECTURE_DECISION_GUIDE.md
 - Pipeline setup:
   - ci/github-actions/
   - pipelines/
@@ -26,6 +34,7 @@ Recommended first files to open by intent.
   - cd/kubernetes/_base/
   - cd/kubernetes/training/
   - cd/kubernetes/batch/
+  - cd/kubernetes/README.md
 - Security baseline:
   - policy/README.md
   - ci/github-actions/_shared/reusable-mlops-scan.yml

@@ -1,0 +1,74 @@
+name: Platform Compatibility Check
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on the 1st
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-platform-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download platform manifest
+        run: |
+          echo "Downloading platform manifest from cicd-reference..."
+          git clone https://github.com/platform/cicd-reference.git
+          
+      - name: Validate platform version
+        run: |
+          echo "Validating platform version compatibility..."
+          
+          # Check platform version compatibility
+          platform_version=$(cat cicd-reference/manifest.yaml | grep version)
+          min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+          
+          if [ "$platform_version" < "$min_version" ]; then
+            echo "❌ Platform version $platform_version is incompatible (minimum: $min_version)"
+            exit 1
+          else
+            echo "✓ Platform version $platform_version is compatible"
+          fi
+      
+      - name: Check required features
+        run: |
+          echo "Checking required features..."
+          
+          # Verify all required features are present
+          required_features=$(cat .cicd-reference/manifest.yaml | grep required-features)
+          
+          for feature in $required_features; do
+            if [ ! -f "$feature" ]; then
+              echo "❌ Missing required feature: $feature"
+              exit 1
+            else
+              echo "✓ Required feature present: $feature"
+            fi
+          done
+      
+      - name: Validate component compatibility
+        run: |
+          echo "Validating component compatibility..."
+          
+          components=(
+            "gpu-cluster"
+            "base-kubernetes"
+            "secrets-management"
+            "oidc-federation"
+            "policy-controls"
+            "observability-baseline"
+          )
+          
+          for component in "${components[@]}"; do
+            component_version=$(cat cicd-reference/manifest.yaml | grep "$component: version")
+            min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+            
+            if [ "$component_version" < "$min_version" ]; then
+              echo "❌ Component $component version $component_version is incompatible (minimum: $min_version)"
+              exit 1
+            else
+              echo "✓ Component $component version $component_version is compatible"
+            fi
+          done

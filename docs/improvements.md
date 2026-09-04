@@ -22,22 +22,46 @@ terraform/README.md
 cd/kubernetes/README.md
 This prevents agents from starting at nonexistent files before reaching the genuinely useful golden paths.
 
-Priority 2: Operationalize the intelligence
+## Priority 2: Operationalize the intelligence [Done]
 
-Add a CI validation script that checks every local path referenced from context, retrieval, and instructions.
-Add owner, last-reviewed, source-of-truth, and depends-on metadata to context and retrieval documents.
-Set a freshness SLA, such as review on every structural PR and a monthly automated stale-reference check.
-Add a skills catalog documenting each skill’s trigger phrases, required inputs, outputs, and validation commands.
-Priority 3: Strengthen the Integration Bridge
+Completed 2026-09-03.
 
-Replace the placeholder topology README with:
+- Created CI validation script in `.github/workflows/validate-intelligence-paths.yml` that checks every local path referenced from context, retrieval, and instructions.
+- Added owner, last-reviewed, source-of-truth, and depends-on metadata to all context documents:
+  - [architecture-overview.md](.ai/context/architecture-overview.md)
+  - [glossary.md](.ai/context/glossary.md)
+  - [project_details.md](.ai/context/project_details.md)
+  - [repo-summary.md](.ai/context/repo-summary.md)
+- Added metadata to all retrieval documents:
+  - [bounded-contexts.md](.ai/retrieval/bounded-contexts.md)
+  - [canonical-files.md](.ai/retrieval/canonical-files.md)
+  - [common-workflows.md](.ai/retrieval/common-workflows.md)
+  - [entrypoints.md](.ai/retrieval/entrypoints.md)
+  - [file-selection-guide.md](.ai/retrieval/file-selection-guide.md)
+  - [retrieval-priority.md](.ai/retrieval/retrieval-priority.md)
+  - [retrieval-rules.md](.ai/retrieval/retrieval-rules.md)
+  - [search-hints.md](.ai/retrieval/search-hints.md)
+  - [task-routing.md](.ai/retrieval/task-routing.md)
+- Created skills catalog in `.ai/skills/SKILL-CATALOG.md` documenting each skill's trigger phrases, required inputs, outputs, and validation commands.
+- Created monthly stale-reference check workflow in `.github/workflows/stale-reference-check.yml` with freshness SLA enforcement.
+- Set up CI validation on every structural PR and monthly automated stale-reference check.
 
-repository responsibility map: devops-playbook versus this repository
-executable dependency matrix: required platform primitives, versions, configuration inputs
-MLOps control-plane/data-plane diagram
-compatibility contract and a CI check against the platform repo’s published manifest
-This turns “not islands” from a principle into an enforceable interface.
+Completed 2026-09-04.
 
-Priority 4: Improve routing quality
+Priority 3: Strengthen the Integration Bridge [Done]
 
-Split generic platform workflows from MLOps workflows. The MLOps routes are strong; the inherited generic routes dilute them. Add intent coverage for the repo’s actual newer domains: batch inference, pipeline orchestration, distributed training, feature store, fairness, online learning, federated learning, multi-cloud serving, and model optimization.
+- Created repository responsibility map in [docs/topology/INTEGRATION-BRIDGE.md](docs/topology/INTEGRATION-BRIDGE.md) documenting devops-playbook versus this repository responsibilities.
+- Created executable dependency matrix in [docs/topology/DEPENDENCY-MATRIX.md](docs/topology/DEPENDENCY-MATRIX.md) with required platform primitives, versions, and configuration inputs.
+- Created MLOps control-plane/data-plane diagram in [docs/topology/CONTROL-PLANES.md](docs/topology/CONTROL-PLANES.md) showing governance and execution layers.
+- Created compatibility contract in [docs/topology/COMPATIBILITY-CONTRACT.md](docs/topology/COMPATIBILITY-CONTRACT.md) with platform manifest requirements and compatibility matrix.
+- Created CI check for platform manifest compatibility in `.github/workflows/platform-compatibility.yml` validating platform version and required features.
+- Turned "not islands" from a principle into an enforceable interface with CI enforcement.
+
+Priority 4: Improve routing quality [Done]
+
+Completed 2026-09-04.
+
+- Created routing quality documentation in [docs/topology/ROUTING-QUALITY.md](docs/topology/ROUTING-QUALITY.md) describing routing quality improvements.
+- Updated [task-routing.md](.ai/retrieval/task-routing.md) with MLOps-Specific Routing - Newer Domains section and Generic Platform Routing section.
+- Split generic platform workflows from MLOps workflows.
+- Added intent coverage for the repo's actual newer domains: batch inference, pipeline orchestration, distributed training, feature store, fairness, online learning, federated learning, multi-cloud serving, and model optimization.

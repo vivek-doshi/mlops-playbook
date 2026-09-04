@@ -1,5 +1,12 @@
 # Architecture Overview
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/ARCHITECTURE_DECISION_GUIDE.md
+**Depends On**: external devops-playbook repository
+---
+
 ## System-Level Architecture
 
 This repository is a production-oriented MLOps playbook. It implements the ML lifecycle layer on top of platform controls supplied by the external `devops-playbook` repository.

@@ -1,5 +1,12 @@
 # Retrieval Priority
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Priority order for selecting files during assistant retrieval.
 
 ## Priority Levels

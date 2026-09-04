@@ -1,5 +1,12 @@
 # Search Hints
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Practical search terms and patterns to accelerate accurate retrieval.
 
 ## High-Value Keywords By Domain

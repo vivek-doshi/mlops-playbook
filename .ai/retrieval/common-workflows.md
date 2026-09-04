@@ -1,5 +1,12 @@
 # Common Workflows
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Standard retrieval paths for frequent engineering tasks.
 
 ## 1. Train, Evaluate, and Promote a Model

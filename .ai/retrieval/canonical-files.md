@@ -1,5 +1,12 @@
 # Canonical Files
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Primary files and directories that should be consulted first for most tasks.
 
 ## Repository-Level Canonical Files

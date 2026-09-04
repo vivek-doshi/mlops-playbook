@@ -1,5 +1,12 @@
 # Repository Summary
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-08-31
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 ## What This Repository Fundamentally Is
 
 This repository is a production-oriented MLOps playbook.
