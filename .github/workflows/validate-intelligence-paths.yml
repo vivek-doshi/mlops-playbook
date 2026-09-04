@@ -39,13 +39,13 @@ jobs:
           echo "Validating all referenced paths exist..."
           
           # Extract all unique paths from context files
-          context_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/context/*.md | sort -u)
+          context_paths=$(grep -oP ':[^:]+\.md' .ai/context/*.md | sort -u)
           
           # Extract all unique paths from retrieval files
-          retrieval_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/retrieval/*.md | sort -u)
+          retrieval_paths=$(grep -oP ':[^:]+\.md' .ai/retrieval/*.md | sort -u)
           
           # Extract all unique paths from instructions files
-          instructions_paths=$(grep -oP '(?<=: )[^:]+(?=\.md)' .ai/instructions/*.md | sort -u)
+          instructions_paths=$(grep -oP ':[^:]+\.md' .ai/instructions/*.md | sort -u)
           
           # Combine and validate
           all_paths=$(echo "$context_paths
