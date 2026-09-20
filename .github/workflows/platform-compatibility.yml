@@ -11,11 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+      - name: Install GitHub CLI
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/step-security/gh-install-secure/main/install.sh | sh
       - name: Download platform manifest
         run: |
           echo "Downloading platform manifest from devops-playbook..."
-          git clone https://github.com/platform/devops-playbook.git
+          gh repo clone platform/devops-playbook
           
       - name: Validate platform version
         run: |
