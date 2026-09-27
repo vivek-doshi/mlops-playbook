@@ -1,5 +1,12 @@
 # Documentation Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/documentation-rules.md
+**Depends On**: docs/golden-paths/, docs/guides/
+---
+
 Documentation standards for guides, templates, runbooks, and architecture references.
 
 ## Writing Principles

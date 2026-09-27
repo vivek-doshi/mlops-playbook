@@ -64,9 +64,7 @@ jobs:
           instructions_paths=$(find .ai/instructions -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
           
           # Combine and validate
-          all_paths=$(echo "$context_paths
-$retrieval_paths
-$instructions_paths" | sort -u)
+          all_paths=$(printf '%s\n%s\n%s\n' "$context_paths" "$retrieval_paths" "$instructions_paths" | sort -u)
           
           stale_count=0
           
@@ -85,22 +83,35 @@ $instructions_paths" | sort -u)
           else
             echo "✅ All path references are valid!"
           fi
-            echo "❌ Found $stale_count stale references"
-            exit 1
-          else
-            echo "✓ All path references are valid"
-          fi
       
       - name: Check for outdated metadata
         run: |
           echo "Checking for outdated metadata..."
-          
-          # Check if metadata is recent (last 30 days)
-          metadata_age=$(find .ai/context -name "*.md" -type f -exec stat -c %Y {} \; | sort -rn | head -1)
-          metadata_age_days=$(( ( $(date +%s) - $metadata_age ) / 86400 ))
-          
-          if [ $metadata_age_days -gt 30 ]; then
-            echo "⚠️ Context files may be outdated (last modified: $metadata_age_days days ago)"
-          else
-            echo "✓ Context files are recent"
+
+          metadata_age_limit_days=30
+          stale_metadata_count=0
+
+          while IFS= read -r file; do
+            last_reviewed=$(grep -m1 '^\*\*Last Reviewed\*\*:' "$file" | sed 's/.*: //')
+            if [ -z "$last_reviewed" ]; then
+              echo "❌ Missing Last Reviewed metadata: $file"
+              stale_metadata_count=$((stale_metadata_count + 1))
+              continue
+            fi
+
+            reviewed_epoch=$(date -d "$last_reviewed" +%s)
+            age_days=$(( ( $(date +%s) - reviewed_epoch ) / 86400 ))
+            if [ "$age_days" -gt "$metadata_age_limit_days" ]; then
+              echo "❌ Stale metadata ($age_days days old): $file"
+              stale_metadata_count=$((stale_metadata_count + 1))
+            else
+              echo "✓ Current metadata ($age_days days old): $file"
+            fi
+          done < <(find .ai/context .ai/retrieval .ai/instructions -name "*.md" -type f ! -name "repo_map.md" | sort)
+
+          if [ "$stale_metadata_count" -gt 0 ]; then
+            echo "❌ Found $stale_metadata_count stale or incomplete metadata records"
+            exit 1
           fi
+
+          echo "✅ All intelligence metadata is current"

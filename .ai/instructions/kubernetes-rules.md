@@ -1,5 +1,12 @@
 # Kubernetes Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/kubernetes-rules.md
+**Depends On**: cd/kubernetes/, docs/golden-paths/
+---
+
 Rules for manifests and patterns under cd/kubernetes/, cd/argo/, policy/, monitoring/, and finops/.
 
 ## Workload Safety Baseline

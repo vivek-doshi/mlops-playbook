@@ -67,20 +67,20 @@ Routes user intent to the minimum correct repository domain.
 - "Explainability" -> fairness/ or ci/github-actions/fairness/
 - "Fairness gate" -> policy/ and ci/github-actions/fairness/
 - "Online learning" -> docs/golden-paths/online-learning.md
-- "Online inference" -> online-learning/ or cd/kubernetes/batch/
-- "Model update" -> online-learning/ or ci/github-actions/pipelines/
-- "Model rollback" -> online-learning/ or ci/github-actions/pipelines/
-- "Model validator" -> online-learning/ or ci/github-actions/pipelines/
+- "Online inference" -> online_learning/ or cd/kubernetes/batch/
+- "Model update" -> online_learning/ or ci/github-actions/pipelines/
+- "Model rollback" -> online_learning/ or ci/github-actions/pipelines/
+- "Model validator" -> online_learning/ or ci/github-actions/pipelines/
 - "Federated learning" -> docs/golden-paths/federated-learning.md
-- "Federated training" -> federated-learning/ or ci/github-actions/federated/
-- "Privacy-preserving" -> federated-learning/ or ci/github-actions/federated/
-- "Distributed coordination" -> federated-learning/ or ci/github-actions/federated/
+- "Federated training" -> federated_learning/ or ci/github-actions/federated/
+- "Privacy-preserving" -> federated_learning/ or ci/github-actions/federated/
+- "Distributed coordination" -> federated_learning/ or ci/github-actions/federated/
 - "Federated evaluation" -> ci/github-actions/federated/
 - "Multi-cloud serving" -> docs/golden-paths/multi-cloud-serving.md
-- "Multi-cloud routing" -> multi-cloud-serving/ or cd/kubernetes/
-- "Cloud-specific serving" -> multi-cloud-serving/ or serving/
-- "Cloud routing config" -> multi-cloud-serving/router.py or cd/kubernetes/
-- "Cloud health check" -> multi-cloud-serving/health_check.py
+- "Multi-cloud routing" -> multi_cloud_serving/ or cd/kubernetes/
+- "Cloud-specific serving" -> multi_cloud_serving/ or serving/
+- "Cloud routing config" -> multi_cloud_serving/router.py or cd/kubernetes/
+- "Cloud health check" -> multi_cloud_serving/health_check.py
 - "Model optimization" -> docs/golden-paths/model-optimization.md
 - "Model pruning" -> model_optimization/pruning.py
 - "Model quantization" -> model_optimization/quantisation.py
@@ -91,7 +91,7 @@ Routes user intent to the minimum correct repository domain.
 
 - "Provision GPU cluster" -> terraform/gpu-cluster/
 - "Provision Kubernetes cluster" -> cd/kubernetes/
-- "Manage secrets" -> cd/kubernetes/secrets/
-- "Configure OIDC federation" -> cd/kubernetes/oidc/
+- "Manage secrets" -> external `devops-playbook` secrets capability
+- "Configure OIDC federation" -> external `devops-playbook` identity capability
 - "Enforce policy controls" -> policy/
 - "Set up monitoring baseline" -> monitoring/

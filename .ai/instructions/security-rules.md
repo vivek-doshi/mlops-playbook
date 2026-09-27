@@ -1,5 +1,12 @@
 # Security Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/security-rules.md
+**Depends On**: policy/, ci/github-actions/_shared/
+---
+
 Security baseline for code templates, IaC, CI/CD, runtime configuration, and incident response content.
 
 ## Non-Negotiable Rules

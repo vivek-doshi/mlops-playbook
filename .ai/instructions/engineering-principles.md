@@ -1,5 +1,12 @@
 # Engineering Principles
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/engineering-principles.md
+**Depends On**: .ai/context/repo-summary.md
+---
+
 Most important file in the entire system.
 
 ## Core Principles

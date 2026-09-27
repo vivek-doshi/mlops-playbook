@@ -2,9 +2,9 @@
 
 Generated from current workspace structure.
 
-- Root: d:/personal/projects/mlops-playbook
-- Generated: 2026-09-03 21:53:20
-- Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/, docs/topology/
+- Root: d:/projects/mlops-playbook
+- Generated: 2026-09-27 11:03:48
+- Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
 .
@@ -19,6 +19,7 @@ Generated from current workspace structure.
 │   │   └── model_quality_issue.yml
 │   ├── workflows
 │   │   ├── deploy-website.yml
+│   │   ├── platform-compatibility.yml
 │   │   ├── stale-reference-check.yml
 │   │   └── validate-intelligence-paths.yml
 │   ├── CODEOWNERS
@@ -181,6 +182,12 @@ Generated from current workspace structure.
 │   │   └── gpu-cost-governance.md
 │   ├── model-cards
 │   │   └── fraud-detection-model-card.md
+│   ├── topology
+│   │   ├── COMPATIBILITY-CONTRACT.md
+│   │   ├── CONTROL-PLANES.md
+│   │   ├── DEPENDENCY-MATRIX.md
+│   │   ├── INTEGRATION-BRIDGE.md
+│   │   └── ROUTING-QUALITY.md
 │   ├── ARCHITECTURE_DECISION_GUIDE.md
 │   ├── improvements.md
 │   ├── local-setup.md
@@ -305,6 +312,7 @@ Generated from current workspace structure.
 │   │   └── cross-cloud-alerts.yaml
 │   ├── online-learning
 │   │   └── online-learning-alerts.yaml
+│   ├── prometheus
 │   ├── slos
 │   │   ├── _defaults.yaml
 │   │   ├── README.md

@@ -42,9 +42,7 @@ jobs:
           instructions_paths=$(find .ai/instructions -name "*.md" -type f -exec grep -oE ':[^:]+\.md' {} \; | sort -u)
           
           # Combine and validate
-          all_paths=$(echo "$context_paths
-$retrieval_paths
-$instructions_paths" | sort -u)
+          all_paths=$(printf '%s\n%s\n%s\n' "$context_paths" "$retrieval_paths" "$instructions_paths" | sort -u)
           
           stale_count=0
           
@@ -52,8 +50,16 @@ $instructions_paths" | sort -u)
             if [ -n "$path" ]; then
               if [ ! -f "$path" ]; then
                 echo "❌ Missing path: $path"
+                stale_count=$((stale_count + 1))
               else
                 echo "✓ Valid path: $path"
               fi
             fi
           done
+
+          if [ "$stale_count" -gt 0 ]; then
+            echo "❌ Found $stale_count missing path references"
+            exit 1
+          fi
+
+          echo "✅ All referenced paths are valid"

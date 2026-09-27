@@ -9,25 +9,25 @@ Completed 2026-08-31.
 - Corrected the duplicate `guardrails` key in the workflow routing manifest.
 - Updated routing metadata and repository context to reflect the current repository structure.
 
-## Deferred
+## Priority 1 - Add missing agent entrypoints [Done]
 
-Priority 1: Add missing agent entrypoints
+Completed 2026-09-27.
 
-Either create concise MLOps-specific versions or redirect these expected files to their existing equivalents:
+The expected agent entrypoints now exist:
 
 docs/ARCHITECTURE_DECISION_GUIDE.md
 ci/README.md
 cd/README.md
 terraform/README.md
 cd/kubernetes/README.md
-This prevents agents from starting at nonexistent files before reaching the genuinely useful golden paths.
+These entrypoints prevent agents from starting at nonexistent files before reaching the genuinely useful golden paths.
 
 ## Priority 2: Operationalize the intelligence [Done]
 
 Completed 2026-09-03.
 
 - Created CI validation script in `.github/workflows/validate-intelligence-paths.yml` that checks every local path referenced from context, retrieval, and instructions.
-- Added owner, last-reviewed, source-of-truth, and depends-on metadata to all context documents:
+- Added owner, last-reviewed, source-of-truth, and depends-on metadata to all canonical context documents:
   - [architecture-overview.md](.ai/context/architecture-overview.md)
   - [glossary.md](.ai/context/glossary.md)
   - [project_details.md](.ai/context/project_details.md)

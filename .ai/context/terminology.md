@@ -1,5 +1,12 @@
 # Terminology
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: docs/guides/
+**Depends On**: docs/golden-paths/, docs/decisions/
+---
+
 Defines canonical language for this repository. Use these terms consistently in docs, templates, and reviews.
 
 ## Canonical Terms

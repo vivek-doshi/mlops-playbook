@@ -1,5 +1,12 @@
 # Terraform Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/terraform-rules.md
+**Depends On**: terraform/, docs/golden-paths/
+---
+
 Rules for Terraform under terraform/ and related CI/CD workflows.
 
 ## Required Practices

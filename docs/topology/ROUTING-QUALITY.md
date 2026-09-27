@@ -153,11 +153,11 @@ The routing system has been strengthened to add intent coverage for the repo's a
 - "Model validator" -> online-learning/ or ci/github-actions/pipelines/
 
 **Implementation**:
-- `online-learning/` - Online learning patterns and workflows
-- `online-learning/consumer.py` - Online learning consumer
-- `online-learning/updater.py` - Model update patterns
-- `online-learning/validator.py` - Model validation patterns
-- `online-learning/rollback.py` - Model rollback patterns
+- `online_learning/` - Online learning patterns and workflows
+- `online_learning/consumer.py` - Online learning consumer
+- `online_learning/updater.py` - Model update patterns
+- `online_learning/validator.py` - Model validation patterns
+- `online_learning/rollback.py` - Model rollback patterns
 
 #### Federated Learning Routing
 
@@ -169,9 +169,9 @@ The routing system has been strengthened to add intent coverage for the repo's a
 - "Federated evaluation" -> ci/github-actions/federated/
 
 **Implementation**:
-- `federated-learning/` - Federated learning patterns and workflows
-- `federated-learning/coordinator.py` - Distributed coordination
-- `federated-learning/party.py` - Party patterns
+- `federated_learning/` - Federated learning patterns and workflows
+- `federated_learning/coordinator.py` - Distributed coordination
+- `federated_learning/party.py` - Party patterns
 - `ci/github-actions/federated/` - Federated evaluation workflows
 - `ci/github-actions/federated/federated-eval.yml` - Federated evaluation workflow
 
@@ -220,8 +220,8 @@ The routing system has been strengthened to add intent coverage for the repo's a
 | Fairness | docs/golden-paths/fairness-and-explainability.md | fairness/, ci/github-actions/fairness/, docs/guides/ |
 | Online Learning | docs/golden-paths/online-learning.md | online-learning/, cd/kubernetes/batch/, ci/github-actions/pipelines/ |
 | Federated Learning | docs/golden-paths/federated-learning.md | federated-learning/, ci/github-actions/federated/ |
-| Multi-Cloud Serving | docs/golden-paths/multi-cloud-serving.md | multi-cloud-serving/, serving/, cd/kubernetes/ |
-| Model Optimization | docs/golden-paths/model-optimization.md | model_optimization/, model_optimization/distillation/, model_optimization/benchmark/ |
+| Multi-Cloud Serving | docs/golden-paths/multi-cloud-serving.md | multi_cloud_serving/, serving/, cd/kubernetes/ |
+| Model Optimization | docs/golden-paths/model-optimization.md | model_optimization/, model_optimization/distillation/, model_optimization/benchmark.py |
 
 ## Routing Quality Guidelines
 

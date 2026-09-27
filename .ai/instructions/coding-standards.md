@@ -1,5 +1,12 @@
 # Coding Standards
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/coding-standards.md
+**Depends On**: .ai/context/repo-summary.md
+---
+
 Language-independent standards for all templates, scripts, infrastructure, and docs in this repository.
 
 ## Baseline Standards

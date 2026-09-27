@@ -1,5 +1,12 @@
 # Instructions
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-09-27
+**Source of Truth**: .ai/instructions/
+**Depends On**: .ai/context/, .ai/retrieval/
+---
+
 This directory contains AI agent instructions for working with this repository.
 
 ## Current Instructions
