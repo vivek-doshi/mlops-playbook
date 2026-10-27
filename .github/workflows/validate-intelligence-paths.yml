@@ -2,7 +2,7 @@ name: Validate Intelligence Paths
 
 on:
   schedule:
-    - cron: '0 0 1 * *'  # Monthly on the 1st
+    - cron: '0 0 1 * *'
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
@@ -12,54 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Check context path references
-        run: |
-          echo "Checking context path references..."
-          find .ai/context -name "*.md" -type f -exec grep -oE '\./|/|\.\./' {} \; | sort -u
-          
-      - name: Check retrieval path references
-        run: |
-          echo "Checking retrieval path references..."
-          find .ai/retrieval -name "*.md" -type f -exec grep -oE '\./|/|\.\./' {} \; | sort -u
-          
-      - name: Check instructions path references
-        run: |
-          echo "Checking instructions path references..."
-          find .ai/instructions -name "*.md" -type f -exec grep -oE '\./|/|\.\./' {} \; | sort -u
-      
-      - name: Validate all paths exist
-        run: |
-          echo "Validating all referenced paths exist..."
-          
-          # Extract all unique paths from context files
-          context_paths=$(find .ai/context -name "*.md" -type f -exec grep -oE ':[^:]+\.md' {} \; | sort -u)
-          
-          # Extract all unique paths from retrieval files
-          retrieval_paths=$(find .ai/retrieval -name "*.md" -type f -exec grep -oE ':[^:]+\.md' {} \; | sort -u)
-          
-          # Extract all unique paths from instructions files
-          instructions_paths=$(find .ai/instructions -name "*.md" -type f -exec grep -oE ':[^:]+\.md' {} \; | sort -u)
-          
-          # Combine and validate
-          all_paths=$(printf '%s\n%s\n%s\n' "$context_paths" "$retrieval_paths" "$instructions_paths" | sort -u)
-          
-          stale_count=0
-          
-          for path in $all_paths; do
-            if [ -n "$path" ]; then
-              if [ ! -f "$path" ]; then
-                echo "❌ Missing path: $path"
-                stale_count=$((stale_count + 1))
-              else
-                echo "✓ Valid path: $path"
-              fi
-            fi
-          done
 
-          if [ "$stale_count" -gt 0 ]; then
-            echo "❌ Found $stale_count missing path references"
-            exit 1
-          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-          echo "✅ All referenced paths are valid"
+      - name: Validate repository intelligence links and routes
+        run: python scripts/validate-intelligence-paths.py

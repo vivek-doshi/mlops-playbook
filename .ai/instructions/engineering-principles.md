@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: .ai/instructions/engineering-principles.md
 **Depends On**: .ai/context/repo-summary.md
 ---

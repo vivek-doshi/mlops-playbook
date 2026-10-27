@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-04
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -16,7 +16,7 @@ Routes user intent to the minimum correct repository domain.
 - "Deploy to Kubernetes" -> cd/kubernetes/ and cd/argo/.
 - "Provision ML infrastructure" -> terraform/<cloud-target>/.
 - "Add security checks" -> ci/github-actions/_shared/reusable-mlops-scan.yml and policy/.
-- "Incident response" -> docs/runbooks/, monitoring/, and external `devops-playbook` notification controls.
+- "Incident response" -> monitoring/, policy/model-approval/, docs/topology/, and external `devops-playbook` notification controls.
 - "Observability and alerting" -> monitoring/ and external `devops-playbook` observability controls.
 - "Cost control/FinOps" -> finops/.
 
@@ -43,7 +43,7 @@ Routes user intent to the minimum correct repository domain.
 ## MLOps-Specific Routing - Newer Domains
 
 - "Run batch inference" -> docs/golden-paths/batch-inference.md
-- "Batch scoring" -> batch/README.md or pipelines/README.md
+- "Batch scoring" -> batch/README.md
 - "Batch quality check" -> batch/ or pipelines/
 - "Batch job" -> cd/kubernetes/batch/ or cd/argo/pipelines/
 - "Batch quality gate" -> policy/ and finops/
@@ -67,10 +67,10 @@ Routes user intent to the minimum correct repository domain.
 - "Explainability" -> fairness/ or ci/github-actions/fairness/
 - "Fairness gate" -> policy/ and ci/github-actions/fairness/
 - "Online learning" -> docs/golden-paths/online-learning.md
-- "Online inference" -> online_learning/ or cd/kubernetes/batch/
-- "Model update" -> online_learning/ or ci/github-actions/pipelines/
-- "Model rollback" -> online_learning/ or ci/github-actions/pipelines/
-- "Model validator" -> online_learning/ or ci/github-actions/pipelines/
+- "Online inference" -> online_learning/
+- "Model update" -> online_learning/ or ci/github-actions/online-learning/
+- "Model rollback" -> online_learning/ or ci/github-actions/online-learning/
+- "Model validator" -> online_learning/ or ci/github-actions/online-learning/
 - "Federated learning" -> docs/golden-paths/federated-learning.md
 - "Federated training" -> federated_learning/ or ci/github-actions/federated/
 - "Privacy-preserving" -> federated_learning/ or ci/github-actions/federated/
@@ -86,6 +86,8 @@ Routes user intent to the minimum correct repository domain.
 - "Model quantization" -> model_optimization/quantisation.py
 - "Model distillation" -> model_optimization/distillation/
 - "Model benchmarking" -> model_optimization/benchmark.py
+- "LLMOps / prompt management / model fine-tuning / LLM evaluation" -> docs/golden-paths/llmops.md + llmops/ and ci/github-actions/llmops/
+- "Self-service model operations / portal" -> docs/golden-paths/self-service-portal.md + portal/
 
 ## Generic Platform Routing
 

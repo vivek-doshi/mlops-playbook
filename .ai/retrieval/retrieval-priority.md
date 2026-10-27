@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -20,13 +20,13 @@ Priority order for selecting files during assistant retrieval.
 - P2 (Implementation templates)
   - stack-specific templates and cloud target files
 - P3 (Operational and guardrail reinforcement)
-  - policy/, fairness/, monitoring/, docs/runbooks/, ci/github-actions/_shared/
+  - policy/, fairness/, monitoring/, docs/topology/, ci/github-actions/_shared/
 - P4 (Optimization and advanced variants)
   - finops/scripts/, advanced patterns, optional integrations
 
 ## Routing Priority Overrides
 
-- Incident/security request -> docs/runbooks/, policy/, and ci/github-actions/_shared/ move to P0.
+- Incident/security request -> monitoring/, docs/topology/, policy/, and ci/github-actions/_shared/ move to P0.
 - Cost/optimization request -> finops/ moves to P0.
 - User names exact file -> requested file becomes P0.
 

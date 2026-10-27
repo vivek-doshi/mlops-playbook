@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -24,10 +24,11 @@ Primary files and directories that should be consulted first for most tasks.
 - Security and policy: policy/ and ci/github-actions/_shared/reusable-mlops-scan.yml
 - Cost governance: finops/
 - Monitoring: monitoring/
+- Advanced lifecycle patterns: online_learning/, federated_learning/, multi_cloud_serving/, model_optimization/, llmops/, and portal/
 
-## Canonical Runbook Areas
+## Canonical Operational Documentation
 
-- docs/runbooks/: Supporting operations and procedures.
+- docs/guides/ and docs/topology/: Supporting concepts, platform boundaries, and integration contracts.
 
 ## Canonical Selection Rules
 

@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -17,6 +17,7 @@ Practical search terms and patterns to accelerate accurate retrieval.
 - Governance: model-approval, data-governance, pii, fairness, gitleaks, pip-audit
 - FinOps: budget, rightsizing, cost-center, model-name, gpu
 - Monitoring: evidently, drift, prometheus, grafana, slo, alert
+- Advanced lifecycle: online-learning, federated, multi-cloud, llmops, prompt, optimization, quantization, portal
 
 ## Path-Focused Search Patterns
 

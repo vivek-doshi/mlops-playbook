@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/ARCHITECTURE_DECISION_GUIDE.md
 **Depends On**: external devops-playbook repository
 ---
@@ -36,7 +36,7 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 
 - monitoring/ provides drift detection, alert rules, SLOs, and Grafana dashboards.
 - finops/ provides ML cost attribution, budgets, alerts, and reports.
-- docs/runbooks/, docs/diagrams/, docs/golden-paths/, and docs/decisions/ provide operational guidance and architecture records.
+- docs/golden-paths/, docs/guides/, docs/topology/, and docs/decisions/ provide operational guidance and architecture records.
 
 ### 5. ML Lifecycle Execution Layer
 
@@ -45,6 +45,8 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 - batch/ implements MLflow pyfunc-based batch scoring with input validation, output quality gating, and downstream notification.
 - training/ implements distributed training scripts for KubeRay (primary) and Kubeflow (secondary).
 - fairness/ implements Fairlearn bias metrics and SHAP explainability analysis with CI enforcement.
+- online_learning/, federated_learning/, multi_cloud_serving/, model_optimization/, and llmops/ provide advanced lifecycle patterns.
+- portal/ provides a self-service interface for model, deployment, and budget workflows.
 - All pipeline pods carry four mandatory cost labels: cost-center, team, model-name, environment.
 
 ## Reference Flow
@@ -59,7 +61,7 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 ## Canonical Source Areas
 
 - docs/ for architectural and procedural guidance.
-- ci/, cd/, terraform/, mlflow/, dvc/, serving/, monitoring/, policy/, and finops/ for executable patterns.
+- ci/, cd/, terraform/, mlflow/, dvc/, serving/, monitoring/, policy/, finops/, training/, batch/, pipelines/, and the advanced lifecycle domains for executable patterns.
 
 ## External Platform Dependencies
 
@@ -68,8 +70,7 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 ## Documentation Navigation Anchors
 
 - ADR index: `docs/decisions/README.md`
-- Runbook index and authoring standard: `docs/runbooks/README.md`
-- Diagram inventory: `docs/diagrams/README.md`
+- Documentation index: `docs/README.md`
 - Concepts guide: `docs/guides/concepts.md`
 - Integration bridge: `docs/topology/INTEGRATION-BRIDGE.md`
 - Dependency matrix: `docs/topology/DEPENDENCY-MATRIX.md`

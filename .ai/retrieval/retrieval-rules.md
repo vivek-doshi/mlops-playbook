@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -46,3 +46,4 @@ Retrieval is complete when:
 - required templates are identified
 - security and operational guardrails are represented
 - at least one end-to-end route is documented
+- local Markdown links and structured route targets pass `scripts/validate-intelligence-paths.py`

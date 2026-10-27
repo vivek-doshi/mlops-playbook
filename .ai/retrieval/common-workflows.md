@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -34,7 +34,6 @@ Standard retrieval paths for frequent engineering tasks.
 
 ## 4. Respond to Model Incidents
 
-1. docs/runbooks/
-2. monitoring/alerts/ and monitoring/slos/
-3. policy/model-approval/ for rollback and promotion controls
-4. devops-playbook notifications and cluster observability interfaces (external dependency)
+1. monitoring/README.md and monitoring/alerts/
+2. policy/model-approval/ for rollback and promotion controls
+3. docs/topology/ for external platform notification and observability interfaces

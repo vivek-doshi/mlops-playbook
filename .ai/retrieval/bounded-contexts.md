@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -27,13 +27,13 @@ Repository contexts and their boundaries for retrieval and change planning.
   - Scope: policy/, fairness/
   - Concern: model approval, data governance, and fairness evaluation
 - Monitoring Context
-  - Scope: monitoring/, docs/runbooks/
-  - Concern: drift detection, serving SLOs, alerts, and operational response
+  - Scope: monitoring/, policy/model-approval/, docs/topology/
+  - Concern: drift detection, serving SLOs, alerts, rollback, and platform escalation
 - FinOps Context
   - Scope: finops/
   - Concern: spend visibility, cost governance, optimization
 - Documentation Context
-  - Scope: docs/, docs/runbooks/, docs/golden-paths/, docs/decisions/
+  - Scope: docs/, docs/golden-paths/, docs/decisions/, docs/topology/
   - Concern: decision support and operational knowledge
 
 ## External Platform Context

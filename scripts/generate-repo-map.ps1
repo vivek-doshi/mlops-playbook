@@ -126,7 +126,6 @@ try {
   }
 
   $generated = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-  $rootDisplay = $rootFullPath.Replace([char]92, [char]47).ToLowerInvariant()
   $exclusions = ($ignoreEntries | ForEach-Object { "$_/" }) -join ", "
 
   $content = New-Object System.Collections.Generic.List[string]
@@ -134,7 +133,7 @@ try {
   $content.Add("")
   $content.Add("Generated from current workspace structure.")
   $content.Add("")
-  $content.Add("- Root: $rootDisplay")
+  $content.Add("- Root: .")
   $content.Add("- Generated: $generated")
   $content.Add("- Exclusions: $exclusions")
   $content.Add("")

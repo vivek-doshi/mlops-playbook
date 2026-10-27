@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: .ai/instructions/kubernetes-rules.md
 **Depends On**: cd/kubernetes/, docs/golden-paths/
 ---
@@ -33,6 +33,6 @@ Rules for manifests and patterns under cd/kubernetes/, cd/argo/, policy/, monito
 
 ## Repo Alignment
 
-- Reuse patterns from cd/kubernetes/_base and cd/kubernetes/_patterns.
+- Reuse manifests from cd/kubernetes/_base and environment or workload examples from cd/kubernetes/environments/, cd/kubernetes/training/, and cd/kubernetes/batch/.
 - Keep GitOps-compatible manifests for argocd and flux targets.
 - Align guardrails with policy/, the reusable CI security scan, and finops/ budget controls.

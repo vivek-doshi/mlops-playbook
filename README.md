@@ -113,6 +113,20 @@ Specifically, you need:
   `pipelines/`, `cd/argo/`, `terraform/vertex-pipelines/`
 - **Architecture Decisions** — ADR-ML-014 through ADR-ML-018 in `docs/decisions/`
 
+### Phase 3 — Advanced MLOps Workflows
+
+- **Online learning** — streaming update, validation, and rollback patterns in
+  `online_learning/` and `ci/github-actions/online-learning/`
+- **Federated learning** — coordinator, aggregation, privacy controls, and CI workflows in
+  `federated_learning/` and `ci/github-actions/federated/`
+- **Multi-cloud serving** — routing, registry, and health-check patterns in
+  `multi_cloud_serving/`
+- **Model optimization** — pruning, quantization, distillation, and benchmarks in
+  `model_optimization/`
+- **LLMOps** — prompt registry, fine-tuning, evaluation, and RLHF examples in `llmops/`
+- **Self-service portal** — model, deployment, and budget workflows in `portal/`
+- **Architecture Decisions** — ADR-ML-019 through ADR-ML-024 in `docs/decisions/`
+
 
 
 | Task | Start here |

@@ -2,8 +2,8 @@
 
 Generated from current workspace structure.
 
-- Root: d:/projects/mlops-playbook
-- Generated: 2026-09-27 11:03:48
+- Root: .
+- Generated: 2026-10-27 10:44:26
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -312,7 +312,6 @@ Generated from current workspace structure.
 │   │   └── cross-cloud-alerts.yaml
 │   ├── online-learning
 │   │   └── online-learning-alerts.yaml
-│   ├── prometheus
 │   ├── slos
 │   │   ├── _defaults.yaml
 │   │   ├── README.md
@@ -408,7 +407,8 @@ Generated from current workspace structure.
 │   ├── generate_model_card.py
 │   ├── generate-repo-map.ps1
 │   ├── model-card-template.md.j2
-│   └── README.md
+│   ├── README.md
+│   └── validate-intelligence-paths.py
 ├── serving
 │   ├── torchserve
 │   │   ├── config.properties

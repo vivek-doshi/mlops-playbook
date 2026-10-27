@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -40,7 +40,14 @@ Recommended first files to open by intent.
   - ci/github-actions/_shared/reusable-mlops-scan.yml
 - FinOps baseline:
   - finops/README.md
-  - monitoring/dashboards/ml-cost-attribution.json
+  - monitoring/dashboards/model-health.json
+- Advanced MLOps workflows:
+  - online_learning/README.md
+  - federated_learning/README.md
+  - multi_cloud_serving/README.md
+  - model_optimization/README.md
+  - llmops/README.md
+  - portal/README.md
 
 ## Triage Entrypoint Order
 

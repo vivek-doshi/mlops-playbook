@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: .ai/instructions/security-rules.md
 **Depends On**: policy/, ci/github-actions/_shared/
 ---
@@ -28,7 +28,7 @@ Security baseline for code templates, IaC, CI/CD, runtime configuration, and inc
 
 - Enable runtime detection and audit logging for Kubernetes workloads.
 - Use baseline policy enforcement for pod security and network isolation.
-- Maintain and test incident runbooks for pod compromise, node compromise, secret exposure, and supply chain incidents.
+- Maintain and test incident procedures for model-serving and ML pipeline failures; use the external `devops-playbook` runbooks for cluster, node, and shared-secret incidents.
 
 ## Governance And Evidence
 

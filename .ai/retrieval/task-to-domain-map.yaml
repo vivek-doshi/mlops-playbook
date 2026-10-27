@@ -1,5 +1,5 @@
 version: 2
-updated: 2026-08-31
+updated: 2026-10-27
 defaults:
   start_with:
     - README.md
@@ -36,10 +36,11 @@ task_to_domain:
       - ci/github-actions/_shared/reusable-mlops-scan.yml
       - policy/
   incident_response:
-    domains: [docs-runbooks, monitoring, external-platform]
+    domains: [monitoring, model-governance, external-platform]
     paths:
-      - docs/runbooks/
       - monitoring/
+      - policy/model-approval/
+      - docs/topology/
       - devops-playbook/notifications/ # external dependency
   observability_setup:
     domains: [monitoring, external-platform]
@@ -52,6 +53,15 @@ task_to_domain:
       - finops/
       - policy/
       - ci/github-actions/
+  advanced_ml_lifecycle:
+    domains: [online-learning, federated-learning, multi-cloud-serving, model-optimization, llmops, self-service]
+    paths:
+      - online_learning/
+      - federated_learning/
+      - multi_cloud_serving/
+      - model_optimization/
+      - llmops/
+      - portal/
   documentation_or_decision_support:
     domains: [docs, runbooks]
     paths:

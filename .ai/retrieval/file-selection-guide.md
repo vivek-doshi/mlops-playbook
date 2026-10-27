@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-08-31
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -38,7 +38,6 @@ Use highest specificity available that still matches user intent.
 For most implementation tasks, retrieve:
 
 1. one architecture or golden-path document
-2. one stack template
-3. one CI template
-4. one deployment target template
-5. one guardrail file (security/policy/finops)
+2. the relevant domain README or implementation template
+3. CI and deployment templates only when the requested workflow uses them
+4. applicable security, policy, or cost guardrails for production-impacting work

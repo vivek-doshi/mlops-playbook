@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: .ai/instructions/
 **Depends On**: .ai/context/, .ai/retrieval/
 ---
@@ -29,24 +29,9 @@ This directory contains AI agent instructions for working with this repository.
 ### Terraform Rules
 - [terraform-rules.md](terraform-rules.md) - Infrastructure as Code guidelines
 
-## Routing Quality Improvements (2026-09-04)
+## Routing
 
-The routing system has been strengthened to:
-
-1. **Split generic platform workflows from MLOps workflows**
-   - MLOps routing focuses on ML lifecycle workflows (experiment tracking, data versioning, model registry, serving, monitoring, approval, governance)
-   - Generic platform routing focuses on infrastructure and operational workflows (provisioning, k8s primitives, secrets, OIDC, policy, observability)
-
-2. **Add intent coverage for newer domains**
-   - Batch inference routing patterns
-   - Pipeline orchestration routing patterns
-   - Distributed training routing patterns
-   - Feature store routing patterns
-   - Fairness routing patterns
-   - Online learning routing patterns
-   - Federated learning routing patterns
-   - Multi-cloud serving routing patterns
-   - Model optimization routing patterns
+Use `.ai/retrieval/task-routing.md` for human-readable intent routing and the structured maps in `.ai/retrieval/` for domain and workflow selection. Shared platform requests belong to the external `devops-playbook` integration boundary; do not imply that this repository owns those platform implementations.
 
 ## Navigation
 

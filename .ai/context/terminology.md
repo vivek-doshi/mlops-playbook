@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: docs/guides/
 **Depends On**: docs/golden-paths/, docs/decisions/
 ---

@@ -4,12 +4,18 @@ This directory contains chronological session notes documenting repository intel
 
 ## Recent Sessions
 
+### 2026-10-27 - Repository Readiness Review
+- Reviewed `.ai/` accuracy, path references, MLOps scope coverage, duplication, and presentation readiness.
+- Recorded findings and recommendations in [2026-10-27-repository-readiness-review.md](2026-10-27-repository-readiness-review.md).
+- Standardized active Integration Bridge references on `devops-playbook`.
+- Corrected stale paths, refreshed lifecycle coverage and routing, and added automated link/route validation.
+
 ### 2026-09-04 - Strengthen the Integration Bridge
-- Created [docs/topology/INTEGRATION-BRIDGE.md](../docs/topology/INTEGRATION-BRIDGE.md)
-- Created [docs/topology/DEPENDENCY-MATRIX.md](../docs/topology/DEPENDENCY-MATRIX.md)
-- Created [docs/topology/CONTROL-PLANES.md](../docs/topology/CONTROL-PLANES.md)
-- Created [docs/topology/COMPATIBILITY-CONTRACT.md](../docs/topology/COMPATIBILITY-CONTRACT.md)
-- Created [docs/topology/ROUTING-QUALITY.md](../docs/topology/ROUTING-QUALITY.md)
+- Created [docs/topology/INTEGRATION-BRIDGE.md](../../docs/topology/INTEGRATION-BRIDGE.md)
+- Created [docs/topology/DEPENDENCY-MATRIX.md](../../docs/topology/DEPENDENCY-MATRIX.md)
+- Created [docs/topology/CONTROL-PLANES.md](../../docs/topology/CONTROL-PLANES.md)
+- Created [docs/topology/COMPATIBILITY-CONTRACT.md](../../docs/topology/COMPATIBILITY-CONTRACT.md)
+- Created [docs/topology/ROUTING-QUALITY.md](../../docs/topology/ROUTING-QUALITY.md)
 - Created `.github/workflows/platform-compatibility.yml`
 
 ### 2026-09-03 - Operationalize the Intelligence

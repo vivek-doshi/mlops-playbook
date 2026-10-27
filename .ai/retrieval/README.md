@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-09-27
+**Last Reviewed**: 2026-10-27
 **Source of Truth**: .ai/retrieval/
 **Depends On**: .ai/context/, .ai/instructions/
 ---
@@ -21,24 +21,16 @@ Suggested contents:
 - [retrieval-priority.md](retrieval-priority.md) - Priority order for selecting files during assistant retrieval
 - [retrieval-rules.md](retrieval-rules.md) - Rules for reliable, low-noise, high-signal retrieval
 
-## Routing Quality Improvements (2026-09-04)
+## Routing Sources And Responsibilities
 
-The retrieval system has been strengthened to:
+- `task-routing.md` is the human-readable intent index.
+- `task-to-domain-map.yaml` maps broad task categories to repository domains.
+- `workflow-to-files.yaml` gives detailed entrypoints, implementation files, and guardrails for common workflows.
+- Keep these representations aligned when adding a workflow. Path targets are checked by the validator below.
 
-1. **Split generic platform workflows from MLOps workflows**
-   - MLOps routing focuses on ML lifecycle workflows
-   - Generic platform routing focuses on infrastructure and operational workflows
+## Routing Coverage
 
-2. **Add intent coverage for newer domains**
-   - Batch inference routing patterns
-   - Pipeline orchestration routing patterns
-   - Distributed training routing patterns
-   - Feature store routing patterns
-   - Fairness routing patterns
-   - Online learning routing patterns
-   - Federated learning routing patterns
-   - Multi-cloud serving routing patterns
-   - Model optimization routing patterns
+MLOps workflows are handled here. Requests for shared cluster, identity, secrets, or platform observability capabilities cross the Integration Bridge and should be routed to the documented external `devops-playbook` interfaces.
 
 ## Navigation
 
@@ -46,3 +38,7 @@ The retrieval system has been strengthened to:
 - Instructions files: [../instructions/](../instructions/)
 - Session notes: [../session/](../session/)
 - Skills: [../skills/](../skills/)
+
+## Path Validation
+
+The GitHub Actions workflow `.github/workflows/validate-intelligence-paths.yml` runs `scripts/validate-intelligence-paths.py` to check local Markdown links and structured route targets. External `devops-playbook` references are intentionally not resolved against this repository.

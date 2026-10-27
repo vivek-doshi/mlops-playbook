@@ -1,5 +1,5 @@
 version: 2
-updated: 2026-08-31
+updated: 2026-10-27
 workflow_to_files:
   # -------------------------------------------------------------------------
   # MLOps Workflows
@@ -94,3 +94,37 @@ workflow_to_files:
       - .ai/context/repo-summary.md
       - policy/
       - docs/decisions/
+
+  mlops_advanced_lifecycle:
+    description: "Build advanced lifecycle workflows such as online learning, federated learning, LLMOps, or optimization"
+    entrypoints:
+      - docs/guides/concepts.md
+      - docs/decisions/README.md
+    implementation:
+      - online_learning/
+      - ci/github-actions/online-learning/
+      - federated_learning/
+      - ci/github-actions/federated/
+      - multi_cloud_serving/
+      - ci/github-actions/multi-cloud/
+      - model_optimization/
+      - ci/github-actions/model-optimization/
+      - llmops/
+      - ci/github-actions/llmops/
+    guardrails:
+      - policy/
+      - ci/github-actions/_shared/reusable-mlops-scan.yml
+      - finops/
+
+  mlops_self_service:
+    description: "Explore or change the self-service model operations portal"
+    entrypoints:
+      - docs/golden-paths/self-service-portal.md
+      - portal/README.md
+    implementation:
+      - portal/
+      - cd/kubernetes/portal/
+      - terraform/portal/
+    guardrails:
+      - policy/
+      - finops/
