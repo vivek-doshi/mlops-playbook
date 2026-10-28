@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: .
-- Generated: 2026-10-28 17:50:18
+- Generated: 2026-10-28 18:25:44
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -198,6 +198,7 @@ Generated from current workspace structure.
 │   │   ├── CONTROL-PLANES.md
 │   │   ├── DEPENDENCY-MATRIX.md
 │   │   ├── INTEGRATION-BRIDGE.md
+│   │   ├── platform-manifest.yaml
 │   │   └── ROUTING-QUALITY.md
 │   ├── ARCHITECTURE_DECISION_GUIDE.md
 │   ├── disaster-recovery.md
@@ -398,20 +399,7 @@ Generated from current workspace structure.
 │   ├── __pycache__
 │   │   └── __init__.cpython-314.pyc
 │   ├── backend
-│   │   ├── __pycache__
-│   │   │   ├── __init__.cpython-314.pyc
-│   │   │   ├── auth.cpython-314.pyc
-│   │   │   ├── github_client.cpython-314.pyc
-│   │   │   ├── k8s_client.cpython-314.pyc
-│   │   │   ├── main.cpython-314.pyc
-│   │   │   └── mlflow_client.cpython-314.pyc
 │   │   ├── api
-│   │   │   ├── __pycache__
-│   │   │   │   ├── __init__.cpython-314.pyc
-│   │   │   │   ├── budgets.cpython-314.pyc
-│   │   │   │   ├── deployments.cpython-314.pyc
-│   │   │   │   ├── models.cpython-314.pyc
-│   │   │   │   └── notifications.cpython-314.pyc
 │   │   │   ├── __init__.py
 │   │   │   ├── budgets.py
 │   │   │   ├── deployments.py
@@ -488,11 +476,7 @@ Generated from current workspace structure.
 │   │   └── variables.tf
 │   └── README.md
 ├── tests
-│   ├── __pycache__
-│   │   ├── test_policy_contracts.cpython-314.pyc
-│   │   ├── test_policy_contracts.cpython-314-pytest-9.0.3.pyc
-│   │   ├── test_portal_auth.cpython-314.pyc
-│   │   └── test_portal_auth.cpython-314-pytest-9.0.3.pyc
+│   ├── conftest.py
 │   ├── test_policy_contracts.py
 │   └── test_portal_auth.py
 ├── training

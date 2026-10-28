@@ -17,6 +17,10 @@ jobs:
         run: |
           echo "Downloading platform manifest from devops-playbook..."
           gh repo clone vivek-doshi/devops-playbook -- --depth 1
+          test -f devops-playbook/manifest.yaml || {
+            echo "Copy docs/topology/platform-manifest.yaml to the root of devops-playbook as manifest.yaml."
+            exit 1
+          }
 
       - name: Validate platform version
         run: |
@@ -114,4 +118,3 @@ jobs:
               echo "✓ Component $component version $component_version is compatible"
             fi
           done
-

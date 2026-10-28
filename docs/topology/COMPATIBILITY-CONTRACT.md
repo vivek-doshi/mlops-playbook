@@ -11,28 +11,33 @@
 
 The MLOps repository requires the platform repository to publish the following manifest:
 
+The starter manifest is available at
+[`platform-manifest.yaml`](platform-manifest.yaml). Copy it to the root of the
+`devops-playbook` repository as `manifest.yaml`, then replace the versions and
+features with the values actually provided by that platform deployment.
+
 ```yaml
 # Platform Manifest (devops-playbook/manifest.yaml)
 platform:
   version: "1.2.0"
   components:
     gpu-cluster:
-      version: "v1.2.0"
+      version: "1.2.0"
       required: true
     base-kubernetes:
-      version: "v1.28.0"
+      version: "1.28.0"
       required: true
     secrets-management:
-      version: "v1.0.0"
+      version: "1.0.0"
       required: true
     oidc-federation:
-      version: "v1.1.0"
+      version: "1.1.0"
       required: true
     policy-controls:
-      version: "v1.0.0"
+      version: "1.0.0"
       required: true
     observability-baseline:
-      version: "v1.0.0"
+      version: "1.0.0"
       required: true
 
 compatibility:

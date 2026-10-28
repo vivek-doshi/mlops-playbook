@@ -18,6 +18,7 @@ It explains the why and how behind the repository patterns so teams can adopt co
 - `maturity-roadmap.md`: staged path from reference patterns to production operation.
 - `release-strategies.md`: canary, blue/green, shadow, champion/challenger, and rollback patterns.
 - `supply-chain-security.md`: dependency, SBOM, signing, provenance, and immutable-release requirements.
+- `topology/platform-manifest.yaml`: starter manifest to copy into `devops-playbook`.
 
 ## How to use this as an individual component
 

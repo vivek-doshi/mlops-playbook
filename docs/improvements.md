@@ -85,3 +85,15 @@ Remaining environment-specific evidence:
 - Generate and verify SBOMs, signatures, and build provenance in the release platform.
 - Run staging canary/blue-green, restore, failover, and champion/challenger exercises.
 - Retain signed evidence and complete the maturity checklist before claiming production readiness.
+
+## CI hardening follow-up - 2026-10-28
+
+- Added [`docs/topology/platform-manifest.yaml`](topology/platform-manifest.yaml)
+  as the copy-ready `devops-playbook/manifest.yaml` contract required by the
+  platform compatibility workflow.
+- Added a pytest path bootstrap and aligned CI with `python -m pytest` so the
+  `portal` package is importable on GitHub-hosted runners.
+- Updated portal dependencies, including FastAPI/Starlette, PyJWT,
+  cryptography, protobuf transitives, MLflow, and the Kubernetes client.
+- Audited the resolved wheel dependency closure with `pip-audit`; no known
+  vulnerabilities were reported.

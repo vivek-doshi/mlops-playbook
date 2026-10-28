@@ -32,7 +32,9 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q portal tests
       - name: Run tests
-        run: pytest -q
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q
 
   manifest-validation:
     runs-on: ubuntu-latest

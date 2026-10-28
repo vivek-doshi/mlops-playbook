@@ -236,7 +236,7 @@ The drift monitoring workflow can dispatch the training workflow:
 
 ## Cross-Repo Dependencies
 
-This playbook depends on infrastructure provided by the platform repository (`devops-playbook` / `cicd-reference`):
+This playbook depends on infrastructure provided by the platform repository (`devops-playbook`):
 
 | Dependency | Platform provides | This repo consumes |
 |-----------|-------------------|--------------------|

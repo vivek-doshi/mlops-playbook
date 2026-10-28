@@ -27,6 +27,7 @@ This is a production-oriented MLOps playbook: opinionated golden paths, reusable
 - **Guidance and decisions**: lifecycle walkthroughs (`docs/golden-paths/`), concepts (`docs/guides/`), architecture decisions (`docs/decisions/`), and platform integration (`docs/topology/`).
 - **Presentation surface**: the generated template browser in `website/` mirrors the repository's top-level directories and is deployed through `.github/workflows/deploy-website.yml`.
 - **Production hardening**: release safety, model inventory, lineage, observability, supply chain, and recovery acceptance criteria are defined under `docs/` and `policy/`.
+- **Platform compatibility**: `docs/topology/platform-manifest.yaml` is the copy-ready manifest contract for the external `devops-playbook` repository.
 
 ## How Teams Use It
 

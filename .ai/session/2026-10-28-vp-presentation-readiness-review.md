@@ -17,3 +17,12 @@ Reviewed the public README, getting-started guide, website template browser, web
 - `python scripts/validate-intelligence-paths.py` passed.
 - `git diff --check` passed.
 - `cd website; npm run build` passed, including TypeScript compilation and the Vite production build.
+
+## CI hardening follow-up
+
+- Added a copy-ready platform manifest at `docs/topology/platform-manifest.yaml`
+  for manual placement at `devops-playbook/manifest.yaml`.
+- Fixed GitHub Actions pytest imports with `tests/conftest.py` and
+  `PYTHONPATH=.`.
+- Upgraded the portal dependency set and verified the resolved wheel closure
+  with `pip-audit` (`No known vulnerabilities found`).

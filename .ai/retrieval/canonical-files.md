@@ -28,6 +28,7 @@ Primary files and directories that should be consulted first for most tasks.
 - Repository browser: website/src/components/Sidebar.tsx and website/scripts/generate-index.js
 - Production readiness: docs/production-readiness.md, docs/maturity-roadmap.md, and docs/lineage-and-observability-contract.md
 - Release governance: policy/model-approval/gates.yaml and policy/model-inventory.yaml
+- Platform compatibility: docs/topology/platform-manifest.yaml and .github/workflows/platform-compatibility.yml
 
 ## Canonical Operational Documentation
 
