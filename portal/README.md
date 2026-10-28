@@ -37,14 +37,32 @@ Liveness and readiness probes target `GET /health`.
 
 ## Authentication
 
-The backend uses a **GitHub App installation token** to trigger workflows.
-Never use a PAT.  Required secrets:
+The portal requires an enterprise OIDC bearer token for every `/api/*` route.
+The backend validates the JWT signature and claims using the configured issuer,
+audience, and JWKS endpoint. Human authorization is group-based:
+
+- `PORTAL_OPERATOR_GROUP` may trigger promotion and rollback workflows.
+- `PORTAL_ADMIN_GROUP` may update budgets and notification configuration.
+
+The backend uses a **GitHub App installation token** to trigger workflows after
+the authenticated user is authorized. Never use a PAT. Required secrets:
 
 | Secret | Description |
 |---|---|
 | `GITHUB_APP_ID` | GitHub App numeric ID |
 | `GITHUB_APP_PRIVATE_KEY` | PEM private key for JWT signing |
 | `GITHUB_INSTALLATION_ID` | Installation ID for the target org/repo |
+
+Required OIDC configuration:
+
+| Variable | Description |
+|---|---|
+| `OIDC_ISSUER` | Trusted token issuer URL |
+| `OIDC_AUDIENCE` | API audience / client ID |
+| `OIDC_JWKS_URL` | Issuer signing-key endpoint |
+| `PORTAL_OPERATOR_GROUP` | Group allowed to promote or roll back |
+| `PORTAL_ADMIN_GROUP` | Group allowed to change budgets and notifications |
+| `ALLOWED_ORIGINS` | Comma-separated browser origins; wildcard is prohibited |
 
 ## Environment variables
 

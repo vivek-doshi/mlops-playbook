@@ -1,6 +1,13 @@
 # Terraform Rules
 
-Rules for Terraform under terraform/, backup/terraform/, and related CI/CD workflows.
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: .ai/instructions/terraform-rules.md
+**Depends On**: terraform/, docs/golden-paths/
+---
+
+Rules for Terraform under terraform/ and related CI/CD workflows.
 
 ## Required Practices
 
@@ -27,6 +34,6 @@ Rules for Terraform under terraform/, backup/terraform/, and related CI/CD workf
 
 ## Repo Alignment
 
-- Use existing cloud targets such as terraform/aws-eks, terraform/azure-aks, terraform/gcp-gke as references.
-- Keep bootstrap and testing concerns isolated in terraform/_bootstrap and terraform/_testing.
-- Align deployment automation with cd/targets and ci templates.
+- Start with terraform/README.md and use the repository's existing targets, including terraform/aws-sagemaker, terraform/azure-ml, terraform/gcp-vertex-ai, terraform/ray-cluster, and terraform/vertex-pipelines.
+- Keep cloud-specific examples in their target directories and document external platform modules as dependencies rather than local paths.
+- Align deployment automation with cd/kubernetes/, cd/argo/, and ci/github-actions/ workflows.

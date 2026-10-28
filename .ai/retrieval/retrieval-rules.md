@@ -1,12 +1,19 @@
 # Retrieval Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Rules for reliable, low-noise, high-signal retrieval in this repository.
 
 ## Core Rules
 
 - Always begin with canonical files before deep search.
 - Route by intent first, then by platform, then by stack.
-- Prefer golden paths and architecture guide over ad hoc file hopping.
+- Prefer MLOps golden paths over ad hoc file hopping.
 - Retrieve smallest sufficient set of files that proves one valid implementation path.
 - Include guardrail domains for production-impacting tasks.
 
@@ -14,7 +21,7 @@ Rules for reliable, low-noise, high-signal retrieval in this repository.
 
 For any deployment or infrastructure task, include at least one relevant file from:
 
-- security/ or secops/
+- ci/github-actions/_shared/reusable-mlops-scan.yml or a relevant policy/ control
 - policy/
 - finops/ (for resource and cost governance)
 
@@ -22,7 +29,7 @@ For any deployment or infrastructure task, include at least one relevant file fr
 
 - Prefer existing, stable templates over experimental or backup areas.
 - Prefer shared/reusable pipeline templates where available.
-- Prefer explicit target directories matching user platform.
+- Prefer explicit cloud, runtime, and environment directories matching the workload.
 - Avoid mixing mutually exclusive deployment models unless comparison is requested.
 
 ## Change Safety Rules
@@ -39,3 +46,4 @@ Retrieval is complete when:
 - required templates are identified
 - security and operational guardrails are represented
 - at least one end-to-end route is documented
+- local Markdown links and structured route targets pass `scripts/validate-intelligence-paths.py`

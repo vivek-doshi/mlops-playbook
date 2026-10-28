@@ -32,7 +32,7 @@ The fastest way to get a fully working environment is to open the repo in the in
 2. Clone the repo and open it in VS Code:
 
    ```powershell
-   git clone https://github.com/your-org/mlops-playbook.git
+   git clone https://github.com/vivek-doshi/mlops-playbook.git
    code mlops-playbook
    ```
 
@@ -103,7 +103,7 @@ Use the table below to jump to the golden path guide for your current task.
 ### Step 1 — Clone and Bootstrap
 
 ```bash
-git clone https://github.com/your-org/mlops-playbook.git
+git clone https://github.com/vivek-doshi/mlops-playbook.git
 cd mlops-playbook
 ./scripts/bootstrap.sh        # or bootstrap.ps1 on Windows
 source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1

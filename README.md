@@ -4,6 +4,11 @@ A production-oriented, opinionated guide for the full ML lifecycle — from raw 
 
 **New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) | Concepts guide → [docs/guides/concepts.md](docs/guides/concepts.md) | GPU / Dev Container setup → [docs/local-setup.md](docs/local-setup.md)
 
+**Production status:** This is a production-oriented reference implementation.
+Use the [production readiness standard](docs/production-readiness.md) and
+[maturity roadmap](docs/maturity-roadmap.md) before calling an implementation
+production-ready.
+
 ---
 
 ## The Integration Bridge
@@ -87,6 +92,14 @@ Specifically, you need:
 - [ADR-ML-008: Model Approval → Three-Gate Policy](docs/decisions/ADR-ML-008-model-approval-policy.md)
 - [ADR-ML-009: Code Quality → Pre-commit Toolchain](docs/decisions/ADR-ML-009-pre-commit-toolchain.md)
 
+### Enterprise readiness
+
+- [Production readiness standard](docs/production-readiness.md)
+- [Lineage and observability contract](docs/lineage-and-observability-contract.md)
+- [Disaster recovery standard](docs/disaster-recovery.md)
+- [MLOps maturity roadmap](docs/maturity-roadmap.md)
+- [Supply-chain security standard](docs/supply-chain-security.md)
+
 ### Infrastructure
 - AWS SageMaker Terraform: [`terraform/aws-sagemaker/`](terraform/aws-sagemaker/)
 - GCP Vertex AI Terraform (with IAM, lifecycle, outputs): [`terraform/gcp-vertex-ai/`](terraform/gcp-vertex-ai/)
@@ -112,6 +125,20 @@ Specifically, you need:
   drift-triggered retraining pipeline, optional Vertex AI backend:
   `pipelines/`, `cd/argo/`, `terraform/vertex-pipelines/`
 - **Architecture Decisions** — ADR-ML-014 through ADR-ML-018 in `docs/decisions/`
+
+### Phase 3 — Advanced MLOps Workflows
+
+- **Online learning** — streaming update, validation, and rollback patterns in
+  `online_learning/` and `ci/github-actions/online-learning/`
+- **Federated learning** — coordinator, aggregation, privacy controls, and CI workflows in
+  `federated_learning/` and `ci/github-actions/federated/`
+- **Multi-cloud serving** — routing, registry, and health-check patterns in
+  `multi_cloud_serving/`
+- **Model optimization** — pruning, quantization, distillation, and benchmarks in
+  `model_optimization/`
+- **LLMOps** — prompt registry, fine-tuning, evaluation, and RLHF examples in `llmops/`
+- **Self-service portal** — model, deployment, and budget workflows in `portal/`
+- **Architecture Decisions** — ADR-ML-019 through ADR-ML-024 in `docs/decisions/`
 
 
 

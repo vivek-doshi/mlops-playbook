@@ -18,7 +18,14 @@ on:
       - 'mlflow/**'
       - 'dvc/**'
       - 'feature-store/**'
+      - 'federated_learning/**'
+      - 'llmops/**'
+      - 'model_optimization/**'
+      - 'multi_cloud_serving/**'
+      - 'online_learning/**'
       - 'policy/**'
+      - 'portal/**'
+      - 'scripts/**'
       - 'docs/**'
   workflow_dispatch:
 

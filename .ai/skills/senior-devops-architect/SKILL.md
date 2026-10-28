@@ -1,18 +1,18 @@
 ---
 name: Senior DevOps Architect
-description: Architecture and platform decision skill for this multi-cloud DevOps reference repository.
+description: Platform-integration architecture skill for this MLOps playbook repository.
 ---
 
 ## Purpose
 
-Use this skill for solution architecture, platform standards, CI/CD topology decisions, and production guardrail design across this repository.
+Use this skill for MLOps solution architecture, platform-boundary decisions, CI/CD topology, and production guardrail design in this repository.
 
 ## Use This Skill When
 
-- Designing new delivery flows across ci/, cd/, terraform/, and security/.
-- Choosing between Kubernetes, serverless, or app-service style targets.
+- Designing MLOps delivery flows across ci/, cd/, terraform/, and serving/.
+- Integrating this repository's ML lifecycle workflows with the external devops-playbook platform.
 - Defining production-grade defaults and organizational golden paths.
-- Planning cross-domain integrations (security, observability, finops, secops).
+- Planning cross-domain integrations across policy/, monitoring/, and finops/.
 
 ## Repository Context To Read First
 

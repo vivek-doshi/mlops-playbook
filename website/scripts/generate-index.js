@@ -50,7 +50,8 @@ const EXT_TO_LANG = {
 const CATEGORY_DIRS = [
   'ci', 'cd', 'training', 'serving', 'monitoring', 'batch', 'pipelines',
   'fairness', 'terraform', 'finops', 'mlflow', 'dvc', 'feature-store',
-  'policy', 'docs',
+  'policy', 'docs', 'federated_learning', 'llmops', 'model_optimization',
+  'multi_cloud_serving', 'online_learning', 'portal', 'scripts', '.devcontainer',
 ]
 
 const MAX_FILE_SIZE = 100 * 1024  // 100 KB

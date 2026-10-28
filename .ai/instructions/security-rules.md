@@ -1,5 +1,12 @@
 # Security Rules
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: .ai/instructions/security-rules.md
+**Depends On**: policy/, ci/github-actions/_shared/
+---
+
 Security baseline for code templates, IaC, CI/CD, runtime configuration, and incident response content.
 
 ## Non-Negotiable Rules
@@ -21,7 +28,7 @@ Security baseline for code templates, IaC, CI/CD, runtime configuration, and inc
 
 - Enable runtime detection and audit logging for Kubernetes workloads.
 - Use baseline policy enforcement for pod security and network isolation.
-- Maintain and test incident runbooks for pod compromise, node compromise, secret exposure, and supply chain incidents.
+- Maintain and test incident procedures for model-serving and ML pipeline failures; use the external `devops-playbook` runbooks for cluster, node, and shared-secret incidents.
 
 ## Governance And Evidence
 
@@ -31,5 +38,5 @@ Security baseline for code templates, IaC, CI/CD, runtime configuration, and inc
 
 ## Repo Alignment
 
-- Follow templates in security/, secops/, policy/, secrets/, and notifications/.
+- Follow ci/github-actions/_shared/reusable-mlops-scan.yml, policy/, and data-governance controls. Cluster secrets and incident notification integrations are external `devops-playbook` dependencies.
 - Keep security checks consistent across GitHub Actions, Azure Pipelines, GitLab CI, and Jenkins templates.

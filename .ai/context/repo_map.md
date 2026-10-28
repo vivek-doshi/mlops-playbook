@@ -2,14 +2,15 @@
 
 Generated from current workspace structure.
 
-- Root: d:/projects/mlops-playbook
-- Generated: 2026-05-30 17:13:20
+- Root: .
+- Generated: 2026-10-28 18:25:44
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
 .
 ├── .devcontainer
-│   └── devcontainer.json
+│   ├── devcontainer.json
+│   └── devcontainer-lock.json
 ├── .github
 │   ├── ISSUE_TEMPLATE
 │   │   ├── bug_report.yml
@@ -17,11 +18,24 @@ Generated from current workspace structure.
 │   │   ├── feature_request.yml
 │   │   └── model_quality_issue.yml
 │   ├── workflows
-│   │   └── deploy-website.yml
+│   │   ├── deploy-website.yml
+│   │   ├── mlops-validation.yml
+│   │   ├── platform-compatibility.yml
+│   │   ├── stale-reference-check.yml
+│   │   ├── supply-chain.yml
+│   │   └── validate-intelligence-paths.yml
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
 │   ├── dependabot.yml
 │   └── PULL_REQUEST_TEMPLATE.md
+├── .pytest_cache
+│   ├── v
+│   │   └── cache
+│   │       ├── lastfailed
+│   │       └── nodeids
+│   ├── .gitignore
+│   ├── CACHEDIR.TAG
+│   └── README.md
 ├── batch
 │   ├── jobs
 │   │   ├── _job-schema.yaml
@@ -37,95 +51,99 @@ Generated from current workspace structure.
 │   │   └── pipelines
 │   │       ├── batch-inference-workflow.yaml
 │   │       └── training-workflow.yaml
-│   └── kubernetes
-│       ├── _base
-│       │   ├── deployment.yaml
-│       │   ├── kustomization.yaml
-│       │   └── service.yaml
-│       ├── batch
-│       │   ├── batch-cronjob.yaml
-│       │   └── batch-job.yaml
-│       ├── environments
-│       │   ├── dev
-│       │   │   ├── kustomization.yaml
-│       │   │   ├── network-policy.yaml
-│       │   │   └── resource-quota.yaml
-│       │   ├── production
-│       │   │   ├── kustomization.yaml
-│       │   │   ├── network-policy.yaml
-│       │   │   └── pdb.yaml
-│       │   └── staging
-│       │       ├── kustomization.yaml
-│       │       ├── network-policy.yaml
-│       │       └── resource-quota.yaml
-│       ├── portal
-│       │   ├── deployment.yaml
-│       │   ├── ingress.yaml
-│       │   ├── network-policy.yaml
-│       │   └── service.yaml
-│       └── training
-│           ├── checkpointing-pvc.yaml
-│           ├── pytorch-job.yaml
-│           ├── ray-job.yaml
-│           └── tf-job.yaml
+│   ├── kubernetes
+│   │   ├── _base
+│   │   │   ├── deployment.yaml
+│   │   │   ├── kustomization.yaml
+│   │   │   └── service.yaml
+│   │   ├── batch
+│   │   │   ├── batch-cronjob.yaml
+│   │   │   └── batch-job.yaml
+│   │   ├── environments
+│   │   │   ├── dev
+│   │   │   │   ├── kustomization.yaml
+│   │   │   │   ├── network-policy.yaml
+│   │   │   │   └── resource-quota.yaml
+│   │   │   ├── production
+│   │   │   │   ├── kustomization.yaml
+│   │   │   │   ├── network-policy.yaml
+│   │   │   │   └── pdb.yaml
+│   │   │   └── staging
+│   │   │       ├── kustomization.yaml
+│   │   │       ├── network-policy.yaml
+│   │   │       └── resource-quota.yaml
+│   │   ├── portal
+│   │   │   ├── configmap.yaml
+│   │   │   ├── deployment.yaml
+│   │   │   ├── ingress.yaml
+│   │   │   ├── network-policy.yaml
+│   │   │   └── service.yaml
+│   │   ├── training
+│   │   │   ├── checkpointing-pvc.yaml
+│   │   │   ├── pytorch-job.yaml
+│   │   │   ├── ray-job.yaml
+│   │   │   └── tf-job.yaml
+│   │   └── README.md
+│   └── README.md
 ├── ci
 │   ├── azure-ml
 │   │   └── train-job.yaml
 │   ├── dvc
 │   │   └── dvc-pipeline.yml
-│   └── github-actions
-│       ├── _shared
-│       │   └── reusable-mlops-scan.yml
-│       ├── batch
-│       │   ├── batch-quality-check.yml
-│       │   ├── scheduled-batch.yml
-│       │   └── trigger-batch-job.yml
-│       ├── distributed-training
-│       │   ├── distributed-train.yml
-│       │   └── gpu-approval-gate.yml
-│       ├── fairness
-│       │   └── fairness-gate.yml
-│       ├── federated
-│       │   ├── federated-eval.yml
-│       │   └── federated-train.yml
-│       ├── finops
-│       │   ├── cost-budget-check.yml
-│       │   ├── monthly-cost-report.yml
-│       │   └── weekly-cost-report.yml
-│       ├── llmops
-│       │   ├── evaluate-llm.yml
-│       │   ├── fine-tune.yml
-│       │   ├── prompt-validate.yml
-│       │   └── rlhf-train.yml
-│       ├── model-cards
-│       │   └── generate-card.yml
-│       ├── model-deployment
-│       │   └── deploy.yml
-│       ├── model-evaluation
-│       │   └── evaluate.yml
-│       ├── model-monitoring
-│       │   └── drift-check.yml
-│       ├── model-optimization
-│       │   ├── benchmark.yml
-│       │   └── optimize.yml
-│       ├── model-training
-│       │   ├── continuous-training.yml
-│       │   └── train.yml
-│       ├── multi-cloud
-│       │   ├── deploy-multicloud.yml
-│       │   └── failover-test.yml
-│       ├── online-learning
-│       │   ├── online-rollback.yml
-│       │   └── online-update.yml
-│       ├── pipelines
-│       │   ├── trigger-batch-inference.yml
-│       │   └── trigger-training-pipeline.yml
-│       └── promotion
-│           ├── promote-dev.yml
-│           ├── promote-production.yml
-│           ├── promote-staging.yml
-│           ├── promotion-gates.yml
-│           └── rollback.yml
+│   ├── github-actions
+│   │   ├── _shared
+│   │   │   └── reusable-mlops-scan.yml
+│   │   ├── batch
+│   │   │   ├── batch-quality-check.yml
+│   │   │   ├── scheduled-batch.yml
+│   │   │   └── trigger-batch-job.yml
+│   │   ├── distributed-training
+│   │   │   ├── distributed-train.yml
+│   │   │   └── gpu-approval-gate.yml
+│   │   ├── fairness
+│   │   │   └── fairness-gate.yml
+│   │   ├── federated
+│   │   │   ├── federated-eval.yml
+│   │   │   └── federated-train.yml
+│   │   ├── finops
+│   │   │   ├── cost-budget-check.yml
+│   │   │   ├── monthly-cost-report.yml
+│   │   │   └── weekly-cost-report.yml
+│   │   ├── llmops
+│   │   │   ├── evaluate-llm.yml
+│   │   │   ├── fine-tune.yml
+│   │   │   ├── prompt-validate.yml
+│   │   │   └── rlhf-train.yml
+│   │   ├── model-cards
+│   │   │   └── generate-card.yml
+│   │   ├── model-deployment
+│   │   │   └── deploy.yml
+│   │   ├── model-evaluation
+│   │   │   └── evaluate.yml
+│   │   ├── model-monitoring
+│   │   │   └── drift-check.yml
+│   │   ├── model-optimization
+│   │   │   ├── benchmark.yml
+│   │   │   └── optimize.yml
+│   │   ├── model-training
+│   │   │   ├── continuous-training.yml
+│   │   │   └── train.yml
+│   │   ├── multi-cloud
+│   │   │   ├── deploy-multicloud.yml
+│   │   │   └── failover-test.yml
+│   │   ├── online-learning
+│   │   │   ├── online-rollback.yml
+│   │   │   └── online-update.yml
+│   │   ├── pipelines
+│   │   │   ├── trigger-batch-inference.yml
+│   │   │   └── trigger-training-pipeline.yml
+│   │   └── promotion
+│   │       ├── promote-dev.yml
+│   │       ├── promote-production.yml
+│   │       ├── promote-staging.yml
+│   │       ├── promotion-gates.yml
+│   │       └── rollback.yml
+│   └── README.md
 ├── docs
 │   ├── decisions
 │   │   ├── ADR-ML-001-experiment-tracking.md
@@ -175,24 +193,42 @@ Generated from current workspace structure.
 │   │   └── gpu-cost-governance.md
 │   ├── model-cards
 │   │   └── fraud-detection-model-card.md
-│   └── local-setup.md
+│   ├── topology
+│   │   ├── COMPATIBILITY-CONTRACT.md
+│   │   ├── CONTROL-PLANES.md
+│   │   ├── DEPENDENCY-MATRIX.md
+│   │   ├── INTEGRATION-BRIDGE.md
+│   │   ├── platform-manifest.yaml
+│   │   └── ROUTING-QUALITY.md
+│   ├── ARCHITECTURE_DECISION_GUIDE.md
+│   ├── disaster-recovery.md
+│   ├── improvements.md
+│   ├── lineage-and-observability-contract.md
+│   ├── local-setup.md
+│   ├── maturity-roadmap.md
+│   ├── production-readiness.md
+│   ├── README.md
+│   ├── release-strategies.md
+│   └── supply-chain-security.md
 ├── dvc
 │   ├── pipeline-templates
 │   │   └── train-eval-deploy.yaml
-│   └── remote-storage
-│       ├── azure.remote.sample
-│       ├── gcs.remote.sample
-│       ├── README.md
-│       └── s3.remote.sample
+│   ├── remote-storage
+│   │   ├── azure.remote.sample
+│   │   ├── gcs.remote.sample
+│   │   ├── README.md
+│   │   └── s3.remote.sample
+│   └── README.md
 ├── fairness
 │   ├── evaluate.py
 │   ├── explainability.py
 │   └── README.md
 ├── feature-store
-│   └── feast
-│       ├── feature_store.yaml
-│       ├── README.md
-│       └── repo.py
+│   ├── feast
+│   │   ├── feature_store.yaml
+│   │   ├── README.md
+│   │   └── repo.py
+│   └── README.md
 ├── federated_learning
 │   ├── aggregation
 │   │   ├── __init__.py
@@ -254,10 +290,11 @@ Generated from current workspace structure.
 │   │   └── schema.sql
 │   ├── model-registry
 │   │   └── README.md
-│   └── tracking-server
-│       ├── .env.example
-│       ├── docker-compose.yml
-│       └── README.md
+│   ├── tracking-server
+│   │   ├── .env.example
+│   │   ├── docker-compose.yml
+│   │   └── README.md
+│   └── README.md
 ├── model_optimization
 │   ├── distillation
 │   │   ├── student_configs
@@ -278,7 +315,8 @@ Generated from current workspace structure.
 │   └── README.md
 ├── monitoring
 │   ├── alerts
-│   │   └── drift-alerts.yaml
+│   │   ├── drift-alerts.yaml
+│   │   └── label-delay-alerts.yaml
 │   ├── batch
 │   │   └── batch-alerts.yaml
 │   ├── dashboards
@@ -353,9 +391,13 @@ Generated from current workspace structure.
 │   │   └── README.md
 │   ├── model-approval
 │   │   ├── approved-versions.yaml
+│   │   ├── gates.yaml
 │   │   └── README.md
+│   ├── model-inventory.yaml
 │   └── README.md
 ├── portal
+│   ├── __pycache__
+│   │   └── __init__.cpython-314.pyc
 │   ├── backend
 │   │   ├── api
 │   │   │   ├── __init__.py
@@ -364,6 +406,7 @@ Generated from current workspace structure.
 │   │   │   ├── models.py
 │   │   │   └── notifications.py
 │   │   ├── __init__.py
+│   │   ├── auth.py
 │   │   ├── github_client.py
 │   │   ├── k8s_client.py
 │   │   ├── main.py
@@ -384,11 +427,15 @@ Generated from current workspace structure.
 │   ├── Dockerfile
 │   └── README.md
 ├── scripts
+│   ├── __pycache__
+│   │   └── validate-intelligence-paths.cpython-311.pyc
 │   ├── bootstrap.ps1
 │   ├── bootstrap.sh
 │   ├── generate_model_card.py
 │   ├── generate-repo-map.ps1
-│   └── model-card-template.md.j2
+│   ├── model-card-template.md.j2
+│   ├── README.md
+│   └── validate-intelligence-paths.py
 ├── serving
 │   ├── torchserve
 │   │   ├── config.properties
@@ -424,9 +471,14 @@ Generated from current workspace structure.
 │   ├── ray-cluster
 │   │   ├── main.tf
 │   │   └── variables.tf
-│   └── vertex-pipelines
-│       ├── main.tf
-│       └── variables.tf
+│   ├── vertex-pipelines
+│   │   ├── main.tf
+│   │   └── variables.tf
+│   └── README.md
+├── tests
+│   ├── conftest.py
+│   ├── test_policy_contracts.py
+│   └── test_portal_auth.py
 ├── training
 │   ├── kubeflow
 │   │   ├── train_pytorch.py

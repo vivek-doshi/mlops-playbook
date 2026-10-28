@@ -1,17 +1,23 @@
 # Task Routing
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: docs/golden-paths/
+**Depends On**: docs/guides/, docs/decisions/
+---
+
 Routes user intent to the minimum correct repository domain.
 
 ## Primary Routing
 
-- "Containerize app" -> docker/ and compose/.
-- "Set up CI" -> ci/<platform>/ and ci/.../_shared.
-- "Deploy to cloud" -> cd/targets/<cloud>/ and terraform/<cloud-target>/.
-- "Deploy to Kubernetes" -> cd/kubernetes/, cd/helm/, cd/gitops/.
-- "Provision infrastructure" -> terraform/ (or cd/pulumi/ when explicitly requested).
-- "Add security checks" -> security/ and policy/.
-- "Incident response" -> secops/runbooks/ and docs/runbooks/.
-- "Observability and alerting" -> observability/ and notifications/.
+- "Set up MLOps CI" -> ci/github-actions/ and ci/github-actions/_shared/.
+- "Deploy a model" -> serving/, cd/kubernetes/, and terraform/<cloud-target>/.
+- "Deploy to Kubernetes" -> cd/kubernetes/ and cd/argo/.
+- "Provision ML infrastructure" -> terraform/<cloud-target>/.
+- "Add security checks" -> ci/github-actions/_shared/reusable-mlops-scan.yml and policy/.
+- "Incident response" -> monitoring/, policy/model-approval/, docs/topology/, and external `devops-playbook` notification controls.
+- "Observability and alerting" -> monitoring/ and external `devops-playbook` observability controls.
 - "Cost control/FinOps" -> finops/.
 
 ## MLOps-Specific Routing
@@ -34,21 +40,60 @@ Routes user intent to the minimum correct repository domain.
 - "Security scan / CVE / secrets scan / gitleaks" -> ci/github-actions/_shared/reusable-mlops-scan.yml
 - "MLflow authentication / MLflow auth" -> mlflow/tracking-server/docker-compose.yml
 
-## Secondary Routing
+## MLOps-Specific Routing - Newer Domains
 
-- If request is architecture/choice oriented -> docs/ARCHITECTURE_DECISION_GUIDE.md first, then docs/decisions/.
-- If request asks "where do I start" -> GETTING_STARTED.md first, then docs/golden-paths/.
-- If request mixes domains (for example CI + Terraform + security), route to:
-  1. golden path
-  2. target domain files
-  3. enforcement files (security/policy/finops)
+- "Run batch inference" -> docs/golden-paths/batch-inference.md
+- "Batch scoring" -> batch/README.md
+- "Batch quality check" -> batch/ or pipelines/
+- "Batch job" -> cd/kubernetes/batch/ or cd/argo/pipelines/
+- "Batch quality gate" -> policy/ and finops/
+- "Create pipeline" -> docs/golden-paths/pipeline-orchestration.md
+- "Pipeline workflow" -> pipelines/ or cd/argo/pipelines/
+- "Pipeline runner" -> pipelines/README.md
+- "Pipeline component" -> pipelines/components/
+- "Drift-triggered retraining" -> pipelines/ or ci/github-actions/pipelines/
+- "Distributed training" -> docs/golden-paths/distributed-training.md
+- "Ray training" -> training/ or cd/kubernetes/training/
+- "Kubeflow training" -> training/ or cd/kubernetes/training/
+- "Checkpoint management" -> training/ or cd/kubernetes/training/
+- "Resource allocation" -> terraform/ray-cluster/ or cd/kubernetes/training/
+- "Feature store" -> docs/guides/feature-store-patterns.md
+- "Feature patterns" -> docs/guides/feature-store-patterns.md
+- "Feast integration" -> feature-store/ or terraform/gcp-vertex-ai/
+- "Feature versioning" -> feature-store/ or dvc/
+- "Fairness evaluation" -> docs/golden-paths/fairness-and-explainability.md
+- "Fairness metrics" -> fairness/ or ci/github-actions/fairness/
+- "Bias analysis" -> fairness/ or ci/github-actions/fairness/
+- "Explainability" -> fairness/ or ci/github-actions/fairness/
+- "Fairness gate" -> policy/ and ci/github-actions/fairness/
+- "Online learning" -> docs/golden-paths/online-learning.md
+- "Online inference" -> online_learning/
+- "Model update" -> online_learning/ or ci/github-actions/online-learning/
+- "Model rollback" -> online_learning/ or ci/github-actions/online-learning/
+- "Model validator" -> online_learning/ or ci/github-actions/online-learning/
+- "Federated learning" -> docs/golden-paths/federated-learning.md
+- "Federated training" -> federated_learning/ or ci/github-actions/federated/
+- "Privacy-preserving" -> federated_learning/ or ci/github-actions/federated/
+- "Distributed coordination" -> federated_learning/ or ci/github-actions/federated/
+- "Federated evaluation" -> ci/github-actions/federated/
+- "Multi-cloud serving" -> docs/golden-paths/multi-cloud-serving.md
+- "Multi-cloud routing" -> multi_cloud_serving/ or cd/kubernetes/
+- "Cloud-specific serving" -> multi_cloud_serving/ or serving/
+- "Cloud routing config" -> multi_cloud_serving/router.py or cd/kubernetes/
+- "Cloud health check" -> multi_cloud_serving/health_check.py
+- "Model optimization" -> docs/golden-paths/model-optimization.md
+- "Model pruning" -> model_optimization/pruning.py
+- "Model quantization" -> model_optimization/quantisation.py
+- "Model distillation" -> model_optimization/distillation/
+- "Model benchmarking" -> model_optimization/benchmark.py
+- "LLMOps / prompt management / model fine-tuning / LLM evaluation" -> docs/golden-paths/llmops.md + llmops/ and ci/github-actions/llmops/
+- "Self-service model operations / portal" -> docs/golden-paths/self-service-portal.md + portal/
 
-## Conflict Resolution
+## Generic Platform Routing
 
-When multiple valid routes exist:
-
-1. Prefer simpler golden path.
-2. Prefer production-grade templates over demo examples.
-3. Prefer reusable/shared templates.
-4. Prefer cloud target explicitly named by the user.
-5. If no cloud named, default to cloud-agnostic guidance and list supported targets.
+- "Provision GPU cluster" -> terraform/gpu-cluster/
+- "Provision Kubernetes cluster" -> cd/kubernetes/
+- "Manage secrets" -> external `devops-playbook` secrets capability
+- "Configure OIDC federation" -> external `devops-playbook` identity capability
+- "Enforce policy controls" -> policy/
+- "Set up monitoring baseline" -> monitoring/

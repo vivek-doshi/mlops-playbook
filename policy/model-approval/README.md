@@ -4,6 +4,9 @@ Every model promoted from **Staging** to **Production** in the MLflow Model Regi
 must pass the approval gate defined here. The gate is automated in CI but a
 designated approver from the team must review and merge the approval PR.
 
+The machine-readable contract is [`gates.yaml`](gates.yaml). Missing required
+evidence is a blocking failure; it must never be treated as an advisory warning.
+
 > **Beginner tip**: "Staging" is a holding area for models that have passed
 > automated tests but have not yet been released to production. The approval gate
 > is the set of automated and human checks that must pass before a model is

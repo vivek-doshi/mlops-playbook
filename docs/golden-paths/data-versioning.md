@@ -148,7 +148,7 @@ export AWS_ACCESS_KEY_ID=your-key
 export AWS_SECRET_ACCESS_KEY=your-secret
 
 # Option 2: OIDC federation (recommended for GitHub Actions — no stored secrets)
-# Reference: cicd-reference/ci/github-actions/_shared/
+# Reference: devops-playbook/ci/github-actions/_shared/
 ```
 
 ### Google Cloud Storage
@@ -158,7 +158,7 @@ export AWS_SECRET_ACCESS_KEY=your-secret
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json
 
 # Or use Workload Identity Federation (recommended):
-# Reference: cicd-reference/ci/github-actions/_shared/
+# Reference: devops-playbook/ci/github-actions/_shared/
 ```
 
 ### Azure Blob Storage

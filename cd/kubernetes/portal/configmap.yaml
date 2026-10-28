@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlops-portal-config
+  namespace: mlops-portal
+data:
+  MLFLOW_TRACKING_URI: "http://mlflow:5000"
+  GITHUB_REPOSITORY: "vivek-doshi/mlops-playbook"
+  OIDC_ISSUER: "https://login.microsoftonline.com/REPLACE_WITH_TENANT_ID/v2.0"
+  OIDC_AUDIENCE: "REPLACE_WITH_PORTAL_APP_ID"
+  OIDC_JWKS_URL: "https://login.microsoftonline.com/REPLACE_WITH_TENANT_ID/discovery/v2.0/keys"
+  ALLOWED_ORIGINS: "https://REPLACE_WITH_PORTAL_HOST"
+  PORTAL_OPERATOR_GROUP: "REPLACE_WITH_OPERATOR_GROUP_ID"
+  PORTAL_ADMIN_GROUP: "REPLACE_WITH_ADMIN_GROUP_ID"

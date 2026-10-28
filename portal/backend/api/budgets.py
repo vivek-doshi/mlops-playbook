@@ -18,8 +18,9 @@ import os
 from typing import Any
 
 import yaml
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from portal.backend.auth import require_role
 
 router = APIRouter(tags=["budgets"])
 
@@ -58,7 +59,11 @@ def get_budget(model_name: str) -> dict[str, Any]:
 
 
 @router.put("/{model_name}", summary="Update budget config (writes YAML file)")
-def update_budget(model_name: str, update: BudgetUpdate) -> dict[str, str]:
+def update_budget(
+    model_name: str,
+    update: BudgetUpdate,
+    _claims: dict[str, Any] = Depends(require_role("admin")),
+) -> dict[str, str]:
     if model_name != update.model_name:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

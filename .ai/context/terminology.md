@@ -1,5 +1,12 @@
 # Terminology
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: docs/guides/
+**Depends On**: docs/golden-paths/, docs/decisions/
+---
+
 Defines canonical language for this repository. Use these terms consistently in docs, templates, and reviews.
 
 ## Canonical Terms
@@ -10,7 +17,7 @@ Defines canonical language for this repository. Use these terms consistently in 
 - Baseline: Minimum acceptable standard for production readiness.
 - Pattern: Reusable technical approach, often represented as a template family.
 - Runbook: Action-oriented operational procedure for incidents or routine operations.
-- Target: Deployment destination template under cd/targets/.
+- Target: Deployment destination represented by a Kubernetes environment overlay, Argo workflow, or cloud-specific Terraform module.
 - Overlay: Environment-specific customization on top of base Kubernetes manifests.
 - Policy: Enforceable rule expressed in admission controls or CI checks.
 
@@ -24,6 +31,12 @@ Use:
 - reusable templates
 - multi-cloud parity
 - policy enforcement
+- integration contract
+- dependency matrix
+- control plane
+- data plane
+- compatibility contract
+- routing quality
 
 Avoid:
 

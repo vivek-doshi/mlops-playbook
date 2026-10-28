@@ -1,5 +1,12 @@
 # Coding Standards
 
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: .ai/instructions/coding-standards.md
+**Depends On**: .ai/context/repo-summary.md
+---
+
 Language-independent standards for all templates, scripts, infrastructure, and docs in this repository.
 
 ## Baseline Standards
@@ -31,5 +38,5 @@ Language-independent standards for all templates, scripts, infrastructure, and d
 ## Reuse And Composition
 
 - Reuse shared workflow patterns where available.
-- Prefer extending base templates in docker/_base, compose/_templates, and cd/kubernetes/_base.
+- Prefer extending reusable pipeline components, shared CI workflows, and cd/kubernetes/_base manifests.
 - Document every new pattern with when-to-use guidance.

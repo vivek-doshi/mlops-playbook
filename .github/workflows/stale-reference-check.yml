@@ -1,0 +1,117 @@
+name: Stale Reference Check
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on the 1st
+  workflow_dispatch:
+
+jobs:
+  check-stale-references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check context file freshness
+        run: |
+          echo "Checking context file freshness..."
+          
+          # Get last modified dates
+          context_files=$(find .ai/context -name "*.md" -type f)
+          
+          for file in $context_files; do
+            last_modified=$(git log -1 --format=%ct "$file")
+            last_modified_date=$(date -d @$last_modified +"%Y-%m-%d")
+            echo "  - $file: $last_modified_date"
+          done
+      
+      - name: Check retrieval file freshness
+        run: |
+          echo "Checking retrieval file freshness..."
+          
+          # Get last modified dates
+          retrieval_files=$(find .ai/retrieval -name "*.md" -type f)
+          
+          for file in $retrieval_files; do
+            last_modified=$(git log -1 --format=%ct "$file")
+            last_modified_date=$(date -d @$last_modified +"%Y-%m-%d")
+            echo "  - $file: $last_modified_date"
+          done
+      
+      - name: Check instructions file freshness
+        run: |
+          echo "Checking instructions file freshness..."
+          
+          # Get last modified dates
+          instructions_files=$(find .ai/instructions -name "*.md" -type f)
+          
+          for file in $instructions_files; do
+            last_modified=$(git log -1 --format=%ct "$file")
+            last_modified_date=$(date -d @$last_modified +"%Y-%m-%d")
+            echo "  - $file: $last_modified_date"
+          done
+      
+      - name: Validate path references
+        run: |
+          echo "Validating path references..."
+          
+          # Extract all unique paths from context files
+          context_paths=$(find .ai/context -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
+          
+          # Extract all unique paths from retrieval files
+          retrieval_paths=$(find .ai/retrieval -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
+          
+          # Extract all unique paths from instructions files
+          instructions_paths=$(find .ai/instructions -name "*.md" -type f -exec grep -oP '(?<=: )[^:]+(?=\.md)' {} \; | sort -u)
+          
+          # Combine and validate
+          all_paths=$(printf '%s\n%s\n%s\n' "$context_paths" "$retrieval_paths" "$instructions_paths" | sort -u)
+          
+          stale_count=0
+          
+          for path in $all_paths; do
+            if [ -n "$path" ]; then
+              if [ ! -f "$path" ]; then
+                echo "❌ Missing path: $path"
+                stale_count=$((stale_count + 1))
+              fi
+            fi
+          done
+          
+          if [ $stale_count -gt 0 ]; then
+            echo "❌ Found $stale_count stale path references!"
+            exit 1
+          else
+            echo "✅ All path references are valid!"
+          fi
+      
+      - name: Check for outdated metadata
+        run: |
+          echo "Checking for outdated metadata..."
+
+          metadata_age_limit_days=30
+          stale_metadata_count=0
+
+          while IFS= read -r file; do
+            last_reviewed=$(grep -m1 '^\*\*Last Reviewed\*\*:' "$file" | sed 's/.*: //')
+            if [ -z "$last_reviewed" ]; then
+              echo "❌ Missing Last Reviewed metadata: $file"
+              stale_metadata_count=$((stale_metadata_count + 1))
+              continue
+            fi
+
+            reviewed_epoch=$(date -d "$last_reviewed" +%s)
+            age_days=$(( ( $(date +%s) - reviewed_epoch ) / 86400 ))
+            if [ "$age_days" -gt "$metadata_age_limit_days" ]; then
+              echo "❌ Stale metadata ($age_days days old): $file"
+              stale_metadata_count=$((stale_metadata_count + 1))
+            else
+              echo "✓ Current metadata ($age_days days old): $file"
+            fi
+          done < <(find .ai/context .ai/retrieval .ai/instructions -name "*.md" -type f ! -name "repo_map.md" | sort)
+
+          if [ "$stale_metadata_count" -gt 0 ]; then
+            echo "❌ Found $stale_metadata_count stale or incomplete metadata records"
+            exit 1
+          fi
+
+          echo "✅ All intelligence metadata is current"

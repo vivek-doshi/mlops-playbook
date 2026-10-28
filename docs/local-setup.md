@@ -102,7 +102,7 @@ git config --global core.autocrlf input   # keep LF line endings inside WSL/cont
 ## Part 2 — Clone the Repository
 
 ```powershell
-git clone https://github.com/your-org/mlops-playbook.git
+git clone https://github.com/vivek-doshi/mlops-playbook.git
 cd mlops-playbook
 ```
 

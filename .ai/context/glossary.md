@@ -1,5 +1,10 @@
 # Glossary
-
+---
+**Owner**: @mlops-team
+**Last Reviewed**: 2026-10-27
+**Source of Truth**: docs/guides/concepts.md
+**Depends On**: docs/decisions/
+---
 - ADR: Architecture Decision Record documented under docs/decisions/.
 - CD: Continuous Delivery or Continuous Deployment templates under cd/.
 - CI: Continuous Integration templates under ci/.

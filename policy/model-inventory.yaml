@@ -1,0 +1,33 @@
+version: 1
+description: Minimum inventory and lifecycle metadata for every deployed model.
+
+required_fields:
+  - model_name
+  - model_version
+  - tenant_id
+  - owner
+  - business_owner
+  - risk_tier
+  - intended_use
+  - prohibited_use
+  - data_classification
+  - source_commit
+  - model_artifact_digest
+  - container_digest
+  - deployment_id
+  - review_date
+  - deprecation_date
+
+risk_tiers:
+  low:
+    review_period_days: 365
+  medium:
+    review_period_days: 180
+  high:
+    review_period_days: 90
+  critical:
+    review_period_days: 30
+
+expiry:
+  action: block-new-deployments-and-open-review
+  grace_period_days: 30

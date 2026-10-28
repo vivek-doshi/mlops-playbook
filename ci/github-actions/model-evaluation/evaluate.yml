@@ -172,22 +172,24 @@ jobs:
           logged_hash = run.data.tags.get("dvc_data_hash", "")
 
           if not logged_hash:
-              print("WARNING: dvc_data_hash tag not found on training run. Skipping lineage check.")
-              sys.exit(0)
+              print("ERROR: dvc_data_hash tag not found on training run.", file=sys.stderr)
+              sys.exit(1)
 
-          # Compare against the current dvc status.
-          # dvc status exits non-zero if there are uncommitted changes.
+          # Compare the recorded hash with the exact repository pointer.
           result = subprocess.run(
-              ["dvc", "status", "data/dataset.dvc"],
+              ["dvc", "get-url", ".", "data/dataset.dvc"],
               capture_output=True, text=True
           )
           if result.returncode != 0:
-              print("WARNING: DVC status check failed:", result.stderr)
-          else:
-              print(f"Logged DVC hash: {logged_hash}")
-              print(f"DVC status: {result.stdout.strip()}")
+              print("ERROR: Could not read the repository DVC pointer:", result.stderr, file=sys.stderr)
+              sys.exit(1)
 
-          print("Gate 3 passed.")
+          pointer = result.stdout.strip()
+          if logged_hash != pointer:
+              print(f"ERROR: DVC hash mismatch: run={logged_hash}, repository={pointer}", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Gate 3 passed: DVC hash {logged_hash} matches the repository pointer.")
           PY
 
       # ------------------------------------------------------------------ #
