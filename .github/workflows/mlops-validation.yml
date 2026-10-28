@@ -1,0 +1,63 @@
+name: MLOps validation
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "portal/backend/requirements.txt"
+      - ".github/workflows/mlops-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: portal/backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r portal/backend/requirements.txt pytest
+      - name: Compile Python sources
+        run: python -m compileall -q portal tests
+      - name: Run tests
+        run: pytest -q
+
+  manifest-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install YAML validator
+        run: python -m pip install pyyaml
+      - name: Validate YAML manifests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          paths = list(Path("ci").rglob("*.yml"))
+          paths += list(Path("ci").rglob("*.yaml"))
+          paths += list(Path("cd").rglob("*.yaml"))
+          paths += list(Path("policy").rglob("*.yaml"))
+          paths += list(Path("monitoring").rglob("*.yaml"))
+          for path in paths:
+              with path.open(encoding="utf-8") as handle:
+                  list(yaml.safe_load_all(handle))
+              print(f"valid: {path}")
+          PY

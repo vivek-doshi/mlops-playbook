@@ -2,31 +2,31 @@ import { useState, useMemo, useCallback } from 'react'
 import type { FileEntry, FileIndex } from '../types'
 import './Sidebar.css'
 
-const CATEGORY_META: Record<string, { name: string; icon: string; color: string }> = {
-  ci:                  { name: 'CI Pipelines',        icon: '⚡', color: '#f59e0b' },
-  cd:                  { name: 'CD & Deploy',          icon: '🚀', color: '#06b6d4' },
-  training:            { name: 'Model Training',       icon: '🧠', color: '#8b5cf6' },
-  serving:             { name: 'Model Serving',        icon: '🔮', color: '#10b981' },
-  monitoring:          { name: 'Monitoring',           icon: '📊', color: '#ef4444' },
-  batch:               { name: 'Batch Inference',      icon: '⚙️', color: '#f97316' },
-  pipelines:           { name: 'ML Pipelines',         icon: '🔄', color: '#0ea5e9' },
-  fairness:            { name: 'Fairness & XAI',       icon: '⚖️', color: '#ec4899' },
-  terraform:           { name: 'Infrastructure',       icon: '🏗️', color: '#7c3aed' },
-  finops:              { name: 'FinOps',               icon: '💰', color: '#84cc16' },
-  mlflow:              { name: 'MLflow',               icon: '🧪', color: '#0ea5e9' },
-  dvc:                 { name: 'Data Versioning',      icon: '📦', color: '#d946ef' },
-  'feature-store':     { name: 'Feature Store',        icon: '🗃️', color: '#14b8a6' },
-  policy:              { name: 'Policy & Governance',  icon: '🛡️', color: '#64748b' },
-  docs:                { name: 'Documentation',        icon: '📚', color: '#78716c' },
-  llmops:              { name: 'LLMOps',               icon: '🤖', color: '#a855f7' },
-  model_optimization:  { name: 'Model Optimization',   icon: '🔧', color: '#f97316' },
-  multi_cloud_serving: { name: 'Multi-Cloud Serving',  icon: '☁️', color: '#0ea5e9' },
-  online_learning:     { name: 'Online Learning',      icon: '🔁', color: '#06b6d4' },
-  portal:              { name: 'Self-Service Portal',  icon: '🖥️', color: '#f59e0b' },
-  federated_learning:  { name: 'Federated Learning',   icon: '🌐', color: '#8b5cf6' },
-  scripts:             { name: 'Scripts',              icon: '📜', color: '#94a3b8' },
-  '.devcontainer':     { name: 'Dev Container',        icon: '🐳', color: '#2496ed' },
-  root:                { name: 'Root Files',           icon: '📁', color: '#64748b' },
+const CATEGORY_META: Record<string, { icon: string; color: string }> = {
+  ci:                  { icon: '⚡', color: '#f59e0b' },
+  cd:                  { icon: '🚀', color: '#06b6d4' },
+  training:            { icon: '🧠', color: '#8b5cf6' },
+  serving:             { icon: '🔮', color: '#10b981' },
+  monitoring:          { icon: '📊', color: '#ef4444' },
+  batch:               { icon: '⚙️', color: '#f97316' },
+  pipelines:           { icon: '🔄', color: '#0ea5e9' },
+  fairness:            { icon: '⚖️', color: '#ec4899' },
+  terraform:           { icon: '🏗️', color: '#7c3aed' },
+  finops:              { icon: '💰', color: '#84cc16' },
+  mlflow:              { icon: '🧪', color: '#0ea5e9' },
+  dvc:                 { icon: '📦', color: '#d946ef' },
+  'feature-store':     { icon: '🗃️', color: '#14b8a6' },
+  policy:              { icon: '🛡️', color: '#64748b' },
+  docs:                { icon: '📚', color: '#78716c' },
+  llmops:              { icon: '🤖', color: '#a855f7' },
+  model_optimization:  { icon: '🔧', color: '#f97316' },
+  multi_cloud_serving: { icon: '☁️', color: '#0ea5e9' },
+  online_learning:     { icon: '🔁', color: '#06b6d4' },
+  portal:              { icon: '🖥️', color: '#f59e0b' },
+  federated_learning:  { icon: '🌐', color: '#8b5cf6' },
+  scripts:             { icon: '📜', color: '#94a3b8' },
+  '.devcontainer':     { icon: '🐳', color: '#2496ed' },
+  root:                { icon: '📁', color: '#64748b' },
 }
 
 const LANG_ICONS: Record<string, string> = {
@@ -292,7 +292,7 @@ export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSear
           </>
         ) : (
           allCats.map((cat, ci) => {
-            const meta   = CATEGORY_META[cat] ?? { name: cat, icon: '📁', color: '#64748b' }
+            const meta   = CATEGORY_META[cat] ?? { icon: '📁', color: '#64748b' }
             const tree   = grouped.get(cat)!
             const isOpen = openCategories.has(cat)
             return (
@@ -303,7 +303,7 @@ export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSear
               >
                 <div className="category-header" onClick={() => toggleCat(cat)}>
                   <span className="category-icon" style={{ color: meta.color }}>{meta.icon}</span>
-                  <span className="category-name"  style={{ color: meta.color }}>{meta.name}</span>
+                  <span className="category-name"  style={{ color: meta.color }}>{cat}</span>
                   <span className="category-count">{countFiles(tree)}</span>
                   <span className="category-chevron">▶</span>
                 </div>
@@ -318,11 +318,6 @@ export function Sidebar({ index, selectedFile, onSelectFile, searchQuery, onSear
         )}
       </div>
 
-      {index && (
-        <div className="sidebar-footer">
-          {new Date(index.generated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </div>
-      )}
     </aside>
   )
 }

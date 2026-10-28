@@ -355,12 +355,12 @@ jobs:
         run: |
           # Verify all required platform primitives exist
           required_primitives=(
-            "cicd-reference/cluster-config.yaml"
-            "cicd-reference/k8s-base.yaml"
-            "cicd-reference/secrets-config.yaml"
-            "cicd-reference/oidc-config.yaml"
-            "cicd-reference/policy-config.yaml"
-            "cicd-reference/observability-config.yaml"
+            "devops-playbook/cluster-config.yaml"
+            "devops-playbook/k8s-base.yaml"
+            "devops-playbook/secrets-config.yaml"
+            "devops-playbook/oidc-config.yaml"
+            "devops-playbook/policy-config.yaml"
+            "devops-playbook/observability-config.yaml"
           )
           
           for primitive in "${required_primitives[@]}"; do
@@ -373,8 +373,8 @@ jobs:
       - name: Validate platform versions
         run: |
           # Check platform version compatibility
-          platform_version=$(cat cicd-reference/manifest.yaml | grep version)
-          min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+          platform_version=$(cat devops-playbook/manifest.yaml | grep version)
+          min_version=$(cat devops-playbook/manifest.yaml | grep min-platform-version)
           
           if [ "$platform_version" < "$min_version" ]; then
             echo "❌ Platform version $platform_version is incompatible"
@@ -384,7 +384,7 @@ jobs:
       - name: Check required features
         run: |
           # Verify all required features are present
-          required_features=$(cat .cicd-reference/manifest.yaml | grep required-features)
+          required_features=$(cat devops-playbook/manifest.yaml | grep required-features)
           
           for feature in $required_features; do
             if [ ! -f "$feature" ]; then

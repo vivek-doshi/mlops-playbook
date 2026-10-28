@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-10-27
+**Last Reviewed**: 2026-10-28
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -25,6 +25,8 @@ This is a production-oriented MLOps playbook: opinionated golden paths, reusable
 - **Operations**: drift detection, alerts, and SLOs (`monitoring/`); cost attribution and budgets (`finops/`); batch inference (`batch/`).
 - **Advanced lifecycle patterns**: feature stores (`feature-store/`), online learning (`online_learning/`), federated learning (`federated_learning/`), multi-cloud serving (`multi_cloud_serving/`), model optimization (`model_optimization/`), LLMOps (`llmops/`), and self-service operations (`portal/`).
 - **Guidance and decisions**: lifecycle walkthroughs (`docs/golden-paths/`), concepts (`docs/guides/`), architecture decisions (`docs/decisions/`), and platform integration (`docs/topology/`).
+- **Presentation surface**: the generated template browser in `website/` mirrors the repository's top-level directories and is deployed through `.github/workflows/deploy-website.yml`.
+- **Production hardening**: release safety, model inventory, lineage, observability, supply chain, and recovery acceptance criteria are defined under `docs/` and `policy/`.
 
 ## How Teams Use It
 

@@ -1,0 +1,27 @@
+groups:
+  - name: model-label-delay
+    rules:
+      - alert: ModelLabelAvailabilityDelayed
+        expr: |
+          model_label_age_seconds > model_label_delay_slo_seconds
+        for: 30m
+        labels:
+          severity: warning
+          category: model-quality
+        annotations:
+          summary: Labels are delayed for {{ $labels.model }}
+          description: >
+            Post-deployment quality evaluation is behind the configured label-delay
+            objective. Investigate the feedback or ground-truth pipeline.
+      - alert: ModelBusinessMetricDegraded
+        expr: |
+          model_business_metric_ratio < model_business_metric_slo_ratio
+        for: 15m
+        labels:
+          severity: critical
+          category: model-quality
+        annotations:
+          summary: Business KPI degraded for {{ $labels.model }}
+          description: >
+            The model's business outcome is below its agreed objective. Freeze
+            promotion and evaluate rollback or champion/challenger traffic.

@@ -3,7 +3,7 @@
 Generated from current workspace structure.
 
 - Root: .
-- Generated: 2026-10-27 10:44:26
+- Generated: 2026-10-28 17:50:18
 - Exclusions: .ai/, .git/, .github/prompts/, .github/skills/, .kiro/, catalog/scripts/__pycache__/, finops/scripts/__pycache__/, secops/compliance/scripts/__pycache__/, website/
 
 ```text
@@ -19,13 +19,23 @@ Generated from current workspace structure.
 │   │   └── model_quality_issue.yml
 │   ├── workflows
 │   │   ├── deploy-website.yml
+│   │   ├── mlops-validation.yml
 │   │   ├── platform-compatibility.yml
 │   │   ├── stale-reference-check.yml
+│   │   ├── supply-chain.yml
 │   │   └── validate-intelligence-paths.yml
 │   ├── CODEOWNERS
 │   ├── copilot-instructions.md
 │   ├── dependabot.yml
 │   └── PULL_REQUEST_TEMPLATE.md
+├── .pytest_cache
+│   ├── v
+│   │   └── cache
+│   │       ├── lastfailed
+│   │       └── nodeids
+│   ├── .gitignore
+│   ├── CACHEDIR.TAG
+│   └── README.md
 ├── batch
 │   ├── jobs
 │   │   ├── _job-schema.yaml
@@ -63,6 +73,7 @@ Generated from current workspace structure.
 │   │   │       ├── network-policy.yaml
 │   │   │       └── resource-quota.yaml
 │   │   ├── portal
+│   │   │   ├── configmap.yaml
 │   │   │   ├── deployment.yaml
 │   │   │   ├── ingress.yaml
 │   │   │   ├── network-policy.yaml
@@ -189,9 +200,15 @@ Generated from current workspace structure.
 │   │   ├── INTEGRATION-BRIDGE.md
 │   │   └── ROUTING-QUALITY.md
 │   ├── ARCHITECTURE_DECISION_GUIDE.md
+│   ├── disaster-recovery.md
 │   ├── improvements.md
+│   ├── lineage-and-observability-contract.md
 │   ├── local-setup.md
-│   └── README.md
+│   ├── maturity-roadmap.md
+│   ├── production-readiness.md
+│   ├── README.md
+│   ├── release-strategies.md
+│   └── supply-chain-security.md
 ├── dvc
 │   ├── pipeline-templates
 │   │   └── train-eval-deploy.yaml
@@ -297,7 +314,8 @@ Generated from current workspace structure.
 │   └── README.md
 ├── monitoring
 │   ├── alerts
-│   │   └── drift-alerts.yaml
+│   │   ├── drift-alerts.yaml
+│   │   └── label-delay-alerts.yaml
 │   ├── batch
 │   │   └── batch-alerts.yaml
 │   ├── dashboards
@@ -312,6 +330,7 @@ Generated from current workspace structure.
 │   │   └── cross-cloud-alerts.yaml
 │   ├── online-learning
 │   │   └── online-learning-alerts.yaml
+│   ├── prometheus
 │   ├── slos
 │   │   ├── _defaults.yaml
 │   │   ├── README.md
@@ -371,17 +390,35 @@ Generated from current workspace structure.
 │   │   └── README.md
 │   ├── model-approval
 │   │   ├── approved-versions.yaml
+│   │   ├── gates.yaml
 │   │   └── README.md
+│   ├── model-inventory.yaml
 │   └── README.md
 ├── portal
+│   ├── __pycache__
+│   │   └── __init__.cpython-314.pyc
 │   ├── backend
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-314.pyc
+│   │   │   ├── auth.cpython-314.pyc
+│   │   │   ├── github_client.cpython-314.pyc
+│   │   │   ├── k8s_client.cpython-314.pyc
+│   │   │   ├── main.cpython-314.pyc
+│   │   │   └── mlflow_client.cpython-314.pyc
 │   │   ├── api
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-314.pyc
+│   │   │   │   ├── budgets.cpython-314.pyc
+│   │   │   │   ├── deployments.cpython-314.pyc
+│   │   │   │   ├── models.cpython-314.pyc
+│   │   │   │   └── notifications.cpython-314.pyc
 │   │   │   ├── __init__.py
 │   │   │   ├── budgets.py
 │   │   │   ├── deployments.py
 │   │   │   ├── models.py
 │   │   │   └── notifications.py
 │   │   ├── __init__.py
+│   │   ├── auth.py
 │   │   ├── github_client.py
 │   │   ├── k8s_client.py
 │   │   ├── main.py
@@ -402,6 +439,8 @@ Generated from current workspace structure.
 │   ├── Dockerfile
 │   └── README.md
 ├── scripts
+│   ├── __pycache__
+│   │   └── validate-intelligence-paths.cpython-311.pyc
 │   ├── bootstrap.ps1
 │   ├── bootstrap.sh
 │   ├── generate_model_card.py
@@ -448,6 +487,14 @@ Generated from current workspace structure.
 │   │   ├── main.tf
 │   │   └── variables.tf
 │   └── README.md
+├── tests
+│   ├── __pycache__
+│   │   ├── test_policy_contracts.cpython-314.pyc
+│   │   ├── test_policy_contracts.cpython-314-pytest-9.0.3.pyc
+│   │   ├── test_portal_auth.cpython-314.pyc
+│   │   └── test_portal_auth.cpython-314-pytest-9.0.3.pyc
+│   ├── test_policy_contracts.py
+│   └── test_portal_auth.py
 ├── training
 │   ├── kubeflow
 │   │   ├── train_pytorch.py

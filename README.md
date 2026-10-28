@@ -4,6 +4,11 @@ A production-oriented, opinionated guide for the full ML lifecycle — from raw 
 
 **New here?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) | Concepts guide → [docs/guides/concepts.md](docs/guides/concepts.md) | GPU / Dev Container setup → [docs/local-setup.md](docs/local-setup.md)
 
+**Production status:** This is a production-oriented reference implementation.
+Use the [production readiness standard](docs/production-readiness.md) and
+[maturity roadmap](docs/maturity-roadmap.md) before calling an implementation
+production-ready.
+
 ---
 
 ## The Integration Bridge
@@ -86,6 +91,14 @@ Specifically, you need:
 - [ADR-ML-007: Dev Environment → Dev Containers](docs/decisions/ADR-ML-007-dev-container.md)
 - [ADR-ML-008: Model Approval → Three-Gate Policy](docs/decisions/ADR-ML-008-model-approval-policy.md)
 - [ADR-ML-009: Code Quality → Pre-commit Toolchain](docs/decisions/ADR-ML-009-pre-commit-toolchain.md)
+
+### Enterprise readiness
+
+- [Production readiness standard](docs/production-readiness.md)
+- [Lineage and observability contract](docs/lineage-and-observability-contract.md)
+- [Disaster recovery standard](docs/disaster-recovery.md)
+- [MLOps maturity roadmap](docs/maturity-roadmap.md)
+- [Supply-chain security standard](docs/supply-chain-security.md)
 
 ### Infrastructure
 - AWS SageMaker Terraform: [`terraform/aws-sagemaker/`](terraform/aws-sagemaker/)

@@ -9,7 +9,7 @@
 
 ## Repository Responsibility Map
 
-### Platform Repository (`cicd-reference`)
+### Platform Repository (`devops-playbook`)
 
 **Responsibilities**:
 - GPU cluster provisioning and management
@@ -19,12 +19,12 @@
 - Shared CI/CD templates and infrastructure patterns
 
 **Key Components**:
-- `.cicd-reference/` - Platform primitives and infrastructure
-- `.cicd-reference/cluster/` - GPU cluster provisioning
-- `.cicd-reference/k8s/` - Base Kubernetes primitives
-- `.cicd-reference/secrets/` - Secrets management
-- `.cicd-reference/policy/` - Policy controls
-- `.cicd-reference/observability/` - Observability baseline
+- `devops-playbook/` - Platform primitives and infrastructure
+- `devops-playbook/cluster/` - GPU cluster provisioning
+- `devops-playbook/k8s/` - Base Kubernetes primitives
+- `devops-playbook/secrets/` - Secrets management
+- `devops-playbook/policy/` - Policy controls
+- `devops-playbook/observability/` - Observability baseline
 
 ### MLOps Repository (This Repository)
 
@@ -110,7 +110,7 @@ The MLOps repository implements the following ML lifecycle workflows:
 
 ```mermaid
 graph TB
-    subgraph Platform["Platform Repository (cicd-reference)"]
+    subgraph Platform["Platform Repository (devops-playbook)"]
         P1[GPU Cluster]
         P2[Base Kubernetes]
         P3[Secrets Management]
@@ -153,7 +153,7 @@ graph TB
 The MLOps repository requires the platform repository to publish the following manifest:
 
 ```yaml
-# Platform Manifest (cicd-reference/manifest.yaml)
+# Platform Manifest (devops-playbook/manifest.yaml)
 platform:
   version: "1.2.0"
   components:
@@ -210,14 +210,14 @@ jobs:
       
       - name: Download platform manifest
         run: |
-          # Download platform manifest from cicd-reference
-          git clone https://github.com/platform/cicd-reference.git
+          # Download platform manifest from devops-playbook
+          git clone https://github.com/vivek-doshi/devops-playbook.git
           
       - name: Validate platform version
         run: |
           # Check platform version compatibility
-          platform_version=$(cat cicd-reference/manifest.yaml | grep version)
-          min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+          platform_version=$(cat devops-playbook/manifest.yaml | grep version)
+          min_version=$(cat devops-playbook/manifest.yaml | grep min-platform-version)
           
           if [ "$platform_version" < "$min_version" ]; then
             echo "❌ Platform version $platform_version is incompatible"
@@ -227,7 +227,7 @@ jobs:
       - name: Check required features
         run: |
           # Verify all required features are present
-          required_features=$(cat .cicd-reference/manifest.yaml | grep required-features)
+          required_features=$(cat devops-playbook/manifest.yaml | grep required-features)
           
           for feature in $required_features; do
             if [ ! -f "$feature" ]; then

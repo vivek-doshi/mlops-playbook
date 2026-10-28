@@ -34,6 +34,9 @@ on:
         description: Container image tag
         required: true
         default: production-latest
+      image_digest:
+        description: Immutable serving image digest without the sha256 prefix
+        required: true
       rollback_plan:
         description: >
           Rollback plan — describe which version to roll back to if this
@@ -156,20 +159,25 @@ jobs:
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG_PRODUCTION }}
-        continue-on-error: true
 
       - name: Apply production overlay
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
         run: |
+          if [[ ! "${IMAGE_DIGEST}" =~ ^[a-f0-9]{64}$ ]]; then
+            echo "ERROR: image_digest must be a 64-character lowercase SHA-256 digest." >&2
+            exit 1
+          fi
           MODEL_NAME="${{ inputs.model_name }}"
           NAMESPACE="${MODEL_NAME}-prod"
 
           kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
           kubectl kustomize cd/kubernetes/environments/production | \
+            sed "s/sha256:REPLACE_WITH_IMAGE_DIGEST/sha256:${IMAGE_DIGEST}/g" | \
             sed "s/namespace: model-prod/namespace: ${NAMESPACE}/g" | \
             kubectl apply -f -
           # Wait for rollout to complete before recording promotion.
           kubectl rollout status deployment/model-serving -n "${NAMESPACE}" --timeout=5m
-        continue-on-error: true
 
       # Transition the model to Production stage in MLflow registry.
       - name: Transition model to Production in MLflow

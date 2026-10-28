@@ -15,6 +15,9 @@ ML-specific monitoring is separate from platform infrastructure monitoring.
 2. **Prediction drift** — the distribution of model outputs shifts (a leading indicator of accuracy degradation).
 3. **Model accuracy** — when labels become available, compute held-out accuracy.
 4. **Prediction volume** — sudden drops or spikes in prediction count indicate serving or upstream data issues.
+5. **Label delay and business outcomes** — delayed ground truth and degraded
+   business KPIs must pause promotion and trigger investigation. See
+   `monitoring/alerts/label-delay-alerts.yaml`.
 
 ## Architecture
 
@@ -45,4 +48,6 @@ echo "Exit code: $?"
 - `docs/golden-paths/model-monitoring.md` — full monitoring golden path
 - `monitoring/evidently/drift_report.py` — drift detection script
 - `monitoring/alerts/drift-alerts.yaml` — Prometheus alert rules
+- `monitoring/alerts/label-delay-alerts.yaml` — label-delay and business KPI alerts
 - `monitoring/dashboards/model-health.json` — Grafana dashboard
+- `docs/lineage-and-observability-contract.md` — telemetry and correlation requirements

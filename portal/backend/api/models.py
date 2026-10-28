@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from portal.backend.mlflow_client import PortalMLflowClient
 from portal.backend.github_client import GitHubActionsClient
+from portal.backend.auth import require_role
 
 router = APIRouter(tags=["models"])
 
@@ -59,6 +60,7 @@ def get_model(
 def promote_model(
     request: PromoteRequest,
     github_client: GitHubActionsClient = Depends(_github),
+    _claims: dict[str, Any] = Depends(require_role("operator")),
 ) -> dict[str, str]:
     """Dispatch a promotion workflow. The portal never modifies MLflow directly."""
     run_id = github_client.trigger_workflow(

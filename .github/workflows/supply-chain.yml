@@ -1,0 +1,46 @@
+name: Supply-chain evidence
+
+on:
+  pull_request:
+    paths:
+      - "portal/backend/requirements.txt"
+      - "ci/**"
+      - "cd/**"
+      - "Dockerfile"
+      - "**/Dockerfile"
+      - ".github/workflows/supply-chain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install audit tool
+        run: python -m pip install pip-audit
+      - name: Audit portal dependencies
+        run: pip-audit -r portal/backend/requirements.txt
+
+  release-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify production image contract
+        run: |
+          if grep -R -E 'newTag: (latest|production-latest)|image: .*:latest' cd/kubernetes/environments/production cd/kubernetes/portal; then
+            echo "Mutable production image reference found." >&2
+            exit 1
+          fi
+          grep -q 'REPLACE_WITH_IMAGE_DIGEST' cd/kubernetes/environments/production/kustomization.yaml
+          grep -q 'REPLACE_WITH_IMAGE_DIGEST' cd/kubernetes/portal/deployment.yaml
+      - name: Verify approval gate contract
+        run: test -f policy/model-approval/gates.yaml

@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-10-27
+**Last Reviewed**: 2026-10-28
 **Source of Truth**: docs/ARCHITECTURE_DECISION_GUIDE.md
 **Depends On**: external devops-playbook repository
 ---
@@ -37,6 +37,7 @@ This repository is a production-oriented MLOps playbook. It implements the ML li
 - monitoring/ provides drift detection, alert rules, SLOs, and Grafana dashboards.
 - finops/ provides ML cost attribution, budgets, alerts, and reports.
 - docs/golden-paths/, docs/guides/, docs/topology/, and docs/decisions/ provide operational guidance and architecture records.
+- docs/production-readiness.md, docs/lineage-and-observability-contract.md, and docs/disaster-recovery.md define the acceptance evidence for production claims.
 
 ### 5. ML Lifecycle Execution Layer
 

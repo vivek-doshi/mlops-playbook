@@ -17,7 +17,8 @@ namespace: model-prod  # replaced by CI with <model-name>-prod
 
 images:
   - name: model-serving
-    newTag: production-latest
+    # CI replaces this release marker with the immutable SHA-256 digest.
+    digest: sha256:REPLACE_WITH_IMAGE_DIGEST
 
 patches:
   - patch: |-

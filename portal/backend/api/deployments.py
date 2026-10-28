@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from portal.backend.k8s_client import PortalK8sClient
 from portal.backend.github_client import GitHubActionsClient
+from portal.backend.auth import require_role
 
 router = APIRouter(tags=["deployments"])
 
@@ -57,6 +58,7 @@ def rollback_deployment(
     model_name: str,
     environment: str,
     github_client: GitHubActionsClient = Depends(_github),
+    _claims: dict[str, Any] = Depends(require_role("operator")),
 ) -> dict[str, str]:
     """Dispatch rollback workflow. The portal never modifies Kubernetes directly."""
     run_id = github_client.trigger_workflow(

@@ -65,3 +65,23 @@ Completed 2026-09-04.
 - Updated [task-routing.md](.ai/retrieval/task-routing.md) with MLOps-Specific Routing - Newer Domains section and Generic Platform Routing section.
 - Split generic platform workflows from MLOps workflows.
 - Added intent coverage for the repo's actual newer domains: batch inference, pipeline orchestration, distributed training, feature store, fairness, online learning, federated learning, multi-cloud serving, and model optimization.
+
+## Priority 5: Production hardening [In progress - 2026-10-28]
+
+Completed in this hardening pass:
+
+- Made production deployment and lineage checks fail closed.
+- Added a machine-readable model approval gate contract.
+- Added OIDC authentication, role checks, explicit CORS, and audit logging to the portal.
+- Added portal/policy tests and pull-request YAML/Python validation.
+- Replaced the production serving overlay's mutable image tag with a verified digest replacement.
+- Added model inventory, risk-tier review, label-delay alerts, release strategy guidance,
+  supply-chain requirements, lineage/observability contracts, and disaster-recovery standards.
+- Standardized topology references on the external `devops-playbook` platform repository.
+
+Remaining environment-specific evidence:
+
+- Configure the production OIDC tenant, groups, and allowed origins.
+- Generate and verify SBOMs, signatures, and build provenance in the release platform.
+- Run staging canary/blue-green, restore, failover, and champion/challenger exercises.
+- Retain signed evidence and complete the maturity checklist before claiming production readiness.

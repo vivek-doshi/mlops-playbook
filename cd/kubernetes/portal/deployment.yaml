@@ -27,7 +27,8 @@ spec:
       serviceAccountName: mlops-portal
       containers:
         - name: portal
-          image: ghcr.io/your-org/mlops-portal:latest
+          # CI must replace the release marker with an immutable digest.
+          image: ghcr.io/vivek-doshi/mlops-portal@sha256:REPLACE_WITH_IMAGE_DIGEST
           ports:
             - containerPort: 8080
           env:
@@ -56,6 +57,36 @@ spec:
                 secretKeyRef:
                   name: mlops-portal-github-app
                   key: installation_id
+            - name: OIDC_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: OIDC_ISSUER
+            - name: OIDC_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: OIDC_AUDIENCE
+            - name: OIDC_JWKS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: OIDC_JWKS_URL
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: ALLOWED_ORIGINS
+            - name: PORTAL_OPERATOR_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: PORTAL_OPERATOR_GROUP
+            - name: PORTAL_ADMIN_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: mlops-portal-config
+                  key: PORTAL_ADMIN_GROUP
           livenessProbe:
             httpGet:
               path: /health

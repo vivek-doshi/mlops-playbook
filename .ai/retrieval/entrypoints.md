@@ -2,7 +2,7 @@
 
 ---
 **Owner**: @mlops-team
-**Last Reviewed**: 2026-10-27
+**Last Reviewed**: 2026-10-28
 **Source of Truth**: docs/golden-paths/
 **Depends On**: docs/guides/, docs/decisions/
 ---
@@ -23,6 +23,9 @@ Recommended first files to open by intent.
   - docs/golden-paths/model-training-pipeline.md
   - docs/golden-paths/model-serving.md
   - docs/ARCHITECTURE_DECISION_GUIDE.md
+  - docs/production-readiness.md
+  - docs/lineage-and-observability-contract.md
+  - docs/disaster-recovery.md
 - Pipeline setup:
   - ci/github-actions/
   - pipelines/
@@ -48,6 +51,10 @@ Recommended first files to open by intent.
   - model_optimization/README.md
   - llmops/README.md
   - portal/README.md
+- Production readiness and audit evidence:
+  - docs/production-readiness.md
+  - docs/maturity-roadmap.md
+  - docs/disaster-recovery.md
 
 ## Triage Entrypoint Order
 

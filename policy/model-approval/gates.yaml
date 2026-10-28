@@ -1,0 +1,40 @@
+version: 1
+description: Fail-closed promotion requirements for registered models.
+
+gates:
+  performance:
+    required: true
+    metric: accuracy
+    source: mlflow.model_version.tags.accuracy_threshold
+  drift:
+    required: true
+    threshold: 0.3
+    source: monitoring/evidently/drift_report.py
+  lineage:
+    required: true
+    fields:
+      - source_commit
+      - dvc_data_hash
+      - training_run_id
+      - model_artifact_digest
+    missing_value_action: block
+  responsible_ai:
+    required: true
+    evidence:
+      - model_card
+      - fairness_evaluation
+      - data_classification
+  operational:
+    required: true
+    evidence:
+      - rollback_plan
+      - serving_slo
+      - owner
+
+promotion:
+  staging: automated_gates
+  production: automated_gates_plus_human_approval
+  override_requires:
+    - written_justification
+    - two_approvers
+    - recorded_expiration

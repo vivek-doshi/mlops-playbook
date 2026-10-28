@@ -12,6 +12,12 @@ It explains the why and how behind the repository patterns so teams can adopt co
 - `decisions/`: ADRs documenting architecture and technology choices.
 - `model-cards/`: model card examples and documentation artifacts.
 - `local-setup.md`: local development and environment setup instructions.
+- `production-readiness.md`: acceptance standard for production claims.
+- `lineage-and-observability-contract.md`: required cross-system lineage and telemetry fields.
+- `disaster-recovery.md`: RTO, RPO, backup, restore, and recovery exercise standard.
+- `maturity-roadmap.md`: staged path from reference patterns to production operation.
+- `release-strategies.md`: canary, blue/green, shadow, champion/challenger, and rollback patterns.
+- `supply-chain-security.md`: dependency, SBOM, signing, provenance, and immutable-release requirements.
 
 ## How to use this as an individual component
 

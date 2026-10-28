@@ -12,7 +12,7 @@
 The MLOps repository requires the platform repository to publish the following manifest:
 
 ```yaml
-# Platform Manifest (cicd-reference/manifest.yaml)
+# Platform Manifest (devops-playbook/manifest.yaml)
 platform:
   version: "1.2.0"
   components:
@@ -227,14 +227,14 @@ jobs:
       
       - name: Download platform manifest
         run: |
-          # Download platform manifest from cicd-reference
-          git clone https://github.com/platform/cicd-reference.git
+          # Download platform manifest from devops-playbook
+          git clone https://github.com/vivek-doshi/devops-playbook.git
           
       - name: Validate platform version
         run: |
           # Check platform version compatibility
-          platform_version=$(cat cicd-reference/manifest.yaml | grep version)
-          min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+          platform_version=$(cat devops-playbook/manifest.yaml | grep version)
+          min_version=$(cat devops-playbook/manifest.yaml | grep min-platform-version)
           
           if [ "$platform_version" < "$min_version" ]; then
             echo "❌ Platform version $platform_version is incompatible"
@@ -244,7 +244,7 @@ jobs:
       - name: Check required features
         run: |
           # Verify all required features are present
-          required_features=$(cat .cicd-reference/manifest.yaml | grep required-features)
+          required_features=$(cat devops-playbook/manifest.yaml | grep required-features)
           
           for feature in $required_features; do
             if [ ! -f "$feature" ]; then
@@ -266,8 +266,8 @@ jobs:
           )
           
           for component in "${components[@]}"; do
-            component_version=$(cat cicd-reference/manifest.yaml | grep "$component: version")
-            min_version=$(cat .cicd-reference/manifest.yaml | grep min-platform-version)
+            component_version=$(cat devops-playbook/manifest.yaml | grep "$component: version")
+            min_version=$(cat devops-playbook/manifest.yaml | grep min-platform-version)
             
             if [ "$component_version" < "$min_version" ]; then
               echo "❌ Component $component version $component_version is incompatible"
