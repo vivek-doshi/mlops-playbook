@@ -152,8 +152,9 @@ graph TB
 
 The MLOps repository requires the platform repository to publish the following manifest:
 
-Use [`platform-manifest.yaml`](platform-manifest.yaml) as the starter file to
-copy into the root of `devops-playbook` as `manifest.yaml`.
+[`platform-manifest.yaml`](platform-manifest.yaml) documents the expected
+schema. CI reads the authoritative `manifest.yaml` directly from
+`devops-playbook`.
 
 ```yaml
 # Platform Manifest (devops-playbook/manifest.yaml)

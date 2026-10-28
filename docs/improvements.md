@@ -89,8 +89,10 @@ Remaining environment-specific evidence:
 ## CI hardening follow-up - 2026-10-28
 
 - Added [`docs/topology/platform-manifest.yaml`](topology/platform-manifest.yaml)
-  as the copy-ready `devops-playbook/manifest.yaml` contract required by the
-  platform compatibility workflow.
+  as the local reference for the `devops-playbook/manifest.yaml` contract.
+- Updated the platform compatibility workflow to download the authoritative
+  existing manifest through the GitHub Contents API instead of cloning the
+  platform repository and requiring a local copy.
 - Added a pytest path bootstrap and aligned CI with `python -m pytest` so the
   `portal` package is importable on GitHub-hosted runners.
 - Updated portal dependencies, including FastAPI/Starlette, PyJWT,

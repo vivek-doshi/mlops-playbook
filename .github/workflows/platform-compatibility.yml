@@ -15,10 +15,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Download platform manifest
         run: |
-          echo "Downloading platform manifest from devops-playbook..."
-          gh repo clone vivek-doshi/devops-playbook -- --depth 1
-          test -f devops-playbook/manifest.yaml || {
-            echo "Copy docs/topology/platform-manifest.yaml to the root of devops-playbook as manifest.yaml."
+          echo "Downloading the existing manifest from devops-playbook..."
+          mkdir -p devops-playbook
+          gh api \
+            --header "Accept: application/vnd.github.raw+json" \
+            repos/vivek-doshi/devops-playbook/contents/manifest.yaml \
+            > devops-playbook/manifest.yaml
+          test -s devops-playbook/manifest.yaml || {
+            echo "The devops-playbook manifest.yaml could not be downloaded."
             exit 1
           }
 

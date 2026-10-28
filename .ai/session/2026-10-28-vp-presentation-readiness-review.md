@@ -26,3 +26,10 @@ Reviewed the public README, getting-started guide, website template browser, web
   `PYTHONPATH=.`.
 - Upgraded the portal dependency set and verified the resolved wheel closure
   with `pip-audit` (`No known vulnerabilities found`).
+
+## Platform manifest workflow correction
+
+- Confirmed that `vivek-doshi/devops-playbook/manifest.yaml` already exists.
+- Changed the compatibility workflow to download that authoritative file via
+  the GitHub Contents API rather than cloning the repository and incorrectly
+  requiring a local copy.

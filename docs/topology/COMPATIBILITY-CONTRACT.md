@@ -11,10 +11,10 @@
 
 The MLOps repository requires the platform repository to publish the following manifest:
 
-The starter manifest is available at
-[`platform-manifest.yaml`](platform-manifest.yaml). Copy it to the root of the
-`devops-playbook` repository as `manifest.yaml`, then replace the versions and
-features with the values actually provided by that platform deployment.
+The expected manifest is also captured locally at
+[`platform-manifest.yaml`](platform-manifest.yaml) for review and schema
+reference. CI reads the authoritative `manifest.yaml` directly from the
+`devops-playbook` repository.
 
 ```yaml
 # Platform Manifest (devops-playbook/manifest.yaml)
